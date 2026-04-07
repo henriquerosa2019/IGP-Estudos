@@ -3,6 +3,7 @@ import {
   Routes, 
   Route 
 } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { MainLayout } from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Notices from "./pages/Notices";
@@ -17,6 +18,7 @@ export default function App() {
   return (
     <Router>
       <Toaster position="top-right" expand={false} richColors />
+      <Analytics />
       <Routes>
         <Route path="/registrar" element={<Register />} />
         <Route element={<MainLayout />}>
