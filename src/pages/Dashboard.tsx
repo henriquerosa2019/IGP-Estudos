@@ -51,7 +51,7 @@ export default function Dashboard() {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       const uid = getUid();
 
-      const q = query(collection(db, "plans"), where("uid", "==", uid));
+      const q = query(collection(db, "plans"));
       const unsubscribePlans = onSnapshot(q, (snapshot) => {
         const parsedPlans = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlan));
         setPlans(parsedPlans);

@@ -97,7 +97,7 @@ export default function Notices() {
       return;
     }
 
-    const q = query(collection(db, "plans"), where("uid", "==", getUid()), where("notices", "array-contains", selectedNotice.id));
+    const q = query(collection(db, "plans"), where("notices", "array-contains", selectedNotice.id));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         setCurrentPlan({ ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as StudyPlan);
@@ -118,7 +118,7 @@ export default function Notices() {
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, "notices"), where("uid", "==", getUid()));
+    const q = query(collection(db, "notices"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
       setNotices(data);

@@ -116,13 +116,13 @@ export default function StudyPlan() {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       const uid = getUid();
 
-      const qPlans = query(collection(db, "plans"), where("uid", "==", uid));
+      const qPlans = query(collection(db, "plans"));
       const unsubscribePlans = onSnapshot(qPlans, (snapshot) => {
         const parsedPlans = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlanType));
         setSavedPlans(parsedPlans);
       });
 
-      const qNotices = query(collection(db, "notices"), where("uid", "==", uid));
+      const qNotices = query(collection(db, "notices"));
       const unsubscribeNotices = onSnapshot(qNotices, (snapshot) => {
         const parsedNotices = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
         setSavedNotices(parsedNotices);
