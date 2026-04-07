@@ -156,8 +156,18 @@ body {
     }
   body {
     @apply bg-background text-foreground;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
     }
   html {
     @apply font-sans;
     }
+}
+
+@media print {
+  html, body {
+    display: none !important;
+  }
 }
