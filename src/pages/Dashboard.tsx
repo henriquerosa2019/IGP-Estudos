@@ -109,7 +109,7 @@ export default function Dashboard() {
             className="h-24 w-auto object-contain"
             referrerPolicy="no-referrer"
           />
-          <span className="text-red-600 font-serif text-xl tracking-wide">Kaverna Concurso</span>
+          <span className="text-red-600 text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Kverna Concurso</span>
         </div>
       </div>
 
