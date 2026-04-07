@@ -117,5 +117,9 @@ service cloud.firestore {
     match /plans/{planId} {
       allow read, write: if true;
     }
+
+    match /flashcardReviews/{reviewId} {
+      allow read, write: if true;
+    }
   }
 }

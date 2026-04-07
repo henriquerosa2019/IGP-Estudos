@@ -516,22 +516,22 @@ export default function StudyPlan() {
           <motion.div
             initial={{ scale: 0.8, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            className="bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden w-72"
+            className="bg-black border border-red-900/50 rounded-2xl shadow-2xl overflow-hidden w-72"
           >
             <div className={cn(
               "p-4 flex items-center justify-between border-b",
-              timerMode === 'study' ? "bg-indigo-600 text-white border-indigo-700" : "bg-emerald-600 text-white border-emerald-700"
+              timerMode === 'study' ? "bg-red-700 text-white border-red-900/50" : "bg-zinc-900 text-red-600 border-red-900/50"
             )}>
               <div className="flex items-center gap-2">
                 {timerMode === 'study' ? <Timer className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
-                <span className="text-xs font-bold uppercase tracking-widest">
+                <span className="text-xs font-bold uppercase tracking-widest" style={{ fontFamily: "'Deutsch Gothic', serif" }}>
                   {timerMode === 'study' ? 'Foco' : 'Pausa'}
                 </span>
               </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-6 w-6 text-white hover:bg-white/20"
+                className={cn("h-6 w-6", timerMode === 'study' ? "text-white hover:bg-white/20" : "text-red-600 hover:bg-red-900/20")}
                 onClick={() => setShowTimerSettings(!showTimerSettings)}
               >
                 <Settings2 className="w-4 h-4" />
@@ -539,7 +539,7 @@ export default function StudyPlan() {
             </div>
 
             <div className="p-6 text-center">
-              <div className="text-5xl font-black text-zinc-900 mb-6 font-mono tracking-tighter">
+              <div className="text-5xl font-black text-white mb-6 font-mono tracking-tighter">
                 {formatTimer(timerTime)}
               </div>
 
@@ -562,7 +562,7 @@ export default function StudyPlan() {
                             setStudyDuration(val);
                             if (timerMode === 'study' && !timerActive) setTimerTime(val * 60);
                           }}
-                          className="h-8 text-xs"
+                          className="h-8 text-xs bg-zinc-900 border-zinc-800 text-white"
                         />
                       </div>
                       <div className="space-y-1">
@@ -575,7 +575,7 @@ export default function StudyPlan() {
                             setBreakDuration(val);
                             if (timerMode === 'break' && !timerActive) setTimerTime(val * 60);
                           }}
-                          className="h-8 text-xs"
+                          className="h-8 text-xs bg-zinc-900 border-zinc-800 text-white"
                         />
                       </div>
                     </div>
@@ -587,7 +587,9 @@ export default function StudyPlan() {
                 <Button 
                   className={cn(
                     "flex-1 h-10 font-bold",
-                    timerMode === 'study' ? "bg-indigo-600 hover:bg-indigo-700" : "bg-emerald-600 hover:bg-emerald-700"
+                    timerActive 
+                      ? "bg-zinc-900 text-red-600 border border-red-900/50 hover:bg-zinc-800" 
+                      : "bg-red-700 text-white hover:bg-red-600 shadow-md shadow-red-900/20"
                   )}
                   onClick={toggleTimer}
                 >
@@ -600,10 +602,10 @@ export default function StudyPlan() {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="h-10 w-10 border-zinc-200"
+                  className="h-10 w-10 border-red-900/50 bg-zinc-900 hover:bg-zinc-800"
                   onClick={resetTimer}
                 >
-                  <RotateCcw className="w-4 h-4 text-zinc-400" />
+                  <RotateCcw className="w-4 h-4 text-red-600" />
                 </Button>
               </div>
             </div>

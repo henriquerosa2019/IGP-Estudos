@@ -52,6 +52,21 @@
         "progress": { "type": "number" }
       },
       "required": ["name", "weight", "importance", "topics"]
+    },
+    "FlashcardReview": {
+      "title": "Flashcard Review",
+      "description": "A flashcard saved for spaced repetition review",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "subject": { "type": "string" },
+        "status": { "type": "string", "enum": ["medium", "hard"] },
+        "nextReviewDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "question", "answer", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -62,6 +77,10 @@
     "/notices/{noticeId}": {
       "schema": "ExamNotice",
       "description": "Store exam notices and their subjects"
+    },
+    "/flashcardReviews/{reviewId}": {
+      "schema": "FlashcardReview",
+      "description": "Store flashcards marked as medium or hard for spaced repetition"
     }
   }
 }

@@ -20,12 +20,15 @@ import {
   Loader2,
   BrainCircuit,
   Save,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { generateFlashcards } from "@/lib/gemini";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
+import { db, auth } from "@/lib/firebase";
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, onSnapshot } from "firebase/firestore";
 
 interface Flashcard {
   id?: string;
@@ -40,21 +43,53 @@ interface FlashcardDeck {
   cards: Flashcard[];
 }
 
+interface FlashcardReview {
+  id?: string;
+  uid: string;
+  question: string;
+  answer: string;
+  subject: string;
+  status: 'medium' | 'hard';
+  nextReviewDate: string;
+  createdAt: string;
+}
+
 export default function Flashcards() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [view, setView] = useState<'list' | 'study'>('list');
+  const [view, setView] = useState<'list' | 'study' | 'review'>('list');
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [savedDecks, setSavedDecks] = useState<FlashcardDeck[]>([]);
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(false);
   const [showTopicInput, setShowTopicInput] = useState(false);
+  
+  const [reviewsMedium, setReviewsMedium] = useState<FlashcardReview[]>([]);
+  const [reviewsHard, setReviewsHard] = useState<FlashcardReview[]>([]);
+  const [reviewMode, setReviewMode] = useState<'medium' | 'hard' | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("aestudamos_flashcards");
     if (saved) {
       setSavedDecks(JSON.parse(saved));
     }
+
+    if (!auth.currentUser) return;
+
+    const q = query(collection(db, "flashcardReviews"), where("uid", "==", auth.currentUser.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const reviews: FlashcardReview[] = [];
+      snapshot.forEach((doc) => {
+        reviews.push({ id: doc.id, ...doc.data() } as FlashcardReview);
+      });
+      
+      setReviewsMedium(reviews.filter(r => r.status === 'medium'));
+      setReviewsHard(reviews.filter(r => r.status === 'hard'));
+    }, (error) => {
+      console.error("Error fetching reviews:", error);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleStartStudy = () => {
@@ -99,6 +134,84 @@ export default function Flashcards() {
   };
 
   const currentCard = flashcards[currentIndex];
+
+  const handleReview = async (status: 'easy' | 'medium' | 'hard') => {
+    if (!auth.currentUser) {
+      toast.error("Você precisa estar logado para usar a repetição espaçada.");
+      return;
+    }
+
+    try {
+      if (view === 'review' && currentCard.id) {
+        // We are reviewing an existing saved card
+        if (status === 'easy') {
+          await deleteDoc(doc(db, "flashcardReviews", currentCard.id));
+          toast.success("Card removido da revisão!");
+        } else {
+          // Update status if it changed
+          await updateDoc(doc(db, "flashcardReviews", currentCard.id), {
+            status,
+            nextReviewDate: new Date().toISOString() // Simplified logic
+          });
+          toast.success("Revisão agendada!");
+        }
+      } else {
+        // We are studying a new deck
+        if (status !== 'easy') {
+          await addDoc(collection(db, "flashcardReviews"), {
+            uid: auth.currentUser.uid,
+            question: currentCard.question,
+            answer: currentCard.answer,
+            subject: currentCard.subject || topic,
+            status,
+            nextReviewDate: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+          });
+          toast.success("Salvo para revisão!");
+        }
+      }
+
+      // Move to next card
+      setIsFlipped(false);
+      if (currentIndex < flashcards.length - 1) {
+        setCurrentIndex(prev => prev + 1);
+      } else {
+        if (view === 'review') {
+          toast.success("Revisão concluída!");
+          setView('list');
+          setReviewMode(null);
+        } else {
+          toast.success("Você chegou ao fim do deck!");
+        }
+      }
+    } catch (error) {
+      console.error("Error saving review:", error);
+      toast.error("Erro ao salvar revisão.");
+    }
+  };
+
+  const startReview = (mode: 'medium' | 'hard') => {
+    const cardsToReview = mode === 'medium' ? reviewsMedium : reviewsHard;
+    if (cardsToReview.length === 0) {
+      toast.info("Nenhum card para revisar nesta categoria.");
+      return;
+    }
+    
+    // Map FlashcardReview to Flashcard format for the UI
+    const mappedCards: Flashcard[] = cardsToReview.map(r => ({
+      id: r.id,
+      question: r.question,
+      answer: r.answer,
+      subject: r.subject,
+      difficulty: r.status
+    }));
+
+    setFlashcards(mappedCards);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setReviewMode(mode);
+    setView('review');
+  };
 
   return (
     <div className="space-y-8">
@@ -176,9 +289,50 @@ export default function Flashcards() {
 
       {view === 'list' ? (
         <div className="space-y-8">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="hover:border-yellow-400 transition-colors cursor-pointer group bg-yellow-50/50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-900/50" onClick={() => startReview('medium')}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-bold text-yellow-700 dark:text-yellow-500 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    Revisão Questões Médias
+                  </div>
+                  <Badge variant="secondary" className="bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200">
+                    {reviewsMedium.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-yellow-600 dark:text-yellow-400/80">
+                  Flashcards que você marcou como média dificuldade.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-red-400 transition-colors cursor-pointer group bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-900/50" onClick={() => startReview('hard')}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-bold text-red-700 dark:text-red-500 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    Revisão Questões Difíceis
+                  </div>
+                  <Badge variant="secondary" className="bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200">
+                    {reviewsHard.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-red-600 dark:text-red-400/80">
+                  Flashcards que você marcou como alta dificuldade.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
           {savedDecks.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-zinc-800 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Save className="w-5 h-5 text-indigo-500" />
                 Seus Estudos Salvos
               </h2>
@@ -206,7 +360,7 @@ export default function Flashcards() {
           )}
 
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-zinc-800">Exemplos de Flashcards</h2>
+            <h2 className="text-xl font-bold text-white">Exemplos de Flashcards</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-70">
               {[
                 { id: "1", question: "O que é Mitocôndria?", answer: "Organela responsável pela respiração celular e produção de ATP.", subject: "Biologia", difficulty: "easy" },
@@ -261,46 +415,53 @@ export default function Flashcards() {
               </Card>
 
               {/* Back */}
-              <Card className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-12 text-center border-2 border-indigo-100 shadow-xl bg-indigo-50/30 [transform:rotateY(180deg)]">
+              <Card className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-12 text-center border-2 border-indigo-100 dark:border-indigo-900 shadow-xl bg-indigo-50/30 dark:bg-zinc-800 [transform:rotateY(180deg)]">
                 <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-4">Resposta</span>
-                <div className="text-xl text-zinc-800 leading-relaxed prose prose-indigo max-w-none">
+                <div className="text-xl text-zinc-800 dark:text-white dark:font-bold leading-relaxed prose prose-indigo max-w-none">
                   <Markdown>{currentCard?.answer}</Markdown>
                 </div>
               </Card>
             </motion.div>
           </div>
 
-          <div className="flex justify-center gap-4">
-            <Button 
-              variant="outline" 
-              size="lg" 
-              className="rounded-full w-14 h-14 p-0 border-red-200 text-red-500 hover:bg-red-50"
-              onClick={() => {
-                setIsFlipped(false);
-                setCurrentIndex((prev) => (prev + 1) % flashcards.length);
-              }}
-            >
-              <X className="w-6 h-6" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="lg" 
-              className="rounded-full w-14 h-14 p-0 border-zinc-200 text-zinc-500 hover:bg-zinc-50"
-              onClick={() => setIsFlipped(!isFlipped)}
-            >
-              <RotateCcw className="w-6 h-6" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="lg" 
-              className="rounded-full w-14 h-14 p-0 border-green-200 text-green-500 hover:bg-green-50"
-              onClick={() => {
-                setIsFlipped(false);
-                setCurrentIndex((prev) => (prev + 1) % flashcards.length);
-              }}
-            >
-              <Check className="w-6 h-6" />
-            </Button>
+          <div className="flex justify-center gap-4 min-h-[56px]">
+            {isFlipped ? (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="rounded-full px-8 h-14 border-green-200 text-green-600 hover:bg-green-50 dark:bg-zinc-900 dark:border-green-900 dark:text-white dark:font-bold dark:hover:bg-green-900/50"
+                  onClick={(e) => { e.stopPropagation(); handleReview('easy'); }}
+                >
+                  Fácil
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="rounded-full px-8 h-14 border-yellow-200 text-yellow-600 hover:bg-yellow-50 dark:bg-zinc-900 dark:border-yellow-900 dark:text-white dark:font-bold dark:hover:bg-yellow-900/50"
+                  onClick={(e) => { e.stopPropagation(); handleReview('medium'); }}
+                >
+                  Média
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="rounded-full px-8 h-14 border-red-200 text-red-600 hover:bg-red-50 dark:bg-zinc-900 dark:border-red-900 dark:text-white dark:font-bold dark:hover:bg-red-900/50"
+                  onClick={(e) => { e.stopPropagation(); handleReview('hard'); }}
+                >
+                  Difícil
+                </Button>
+              </>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="rounded-full px-8 h-14 border-zinc-200 text-zinc-500 hover:bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800 dark:text-white dark:hover:bg-zinc-800"
+                onClick={() => setIsFlipped(true)}
+              >
+                <RotateCcw className="w-5 h-5 mr-2" /> Mostrar Resposta
+              </Button>
+            )}
           </div>
 
           <div className="flex flex-col gap-6">
@@ -327,12 +488,14 @@ export default function Flashcards() {
               </Button>
             </div>
 
-            <Button 
-              onClick={handleFinishStudy}
-              className="w-full bg-green-600 hover:bg-green-700 font-bold"
-            >
-              Finalizar Estudo e Salvar Deck
-            </Button>
+            {view !== 'review' && (
+              <Button 
+                onClick={handleFinishStudy}
+                className="w-full bg-green-600 hover:bg-green-700 font-bold"
+              >
+                Finalizar Estudo e Salvar Deck
+              </Button>
+            )}
           </div>
         </div>
       )}

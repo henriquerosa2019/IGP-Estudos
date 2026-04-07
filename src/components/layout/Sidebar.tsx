@@ -24,7 +24,7 @@ const menuItems = [
   { icon: FileText, label: "Editais", path: "/editais" },
   { icon: Calendar, label: "Plano de Estudos", path: "/plano" },
   { icon: BookOpen, label: "Flashcards", path: "/flashcards" },
-  { icon: MessageSquare, label: "Tutor IA", path: "/tutor" },
+  { icon: MessageSquare, label: "KvernAI", path: "/tutor" },
 ];
 
 export function Sidebar({ onClose }: { onClose?: () => void }) {
