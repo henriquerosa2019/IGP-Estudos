@@ -113,28 +113,22 @@ export default function StudyPlan() {
   };
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      const uid = getUid();
-
-      const qPlans = query(collection(db, "plans"));
-      const unsubscribePlans = onSnapshot(qPlans, (snapshot) => {
-        const parsedPlans = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlanType));
-        setSavedPlans(parsedPlans);
-      });
-
-      const qNotices = query(collection(db, "notices"));
-      const unsubscribeNotices = onSnapshot(qNotices, (snapshot) => {
-        const parsedNotices = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
-        setSavedNotices(parsedNotices);
-      });
-
-      return () => {
-        unsubscribePlans();
-        unsubscribeNotices();
-      };
+    const qPlans = query(collection(db, "plans"));
+    const unsubscribePlans = onSnapshot(qPlans, (snapshot) => {
+      const parsedPlans = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlanType));
+      setSavedPlans(parsedPlans);
     });
 
-    return () => unsubscribeAuth();
+    const qNotices = query(collection(db, "notices"));
+    const unsubscribeNotices = onSnapshot(qNotices, (snapshot) => {
+      const parsedNotices = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
+      setSavedNotices(parsedNotices);
+    });
+
+    return () => {
+      unsubscribePlans();
+      unsubscribeNotices();
+    };
   }, []);
 
   const handleCreateManualPlan = async () => {

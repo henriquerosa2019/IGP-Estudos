@@ -11,8 +11,8 @@ export function MainLayout() {
     <div className="flex min-h-screen bg-zinc-50">
       {/* Mobile Menu Toggle */}
       <div className="md:hidden fixed top-4 left-4 z-50">
-        <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-          {isSidebarOpen ? <X /> : <Menu />}
+        <Button variant="ghost" size="icon" className="w-12 h-12" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+          {isSidebarOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
         </Button>
       </div>
 

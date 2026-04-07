@@ -48,57 +48,51 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      const uid = getUid();
+    const q = query(collection(db, "plans"));
+    const unsubscribePlans = onSnapshot(q, (snapshot) => {
+      const parsedPlans = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlan));
+      setPlans(parsedPlans);
 
-      const q = query(collection(db, "plans"));
-      const unsubscribePlans = onSnapshot(q, (snapshot) => {
-        const parsedPlans = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlan));
-        setPlans(parsedPlans);
+      // Calculate stats
+      let totalCompleted = 0;
+      let totalMinutes = 0;
+      const subjects: Record<string, { total: number, completed: number }> = {};
 
-        // Calculate stats
-        let totalCompleted = 0;
-        let totalMinutes = 0;
-        const subjects: Record<string, { total: number, completed: number }> = {};
-
-        parsedPlans.forEach(plan => {
-          plan.schedule.forEach(day => {
-            day.topics.forEach(topic => {
-              if (topic.completed) {
-                totalCompleted++;
-                totalMinutes += topic.actualDuration || 0;
-              }
-              
-              if (!subjects[topic.subject]) {
-                subjects[topic.subject] = { total: 0, completed: 0 };
-              }
-              subjects[topic.subject].total++;
-              if (topic.completed) {
-                subjects[topic.subject].completed++;
-              }
-            });
+      parsedPlans.forEach(plan => {
+        plan.schedule.forEach(day => {
+          day.topics.forEach(topic => {
+            if (topic.completed) {
+              totalCompleted++;
+              totalMinutes += topic.actualDuration || 0;
+            }
+            
+            if (!subjects[topic.subject]) {
+              subjects[topic.subject] = { total: 0, completed: 0 };
+            }
+            subjects[topic.subject].total++;
+            if (topic.completed) {
+              subjects[topic.subject].completed++;
+            }
           });
         });
-
-        const hours = (totalMinutes / 60).toFixed(1);
-        const progressList = Object.entries(subjects).map(([name, data]) => ({
-          subject: name,
-          progress: Math.round((data.completed / data.total) * 100)
-        })).sort((a, b) => b.progress - a.progress);
-
-        setSubjectProgress(progressList);
-        setStats([
-          { label: "Tópicos Concluídos", value: totalCompleted.toString(), icon: CheckCircle2, color: "text-green-500" },
-          { label: "Horas de Estudo", value: `${hours}h`, icon: Clock, color: "text-blue-500" },
-          { label: "Ofensiva", value: "1 dia", icon: Trophy, color: "text-orange-500" },
-          { label: "Precisão", value: "100%", icon: TrendingUp, color: "text-indigo-500" },
-        ]);
       });
 
-      return () => unsubscribePlans();
+      const hours = (totalMinutes / 60).toFixed(1);
+      const progressList = Object.entries(subjects).map(([name, data]) => ({
+        subject: name,
+        progress: Math.round((data.completed / data.total) * 100)
+      })).sort((a, b) => b.progress - a.progress);
+
+      setSubjectProgress(progressList);
+      setStats([
+        { label: "Tópicos Concluídos", value: totalCompleted.toString(), icon: CheckCircle2, color: "text-green-500" },
+        { label: "Horas de Estudo", value: `${hours}h`, icon: Clock, color: "text-blue-500" },
+        { label: "Ofensiva", value: "1 dia", icon: Trophy, color: "text-orange-500" },
+        { label: "Precisão", value: "100%", icon: TrendingUp, color: "text-indigo-500" },
+      ]);
     });
 
-    return () => unsubscribeAuth();
+    return () => unsubscribePlans();
   }, []);
 
   return (

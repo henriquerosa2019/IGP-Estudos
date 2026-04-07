@@ -128,7 +128,7 @@ export default function Notices() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, []);
 
   const handleLogin = async () => {
     try {
