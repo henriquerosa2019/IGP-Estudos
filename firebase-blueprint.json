@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "surname": { "type": "string" },
+        "cpf": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "avatar": { "type": "string" },
+        "enrolledContest": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] }
+      },
+      "required": ["id", "name", "surname", "email"]
+    },
+    "ExamNotice": {
+      "title": "Exam Notice",
+      "description": "Information about an exam notice and its subjects",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string", "description": "Owner of the notice" },
+        "name": { "type": "string" },
+        "content": { "type": "string" },
+        "examDate": { "type": "string", "format": "date" },
+        "subjects": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Subject" }
+        },
+        "hasPlanoVertical": { "type": "boolean" },
+        "hasCalendario": { "type": "boolean" }
+      },
+      "required": ["id", "uid", "name", "content", "subjects"]
+    },
+    "Subject": {
+      "title": "Subject",
+      "description": "A study subject within an exam notice",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "weight": { "type": "integer" },
+        "importance": { "type": "string", "enum": ["low", "medium", "high"] },
+        "topics": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "progress": { "type": "number" }
+      },
+      "required": ["name", "weight", "importance", "topics"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Store user profile data"
+    },
+    "/notices/{noticeId}": {
+      "schema": "ExamNotice",
+      "description": "Store exam notices and their subjects"
+    }
+  }
+}

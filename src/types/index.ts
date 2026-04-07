@@ -1,0 +1,74 @@
+export interface User {
+  id: string;
+  name: string;
+  surname: string;
+  cpf?: string;
+  whatsapp?: string;
+  email: string;
+  avatar?: string;
+  enrolledContest?: string;
+  paymentMethod?: string;
+  role?: 'user' | 'admin';
+}
+
+export interface StudyPlan {
+  id: string;
+  title: string;
+  goal: string;
+  startDate: string;
+  endDate: string;
+  schedule: DaySchedule[];
+  examDate?: string;
+  notices?: string[]; // Content of the notices analyzed
+}
+
+export interface DaySchedule {
+  day: string;
+  topics: Topic[];
+}
+
+export interface Topic {
+  id: string;
+  title: string;
+  subject: string;
+  duration: number; // planned duration in minutes
+  completed: boolean;
+  startTime?: string;
+  endTime?: string;
+  actualDuration?: number; // in minutes
+  type: 'study' | 'revision';
+}
+
+export interface Flashcard {
+  id: string;
+  question: string;
+  answer: string;
+  subject: string;
+  lastReviewed?: string;
+  nextReview?: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+export interface ProgressData {
+  date: string;
+  completedTopics: number;
+  accuracy: number;
+}
+
+export interface ExamNotice {
+  id: string;
+  name: string;
+  content: string;
+  subjects: Subject[];
+  examDate?: string;
+  hasPlanoVertical?: boolean;
+  hasCalendario?: boolean;
+}
+
+export interface Subject {
+  name: string;
+  weight: number; // 1 to 5
+  importance: 'low' | 'medium' | 'high';
+  topics?: string[]; // The full content of the discipline (topics list)
+  progress?: number; // 0 to 100
+}

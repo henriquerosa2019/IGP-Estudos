@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - id: string (required) - User ID
+    //   - name: string (required) - Display name
+    //   - email: string (required, email) - User email
+    //   - avatar: string (optional) - Avatar URL
+    //   - role: string (optional, enum: ['user', 'admin']) - User role
+    //
+    // Collection: notices
+    // Document ID: {noticeId}
+    // Fields:
+    //   - id: string (required) - Notice ID
+    //   - uid: string (required) - Owner UID
+    //   - name: string (required) - Notice name
+    //   - content: string (required) - Full notice content
+    //   - examDate: string (optional, date) - Exam date
+    //   - subjects: list (required) - List of Subject objects
+    //   - hasPlanoVertical: bool (optional)
+    //   - hasCalendario: bool (optional)
+    //
+    // Subject (nested in notices):
+    //   - name: string (required)
+    //   - weight: number (required, 1-5)
+    //   - importance: string (required, enum: ['low', 'medium', 'high'])
+    //   - topics: list (required, strings)
+    //   - progress: number (optional, 0-100)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isRequestOwner() {
+      return isAuthenticated() && request.auth.uid == request.resource.data.uid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'surname', 'email']) &&
+             data.id is string && data.id == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.surname is string && data.surname.size() > 0 && data.surname.size() < 100 &&
+             isValidEmail(data.email) &&
+             (!('cpf' in data) || (data.cpf is string && data.cpf.size() <= 14)) &&
+             (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() <= 20)) &&
+             (!('enrolledContest' in data) || (data.enrolledContest is string && data.enrolledContest.size() < 200)) &&
+             (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() < 100)) &&
+             (!('role' in data) || data.role in ['user', 'admin']);
+    }
+
+    function isValidSubject(subject) {
+      return subject.keys().hasAll(['name', 'weight', 'importance', 'topics']) &&
+             subject.name is string && subject.name.size() > 0 && subject.name.size() < 200 &&
+             subject.weight is number && subject.weight >= 1 && subject.weight <= 5 &&
+             subject.importance in ['low', 'medium', 'high'] &&
+             subject.topics is list &&
+             (!('progress' in subject) || (subject.progress is number && subject.progress >= 0 && subject.progress <= 100));
+    }
+
+    function isValidNotice(data) {
+      return data.keys().hasAll(['uid', 'name', 'content', 'subjects']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.content is string && data.content.size() < 500000 &&
+             data.subjects is list &&
+             data.subjects.size() < 100 &&
+             (!('id' in data) || data.id is string);
+    }
+
+    function isValidPlan(data) {
+      return data.keys().hasAll(['uid', 'title', 'goal', 'startDate', 'endDate', 'notices', 'schedule']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.goal is string &&
+             data.startDate is string &&
+             data.endDate is string &&
+             data.notices is list &&
+             data.schedule is list;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if true; // Permite verificação de duplicidade (CPF, Email, WhatsApp)
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /notices/{noticeId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isRequestOwner() && isValidNotice(request.resource.data);
+      allow update: if isDocOwner() && isRequestOwner() && isValidNotice(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    match /plans/{planId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isRequestOwner() && isValidPlan(request.resource.data);
+      allow update: if isDocOwner() && isRequestOwner() && isValidPlan(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+  }
+}
