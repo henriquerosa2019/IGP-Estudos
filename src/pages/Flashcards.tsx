@@ -104,8 +104,8 @@ export default function Flashcards() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Flashcards</h1>
-          <p className="text-zinc-500 mt-2">Memorização ativa com repetição espaçada.</p>
+          <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Flashcards</h1>
+          <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Memorização ativa com repetição espaçada.</p>
         </div>
         {view === 'list' ? (
           <Button onClick={handleStartStudy} className="bg-indigo-600 hover:bg-indigo-700 gap-2">

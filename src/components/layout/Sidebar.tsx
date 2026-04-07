@@ -7,7 +7,9 @@ import {
   LogOut,
   GraduationCap,
   Timer,
-  FileText
+  FileText,
+  Moon,
+  Sun
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -29,8 +31,11 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const location = useLocation();
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
+    setIsDark(document.documentElement.classList.contains('dark'));
+    
     let interval: any;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
@@ -42,6 +47,18 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
+  const toggleTheme = () => {
+    const newTheme = !isDark;
+    setIsDark(newTheme);
+    if (newTheme) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -52,9 +69,9 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     <div className="w-64 h-screen bg-zinc-950 text-zinc-400 flex flex-col border-r border-zinc-800">
       <div className="p-6 flex flex-col items-center justify-center mb-2">
         <img 
-          src="https://www.dropbox.com/scl/fi/r0kvtpyqeb86r34575k6r/kverna.PNG?rlkey=oswgo2suwgyx4yms3jtrpuhn1&st=0tj8q1se&raw=1" 
+          src="https://www.dropbox.com/scl/fi/buu29rs0lp3l1j21fm3yz/kverna-removebg-preview.png?rlkey=j8t4uqgb0ec2x0xjm83jwn13z&st=utvwkcjt&raw=1" 
           alt="Kverna Logo" 
-          className="h-32 w-auto object-contain"
+          className="h-48 w-auto object-contain"
           referrerPolicy="no-referrer"
         />
         <span className="mt-4 text-red-600 text-2xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Kverna Concurso 2.0</span>
@@ -79,21 +96,21 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         ))}
       </nav>
 
-      <div className="p-1.5 mx-3 mb-1.5 bg-zinc-900 rounded-md border border-zinc-800">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-1 text-zinc-200">
-            <Timer className="w-3 h-3" />
-            <span className="text-[9px] font-bold uppercase tracking-wider">Pomodoro</span>
+      <div className="p-2 mx-3 mb-2 bg-black rounded-md border border-red-900/50 shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5 text-red-600">
+            <Timer className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Pomodoro</span>
           </div>
-          <span className="text-[10px] font-mono text-red-600">{formatTime(timeLeft)}</span>
+          <span className="text-xs font-mono font-bold text-red-600">{formatTime(timeLeft)}</span>
         </div>
         <button 
           onClick={() => setIsActive(!isActive)}
           className={cn(
-            "w-full py-0.5 rounded text-[9px] font-bold transition-all uppercase tracking-wide",
+            "w-full py-1 rounded text-[10px] font-bold transition-all uppercase tracking-widest",
             isActive 
-              ? "bg-zinc-800 text-red-600 hover:bg-zinc-700" 
-              : "bg-red-600 text-white hover:bg-red-700"
+              ? "bg-zinc-900 text-red-600 border border-red-900/50 hover:bg-zinc-800" 
+              : "bg-red-700 text-white hover:bg-red-600 shadow-md shadow-red-900/20"
           )}
         >
           {isActive ? "Pausar" : "Focar"}
@@ -101,6 +118,13 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       </div>
 
       <div className="p-4 border-t border-zinc-800 space-y-1">
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-zinc-900 hover:text-red-600 text-zinc-400"
+        >
+          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          <span className="font-medium">Trocar Tela</span>
+        </button>
         <Link 
           to="/configuracoes"
           onClick={onClose}

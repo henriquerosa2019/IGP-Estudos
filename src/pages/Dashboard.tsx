@@ -181,17 +181,17 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="space-y-8 text-zinc-900">
+    <div className="space-y-8 text-zinc-900 dark:text-zinc-50">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900">Bem-vindo de volta!</h1>
-          <p className="text-zinc-500 mt-2 text-lg">Seu progresso é medido por cada tópico concluído nos seus editais.</p>
+          <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Bem-vindo de volta!</h1>
+          <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Seu progresso é medido por cada tópico concluído nos seus editais.</p>
         </div>
         <div className="p-4 bg-black rounded-2xl border border-zinc-800 shadow-sm flex flex-col items-center justify-center gap-2">
           <img 
-            src="https://www.dropbox.com/scl/fi/r0kvtpyqeb86r34575k6r/kverna.PNG?rlkey=oswgo2suwgyx4yms3jtrpuhn1&st=0tj8q1se&raw=1" 
+            src="https://www.dropbox.com/scl/fi/buu29rs0lp3l1j21fm3yz/kverna-removebg-preview.png?rlkey=j8t4uqgb0ec2x0xjm83jwn13z&st=utvwkcjt&raw=1" 
             alt="Kverna Logo" 
-            className="h-24 w-auto object-contain"
+            className="h-36 w-auto object-contain"
             referrerPolicy="no-referrer"
           />
           <span className="text-red-600 text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Kverna Concurso 2.0</span>

@@ -8,7 +8,7 @@ export function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-zinc-50">
+    <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
       {/* Mobile Menu Toggle */}
       <div className="md:hidden fixed top-4 left-4 z-50">
         <Button variant="ghost" size="icon" className="w-12 h-12" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>

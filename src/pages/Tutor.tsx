@@ -238,8 +238,8 @@ export default function Tutor() {
             <BrainCircuit className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Tutor IA</h1>
-            <p className="text-zinc-500">Tire suas dúvidas em tempo real com inteligência artificial.</p>
+            <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Tutor IA</h1>
+            <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Tire suas dúvidas em tempo real com inteligência artificial.</p>
           </div>
         </div>
         <div className="flex gap-2">

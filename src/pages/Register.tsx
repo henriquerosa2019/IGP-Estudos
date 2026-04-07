@@ -223,9 +223,9 @@ export default function Register() {
     <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-4 py-12">
       <div className="mb-8 flex flex-col items-center">
         <img 
-          src="https://www.dropbox.com/scl/fi/r0kvtpyqeb86r34575k6r/kverna.PNG?rlkey=oswgo2suwgyx4yms3jtrpuhn1&st=0tj8q1se&raw=1" 
+          src="https://www.dropbox.com/scl/fi/buu29rs0lp3l1j21fm3yz/kverna-removebg-preview.png?rlkey=j8t4uqgb0ec2x0xjm83jwn13z&st=utvwkcjt&raw=1" 
           alt="Kverna Logo" 
-          className="h-32 w-auto object-contain mb-4"
+          className="h-48 w-auto object-contain mb-4"
           referrerPolicy="no-referrer"
         />
         <h1 className="text-4xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Kverna Concurso 2.0</h1>

@@ -495,8 +495,8 @@ export default function Notices() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Meus Editais</h1>
-          <p className="text-zinc-500 mt-2">Gerencie os editais para cruzamento de matérias e criação de planos.</p>
+          <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Meus Editais</h1>
+          <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Gerencie os editais para cruzamento de matérias e criação de planos.</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -837,7 +837,7 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-bold text-zinc-900">{subject.name}</h4>
                                   <Badge variant={subject.importance === 'high' ? 'destructive' : subject.importance === 'medium' ? 'default' : 'secondary'} className="text-[10px] py-0">
-                                    {subject.importance.toUpperCase()}
+                                    {subject.importance === 'high' ? 'ALTA' : subject.importance === 'medium' ? 'MÉDIA' : 'BAIXA'}
                                   </Badge>
                                 </div>
                                 <div className="flex items-center gap-4 mt-1">

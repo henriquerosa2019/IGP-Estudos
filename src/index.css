@@ -24,7 +24,7 @@
 }
 
 body {
-  @apply antialiased text-zinc-900 bg-zinc-50;
+  @apply antialiased text-zinc-900 bg-zinc-50 dark:bg-zinc-950 dark:text-zinc-50;
 }
 
 /* Custom scrollbar for a cleaner look */
