@@ -12,7 +12,7 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   ResponsiveContainer,
 } from "recharts";
 import { 
@@ -26,14 +26,15 @@ import { StudyPlan } from "@/types";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function Dashboard() {
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [stats, setStats] = useState([
-    { label: "Tópicos Concluídos", value: "0", icon: CheckCircle2, color: "text-green-500" },
-    { label: "Horas de Estudo", value: "0h", icon: Clock, color: "text-blue-500" },
-    { label: "Ofensiva", value: "0 dias", icon: Trophy, color: "text-orange-500" },
-    { label: "Precisão", value: "0%", icon: TrendingUp, color: "text-indigo-500" },
+    { label: "Tópicos Concluídos", value: "0", icon: CheckCircle2, color: "text-green-500", description: "", tooltip: "" },
+    { label: "Horas de Estudo", value: "0h", icon: Clock, color: "text-blue-500", description: "", tooltip: "" },
+    { label: "Ofensiva", value: "0 dias", icon: Trophy, color: "text-orange-500", description: "Dias seguidos de estudo", tooltip: "Sua ofensiva aumenta a cada dia consecutivo que você conclui pelo menos um tópico de estudo." },
+    { label: "Precisão", value: "0%", icon: TrendingUp, color: "text-indigo-500", description: "Acertos nos flashcards", tooltip: "Sua precisão é calculada com base na quantidade de flashcards que você acertou (marcou como fácil) durante as revisões." },
   ]);
   const [subjectProgress, setSubjectProgress] = useState<{subject: string, progress: number}[]>([]);
 
@@ -167,10 +168,10 @@ export default function Dashboard() {
       })));
 
       setStats([
-        { label: "Tópicos Concluídos", value: totalCompleted.toString(), icon: CheckCircle2, color: "text-green-500" },
-        { label: "Horas de Estudo", value: `${hours}h`, icon: Clock, color: "text-blue-500" },
-        { label: "Ofensiva", value: `${streak} dia${streak !== 1 ? 's' : ''}`, icon: Trophy, color: "text-orange-500" },
-        { label: "Precisão", value: accuracy, icon: TrendingUp, color: "text-indigo-500" },
+        { label: "Tópicos Concluídos", value: totalCompleted.toString(), icon: CheckCircle2, color: "text-green-500", description: "", tooltip: "" },
+        { label: "Horas de Estudo", value: `${hours}h`, icon: Clock, color: "text-blue-500", description: "", tooltip: "" },
+        { label: "Ofensiva", value: `${streak} dia${streak !== 1 ? 's' : ''}`, icon: Trophy, color: "text-orange-500", description: "Dias seguidos de estudo", tooltip: "Sua ofensiva aumenta a cada dia consecutivo que você conclui pelo menos um tópico de estudo." },
+        { label: "Precisão", value: accuracy, icon: TrendingUp, color: "text-indigo-500", description: "Acertos nos flashcards", tooltip: "Sua precisão é calculada com base na quantidade de flashcards que você acertou (marcou como fácil) durante as revisões." },
       ]);
     };
 
@@ -200,17 +201,31 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium text-zinc-500">
-                {stat.label}
-              </CardTitle>
-              <stat.icon className={`w-4 h-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-            </CardContent>
-          </Card>
+          <Tooltip key={stat.label}>
+            <TooltipTrigger>
+              <Card className="cursor-help transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
+                <CardHeader className="flex flex-row items-start justify-between pb-2 space-y-0">
+                  <div>
+                    <CardTitle className="text-sm font-medium text-zinc-500">
+                      {stat.label}
+                    </CardTitle>
+                    {stat.description && (
+                      <p className="text-[10px] text-zinc-400 mt-0.5">{stat.description}</p>
+                    )}
+                  </div>
+                  <stat.icon className={`w-4 h-4 ${stat.color} mt-1`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            {stat.tooltip && (
+              <TooltipContent className="max-w-[250px] text-center bg-zinc-900 text-white border-zinc-800">
+                <p>{stat.tooltip}</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
         ))}
       </div>
 
@@ -226,7 +241,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} />
-                <Tooltip 
+                <RechartsTooltip 
                   cursor={{fill: '#f8f8f8'}}
                   contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}
                 />

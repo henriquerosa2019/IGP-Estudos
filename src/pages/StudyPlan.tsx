@@ -43,6 +43,7 @@ import { collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot, query, where
 import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { PlanViewer } from "@/components/PlanViewer";
 
 export default function StudyPlan() {
@@ -320,9 +321,18 @@ export default function StudyPlan() {
                       <Label>Horas por Dia</Label>
                       <Input type="number" value={hours} onChange={(e) => setHours(Number(e.target.value))} />
                     </div>
-                    <Button className="w-full bg-indigo-600" onClick={handleCreateManualPlan} disabled={loading}>
-                      {loading ? "Gerando..." : "Gerar Plano"}
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Button className="w-full bg-red-600 hover:bg-red-700 text-white font-bold" onClick={handleCreateManualPlan} disabled={loading}>
+                            {loading ? "Gerando..." : "Gerar Plano"}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-zinc-900 text-white border-zinc-800 max-w-xs">
+                          <p>A ação Gerar Plano utiliza Inteligência Artificial para criar um cronograma personalizado com base nos seus objetivos, matérias e tempo disponível.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -371,9 +381,18 @@ export default function StudyPlan() {
                         {savedNotices.length === 0 && (
                           <div className="text-center py-8">
                             <p className="text-zinc-400 text-sm italic mb-4">Nenhum edital cadastrado.</p>
-                            <Link to="/editais">
-                              <Button variant="secondary" size="sm">Cadastrar Editais</Button>
-                            </Link>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Link to="/editais">
+                                    <Button variant="secondary" size="sm">Cadastrar Editais</Button>
+                                  </Link>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-zinc-900 text-white border-zinc-800 max-w-xs">
+                                  <p>Cadastre editais (ex: PRF, PF, PC, PM) para que a IA cruze os dados, determine as matérias comuns da carreira policial e ajude na criação de um planejamento mais efetivo para sua aprovação.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         )}
                         {savedNotices.map(n => (

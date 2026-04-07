@@ -28,7 +28,7 @@ import { generateFlashcards } from "@/lib/gemini";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
 import { db, auth } from "@/lib/firebase";
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, onSnapshot } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, onSnapshot, updateDoc } from "firebase/firestore";
 
 interface Flashcard {
   id?: string;
@@ -221,7 +221,7 @@ export default function Flashcards() {
           <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Memorização ativa com repetição espaçada.</p>
         </div>
         {view === 'list' ? (
-          <Button onClick={handleStartStudy} className="bg-indigo-600 hover:bg-indigo-700 gap-2">
+          <Button onClick={handleStartStudy} className="bg-indigo-600 hover:bg-indigo-700 dark:bg-zinc-900 dark:text-red-600 dark:hover:bg-zinc-800 dark:border dark:border-red-900/50 gap-2">
             <Layers className="w-4 h-4" />
             Estudar Agora
           </Button>

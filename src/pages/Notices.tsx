@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Type } from "@google/genai";
 import { auth, db, googleProvider } from "@/lib/firebase";
 import { ai } from "@/lib/gemini";
@@ -509,9 +510,18 @@ export default function Notices() {
             Sair
           </Button>
           {!isAdding && !selectedNotice && (
-            <Button onClick={() => setIsAdding(true)} className="gap-2 bg-indigo-600">
-              <Plus className="w-4 h-4" /> Novo Edital
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button onClick={() => setIsAdding(true)} className="gap-2 bg-indigo-600">
+                    <Plus className="w-4 h-4" /> Novo Edital
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="bg-zinc-900 text-white border-zinc-800 max-w-xs">
+                  <p>Cadastre editais (ex: PRF, PF, PC, PM) para que a IA cruze os dados, determine as matérias comuns da carreira policial e ajude na criação de um planejamento mais efetivo para sua aprovação.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           {(isAdding || selectedNotice) && (
             <Button onClick={() => { setIsAdding(false); setSelectedNotice(null); }} variant="ghost" className="gap-2">
@@ -530,13 +540,13 @@ export default function Notices() {
             exit={{ opacity: 0, y: -20 }}
           >
             <div className="max-w-3xl mx-auto space-y-6">
-              <Card className="border-indigo-200 bg-indigo-50/50">
+              <Card className="border-red-200 bg-white dark:bg-white shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-indigo-900">
+                  <CardTitle className="flex items-center gap-2 text-red-600">
                     <Sparkles className="w-5 h-5" />
                     Importar Edital via Link
                   </CardTitle>
-                  <CardDescription className="text-indigo-800/70">
+                  <CardDescription className="text-red-500/80">
                     Cole o link do edital (ex: QConcursos) ou envie um arquivo PDF e clique em "Importar". O sistema extrairá o conteúdo automaticamente para você.
                   </CardDescription>
                 </CardHeader>
@@ -546,22 +556,22 @@ export default function Notices() {
                       placeholder="https://app.qconcursos.com/..." 
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
-                      className="bg-white"
+                      className="bg-white text-zinc-900 border-red-200 placeholder:text-red-300"
                     />
                     <Button 
                       onClick={handleImport} 
                       disabled={importing || !url}
-                      className="bg-indigo-600 hover:bg-indigo-700"
+                      className="bg-red-600 hover:bg-red-700 text-white"
                     >
                       {importing ? "Importando..." : "Importar Link"}
                     </Button>
                   </div>
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-indigo-200" />
+                      <span className="w-full border-t border-red-200" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-indigo-50 px-2 text-indigo-600">Ou</span>
+                      <span className="bg-white px-2 text-red-600">Ou</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -572,12 +582,12 @@ export default function Notices() {
                         const file = e.target.files?.[0];
                         if (file) handleFileUpload(file);
                       }}
-                      className="bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                      className="bg-white text-zinc-900 border-red-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
                     />
                   </div>
                   {importing && (
                     <div className="space-y-1">
-                      <div className="flex justify-between text-xs text-indigo-600">
+                      <div className="flex justify-between text-xs text-red-600">
                         <span>Progresso</span>
                         <span>{importProgress}%</span>
                       </div>

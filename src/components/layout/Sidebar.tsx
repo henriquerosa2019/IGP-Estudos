@@ -9,7 +9,8 @@ import {
   Timer,
   FileText,
   Moon,
-  Sun
+  Sun,
+  HelpCircle
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ import { toast } from "sonner";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: HelpCircle, label: "Comece aqui", path: "/comece-aqui" },
   { icon: FileText, label: "Editais", path: "/editais" },
   { icon: Calendar, label: "Plano de Estudos", path: "/plano" },
   { icon: BookOpen, label: "Flashcards", path: "/flashcards" },
