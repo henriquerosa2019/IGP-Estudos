@@ -28,6 +28,9 @@ import { ai } from "@/lib/gemini";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
+import { collection, query, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { StudyPlan } from "@/types";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -51,6 +54,7 @@ export default function Tutor() {
   const [showHistory, setShowHistory] = useState(false);
   const [dailyCount, setDailyCount] = useState(0);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [userContext, setUserContext] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,6 +77,43 @@ export default function Tutor() {
     } else {
       localStorage.setItem("aestudamos_tutor_daily", JSON.stringify({ count: 0, date: today }));
     }
+
+    // Fetch user context
+    const fetchContext = async () => {
+      try {
+        const q = query(collection(db, "plans"));
+        const snapshot = await getDocs(q);
+        const plans = snapshot.docs.map(doc => doc.data() as StudyPlan);
+        
+        let completedTopics: string[] = [];
+        let currentTopics: string[] = [];
+        
+        plans.forEach(plan => {
+          plan.schedule.forEach(day => {
+            day.topics.forEach(topic => {
+              if (topic.completed) {
+                completedTopics.push(`${topic.subject}: ${topic.title}`);
+              } else {
+                currentTopics.push(`${topic.subject}: ${topic.title}`);
+              }
+            });
+          });
+        });
+
+        const contextStr = `
+        Contexto do Aluno:
+        - Tópicos já estudados recentemente: ${completedTopics.slice(-5).join(", ") || "Nenhum ainda"}
+        - Tópicos pendentes no plano: ${currentTopics.slice(0, 5).join(", ") || "Nenhum plano ativo"}
+        
+        Use esse contexto para personalizar suas respostas, dar exemplos relevantes às matérias que ele está estudando e motivá-lo com base no seu progresso.
+        `;
+        setUserContext(contextStr);
+      } catch (error) {
+        console.error("Erro ao buscar contexto:", error);
+      }
+    };
+    
+    fetchContext();
   }, []);
 
   const updateDailyCount = (newCount: number) => {
@@ -169,7 +210,9 @@ export default function Tutor() {
         model: "gemini-3-flash-preview",
         contents: history,
         config: {
-          systemInstruction: "Você é um tutor de estudos objetivo e estruturado. Responda de forma clara, organizada (usando tópicos se necessário) e em linguagem simples para leigos. Evite rodeios e explicações excessivamente longas.",
+          systemInstruction: `Você é um tutor de estudos objetivo e estruturado. Responda de forma clara, organizada (usando tópicos se necessário) e em linguagem simples para leigos. Evite rodeios e explicações excessivamente longas.
+          
+          ${userContext}`,
         }
       });
 

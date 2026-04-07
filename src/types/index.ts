@@ -36,6 +36,7 @@ export interface Topic {
   startTime?: string;
   endTime?: string;
   actualDuration?: number; // in minutes
+  completedAt?: string; // ISO date string when it was marked as completed
   type: 'study' | 'revision';
 }
 
@@ -47,6 +48,10 @@ export interface Flashcard {
   lastReviewed?: string;
   nextReview?: string;
   difficulty: 'easy' | 'medium' | 'hard';
+  // SRS fields
+  interval?: number; // in days
+  easeFactor?: number;
+  repetitions?: number;
 }
 
 export interface ProgressData {

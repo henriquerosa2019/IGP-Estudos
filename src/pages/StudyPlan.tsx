@@ -234,6 +234,7 @@ export default function StudyPlan() {
         // Completing study
         topic.endTime = new Date().toISOString();
         topic.completed = true;
+        topic.completedAt = new Date().toISOString();
         
         const start = new Date(topic.startTime).getTime();
         const end = new Date(topic.endTime).getTime();
@@ -247,6 +248,7 @@ export default function StudyPlan() {
       topic.startTime = undefined;
       topic.endTime = undefined;
       topic.actualDuration = undefined;
+      topic.completedAt = undefined;
     }
     
     setPlan(newPlan);

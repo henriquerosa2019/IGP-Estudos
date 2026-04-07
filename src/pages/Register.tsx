@@ -186,7 +186,7 @@ export default function Register() {
             </div>
             <CardTitle className="text-2xl font-bold text-zinc-900">Inscrição Confirmada!</CardTitle>
             <CardDescription className="text-lg">
-              Sua conta foi criada com sucesso na **Kverna Concursos**.
+              Sua conta foi criada com sucesso na **Kverna Concurso 2.0**.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -228,8 +228,8 @@ export default function Register() {
           className="h-32 w-auto object-contain mb-4"
           referrerPolicy="no-referrer"
         />
-        <h1 className="text-3xl font-extrabold text-zinc-900">Kverna Concursos</h1>
-        <p className="text-zinc-500">Inscrição de Novo Aluno</p>
+        <h1 className="text-4xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Kverna Concurso 2.0</h1>
+        <p className="text-zinc-500 mt-2">Inscrição de Novo Aluno</p>
       </div>
 
       <Card className="max-w-2xl w-full border-zinc-200 shadow-lg">

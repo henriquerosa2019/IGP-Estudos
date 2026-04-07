@@ -131,12 +131,13 @@ export const extractSubjectsFromNotice = async (content: string) => {
       ${content}
       
       INSTRUÇÕES:
-      1. Identifique cada disciplina (ex: Português, Matemática, etc).
-      2. Para CADA disciplina, extraia TODOS os tópicos listados no conteúdo programático.
-      3. Não resuma os tópicos. Se o edital diz "1. Ortografia oficial. 2. Acentuação gráfica.", extraia exatamente esses itens.
-      4. Atribua um peso de 1 a 5 baseado na relevância comum para concursos.`,
+      1. Identifique a BANCA EXAMINADORA (ex: Cebraspe, FGV, FCC, Vunesp) se estiver mencionada. Se não, use o padrão geral.
+      2. Identifique cada disciplina (ex: Português, Matemática, etc).
+      3. Para CADA disciplina, extraia TODOS os tópicos listados no conteúdo programático.
+      4. Não resuma os tópicos. Se o edital diz "1. Ortografia oficial. 2. Acentuação gráfica.", extraia exatamente esses itens.
+      5. Atribua um peso de 1 a 5 baseado na relevância comum para concursos e no histórico de cobrança da banca identificada.`,
       config: {
-        systemInstruction: "Você é um especialista em editais de concursos. Sua tarefa é decompor o conteúdo programático em matérias e tópicos detalhados. Retorne APENAS o JSON. Seja exaustivo na extração dos tópicos.",
+        systemInstruction: "Você é um especialista em editais de concursos e bancas examinadoras. Sua tarefa é decompor o conteúdo programático em matérias e tópicos detalhados, ajustando a importância (peso) com base no perfil da banca. Retorne APENAS o JSON. Seja exaustivo na extração dos tópicos.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

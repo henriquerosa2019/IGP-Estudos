@@ -37,6 +37,11 @@ export default function Dashboard() {
   ]);
   const [subjectProgress, setSubjectProgress] = useState<{subject: string, progress: number}[]>([]);
 
+  const [weeklyData, setWeeklyData] = useState<{name: string, horas: number}[]>([
+    { name: "Seg", horas: 0 }, { name: "Ter", horas: 0 }, { name: "Qua", horas: 0 },
+    { name: "Qui", horas: 0 }, { name: "Sex", horas: 0 }, { name: "Sáb", horas: 0 }, { name: "Dom", horas: 0 }
+  ]);
+
   const getUid = () => {
     if (auth.currentUser) return auth.currentUser.uid;
     let localUid = localStorage.getItem('localUid');
@@ -48,22 +53,59 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const q = query(collection(db, "plans"));
-    const unsubscribePlans = onSnapshot(q, (snapshot) => {
-      const parsedPlans = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlan));
-      setPlans(parsedPlans);
+    const qPlans = query(collection(db, "plans"));
+    const qFlashcards = query(collection(db, "flashcards"));
 
+    let flashcardsData: any[] = [];
+    
+    const unsubscribeFlashcards = onSnapshot(qFlashcards, (snapshot) => {
+      flashcardsData = snapshot.docs.map(doc => doc.data());
+      updateStats();
+    });
+
+    let plansData: StudyPlan[] = [];
+
+    const unsubscribePlans = onSnapshot(qPlans, (snapshot) => {
+      plansData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlan));
+      setPlans(plansData);
+      updateStats();
+    });
+
+    const updateStats = () => {
       // Calculate stats
       let totalCompleted = 0;
       let totalMinutes = 0;
       const subjects: Record<string, { total: number, completed: number }> = {};
+      const completedDates = new Set<string>();
+      
+      // For weekly activity
+      const today = new Date();
+      const last7Days = Array.from({length: 7}).map((_, i) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        return {
+          dateStr: d.toISOString().split('T')[0],
+          dayName: d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
+          minutes: 0
+        };
+      }).reverse();
 
-      parsedPlans.forEach(plan => {
+      plansData.forEach(plan => {
         plan.schedule.forEach(day => {
           day.topics.forEach(topic => {
             if (topic.completed) {
               totalCompleted++;
               totalMinutes += topic.actualDuration || 0;
+              
+              if (topic.completedAt) {
+                const dateStr = topic.completedAt.split('T')[0];
+                completedDates.add(dateStr);
+                
+                const weekDay = last7Days.find(d => d.dateStr === dateStr);
+                if (weekDay) {
+                  weekDay.minutes += (topic.actualDuration || 0);
+                }
+              }
             }
             
             if (!subjects[topic.subject]) {
@@ -77,6 +119,41 @@ export default function Dashboard() {
         });
       });
 
+      // Calculate Streak
+      const sortedDates = Array.from(completedDates).sort((a, b) => b.localeCompare(a));
+      let streak = 0;
+      let currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+      
+      const todayStr = currentDate.toISOString().split('T')[0];
+      const yesterday = new Date(currentDate);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      if (sortedDates.includes(todayStr) || sortedDates.includes(yesterdayStr)) {
+        let checkDate = sortedDates.includes(todayStr) ? new Date(currentDate) : new Date(yesterday);
+        
+        for (const dateStr of sortedDates) {
+          const expectedStr = checkDate.toISOString().split('T')[0];
+          if (dateStr === expectedStr) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else if (dateStr < expectedStr) {
+            break;
+          }
+        }
+      }
+
+      // Calculate Accuracy from Flashcards (easeFactor > 2.0 = good)
+      let accuracy = "N/A";
+      if (flashcardsData.length > 0) {
+        const reviewedCards = flashcardsData.filter(c => c.repetitions && c.repetitions > 0);
+        if (reviewedCards.length > 0) {
+          const correctCards = reviewedCards.filter(c => c.easeFactor && c.easeFactor >= 2.0);
+          accuracy = `${Math.round((correctCards.length / reviewedCards.length) * 100)}%`;
+        }
+      }
+
       const hours = (totalMinutes / 60).toFixed(1);
       const progressList = Object.entries(subjects).map(([name, data]) => ({
         subject: name,
@@ -84,15 +161,23 @@ export default function Dashboard() {
       })).sort((a, b) => b.progress - a.progress);
 
       setSubjectProgress(progressList);
+      setWeeklyData(last7Days.map(d => ({
+        name: d.dayName.charAt(0).toUpperCase() + d.dayName.slice(1),
+        horas: Number((d.minutes / 60).toFixed(1))
+      })));
+
       setStats([
         { label: "Tópicos Concluídos", value: totalCompleted.toString(), icon: CheckCircle2, color: "text-green-500" },
         { label: "Horas de Estudo", value: `${hours}h`, icon: Clock, color: "text-blue-500" },
-        { label: "Ofensiva", value: "1 dia", icon: Trophy, color: "text-orange-500" },
-        { label: "Precisão", value: "100%", icon: TrendingUp, color: "text-indigo-500" },
+        { label: "Ofensiva", value: `${streak} dia${streak !== 1 ? 's' : ''}`, icon: Trophy, color: "text-orange-500" },
+        { label: "Precisão", value: accuracy, icon: TrendingUp, color: "text-indigo-500" },
       ]);
-    });
+    };
 
-    return () => unsubscribePlans();
+    return () => {
+      unsubscribePlans();
+      unsubscribeFlashcards();
+    };
   }, []);
 
   return (
@@ -109,7 +194,7 @@ export default function Dashboard() {
             className="h-24 w-auto object-contain"
             referrerPolicy="no-referrer"
           />
-          <span className="text-red-600 text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Kverna Concurso</span>
+          <span className="text-red-600 text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Kverna Concurso 2.0</span>
         </div>
       </div>
 
@@ -133,19 +218,11 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Atividade Semanal</CardTitle>
-            <CardDescription>Horas dedicadas por dia (Simulado)</CardDescription>
+            <CardDescription>Horas dedicadas por dia</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[
-                { name: "Seg", horas: 4 },
-                { name: "Ter", horas: 3 },
-                { name: "Qua", horas: 5 },
-                { name: "Qui", horas: 2 },
-                { name: "Sex", horas: 4 },
-                { name: "Sáb", horas: 6 },
-                { name: "Dom", horas: 1 },
-              ]}>
+              <BarChart data={weeklyData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} />

@@ -57,7 +57,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           className="h-32 w-auto object-contain"
           referrerPolicy="no-referrer"
         />
-        <span className="mt-4 font-bold text-red-600 text-lg tracking-wide">Kverna Concurso</span>
+        <span className="mt-4 text-red-600 text-2xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Kverna Concurso 2.0</span>
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1">
