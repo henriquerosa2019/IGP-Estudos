@@ -42,28 +42,35 @@ export default function Settings() {
     paymentMethod: "Cartão de Crédito" // Default
   });
 
+  const getUid = () => {
+    if (auth.currentUser) return auth.currentUser.uid;
+    let localUid = localStorage.getItem('localUid');
+    if (!localUid) {
+      localUid = 'anon_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('localUid', localUid);
+    }
+    return localUid;
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        const userDoc = await getDoc(doc(db, "users", u.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data() as User;
-          setUser(userData);
-          setFormData({
-            name: userData.name || "",
-            surname: userData.surname || "",
-            cpf: userData.cpf || "",
-            whatsapp: userData.whatsapp || "",
-            email: userData.email || u.email || "",
-            enrolledContest: userData.enrolledContest || "",
-            paymentMethod: userData.paymentMethod || "Cartão de Crédito"
-          });
-        } else {
-          // New user or first time settings
-          setFormData(prev => ({ ...prev, email: u.email || "" }));
-        }
+      const uid = getUid();
+      const userDoc = await getDoc(doc(db, "users", uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data() as User;
+        setUser(userData);
+        setFormData({
+          name: userData.name || "",
+          surname: userData.surname || "",
+          cpf: userData.cpf || "",
+          whatsapp: userData.whatsapp || "",
+          email: userData.email || (u ? u.email : "") || "",
+          enrolledContest: userData.enrolledContest || "",
+          paymentMethod: userData.paymentMethod || "Cartão de Crédito"
+        });
       } else {
-        setUser(null);
+        // New user or first time settings
+        setFormData(prev => ({ ...prev, email: (u ? u.email : "") || "" }));
       }
       setLoading(false);
     });
@@ -72,11 +79,6 @@ export default function Settings() {
   }, []);
 
   const handleSave = async () => {
-    if (!auth.currentUser) {
-      toast.error("Você precisa estar logado para salvar as configurações.");
-      return;
-    }
-
     if (!formData.name || !formData.surname || !formData.email) {
       toast.error("Nome, Sobrenome e E-mail são obrigatórios.");
       return;
@@ -84,9 +86,10 @@ export default function Settings() {
 
     setSaving(true);
     try {
-      const userRef = doc(db, "users", auth.currentUser.uid);
+      const uid = getUid();
+      const userRef = doc(db, "users", uid);
       const updatedUser: User = {
-        id: auth.currentUser.uid,
+        id: uid,
         ...formData,
         role: user?.role || 'user'
       };
@@ -106,20 +109,6 @@ export default function Settings() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  if (!auth.currentUser) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-6">
-        <div className="p-6 bg-indigo-50 rounded-full">
-          <UserIcon className="w-12 h-12 text-indigo-600" />
-        </div>
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-zinc-900">Acesse sua conta</h2>
-          <p className="text-zinc-500 max-w-sm">Faça login para gerenciar seu perfil e inscrições.</p>
-        </div>
       </div>
     );
   }

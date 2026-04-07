@@ -37,14 +37,21 @@ export default function Dashboard() {
   ]);
   const [subjectProgress, setSubjectProgress] = useState<{subject: string, progress: number}[]>([]);
 
+  const getUid = () => {
+    if (auth.currentUser) return auth.currentUser.uid;
+    let localUid = localStorage.getItem('localUid');
+    if (!localUid) {
+      localUid = 'anon_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('localUid', localUid);
+    }
+    return localUid;
+  };
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        setPlans([]);
-        return;
-      }
+      const uid = getUid();
 
-      const q = query(collection(db, "plans"), where("uid", "==", user.uid));
+      const q = query(collection(db, "plans"), where("uid", "==", uid));
       const unsubscribePlans = onSnapshot(q, (snapshot) => {
         const parsedPlans = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlan));
         setPlans(parsedPlans);

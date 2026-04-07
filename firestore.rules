@@ -107,24 +107,15 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if true; // Permite verificação de duplicidade (CPF, Email, WhatsApp)
-      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     match /notices/{noticeId} {
-      allow read: if isDocOwner();
-      allow create: if isAuthenticated() && isRequestOwner() && isValidNotice(request.resource.data);
-      allow update: if isDocOwner() && isRequestOwner() && isValidNotice(request.resource.data);
-      allow delete: if isDocOwner();
+      allow read, write: if true;
     }
 
     match /plans/{planId} {
-      allow read: if isDocOwner();
-      allow create: if isAuthenticated() && isRequestOwner() && isValidPlan(request.resource.data);
-      allow update: if isDocOwner() && isRequestOwner() && isValidPlan(request.resource.data);
-      allow delete: if isDocOwner();
+      allow read, write: if true;
     }
   }
 }

@@ -81,13 +81,23 @@ export default function Notices() {
   const [currentPlan, setCurrentPlan] = useState<StudyPlan | null>(null);
   const [noticeViewMode, setNoticeViewMode] = useState<'subjects' | 'vertical' | 'calendar'>('subjects');
 
+  const getUid = () => {
+    if (user) return user.uid;
+    let localUid = localStorage.getItem('localUid');
+    if (!localUid) {
+      localUid = 'anon_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('localUid', localUid);
+    }
+    return localUid;
+  };
+
   useEffect(() => {
-    if (!selectedNotice || !user) {
+    if (!selectedNotice) {
       setCurrentPlan(null);
       return;
     }
 
-    const q = query(collection(db, "plans"), where("uid", "==", user.uid), where("notices", "array-contains", selectedNotice.id));
+    const q = query(collection(db, "plans"), where("uid", "==", getUid()), where("notices", "array-contains", selectedNotice.id));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         setCurrentPlan({ ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as StudyPlan);
@@ -108,12 +118,7 @@ export default function Notices() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setNotices([]);
-      return;
-    }
-
-    const q = query(collection(db, "notices"), where("uid", "==", user.uid));
+    const q = query(collection(db, "notices"), where("uid", "==", getUid()));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
       setNotices(data);
@@ -146,10 +151,6 @@ export default function Notices() {
 
   const handleAddNotice = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!user) {
-      toast.error("Você precisa estar logado para salvar editais.");
-      return;
-    }
     if (!name || !content) {
       toast.error("Preencha o nome e o conteúdo do edital.");
       return;
@@ -168,7 +169,7 @@ export default function Notices() {
       }
 
       const newNotice = {
-        uid: user.uid,
+        uid: getUid(),
         name,
         content,
         subjects: subjects.map((s: any) => ({ 
@@ -417,7 +418,7 @@ export default function Notices() {
   };
 
   const handleImport = async () => {
-    if (!url || !user) return;
+    if (!url) return;
     setImporting(true);
     setImportProgress(10);
     const toastId = toast.loading("Importando edital...");
@@ -486,45 +487,6 @@ export default function Notices() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-8">
-        <div className="p-8 bg-zinc-50 rounded-3xl border border-zinc-100 shadow-sm">
-          <img 
-            src="https://www.dropbox.com/scl/fi/r0kvtpyqeb86r34575k6r/kverna.PNG?rlkey=oswgo2suwgyx4yms3jtrpuhn1&st=0tj8q1se&raw=1" 
-            alt="Kverna Logo" 
-            className="h-64 w-auto object-contain"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-        <div className="text-center space-y-2">
-          <h2 className="text-3xl font-bold text-zinc-900">Bem-vindo à Kverna Concursos</h2>
-          <p className="text-zinc-500 max-w-sm">A sua plataforma inteligente de estudos para concursos.</p>
-        </div>
-        <div className="flex flex-col gap-4 w-full max-w-xs">
-          <Button onClick={handleLogin} className="gap-3 bg-indigo-600 hover:bg-indigo-700 w-full py-7 text-lg rounded-2xl shadow-lg shadow-indigo-100 transition-all hover:scale-105 active:scale-95">
-            <LogIn className="w-5 h-5" />
-            Entrar com Google
-          </Button>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-zinc-200" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-zinc-500">Ou</span>
-            </div>
-          </div>
-          <Button variant="outline" className="w-full p-0 rounded-2xl border-zinc-200 hover:bg-zinc-50 transition-all">
-            <Link to="/registrar" className="flex items-center justify-center gap-3 w-full h-full py-7">
-              <UserPlus className="w-5 h-5" />
-              Criar Nova Conta
-            </Link>
-          </Button>
-        </div>
       </div>
     );
   }
