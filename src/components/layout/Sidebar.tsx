@@ -79,24 +79,24 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         ))}
       </nav>
 
-      <div className="p-4 mx-4 mb-4 bg-zinc-900 rounded-xl border border-zinc-800">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2 text-zinc-200">
-            <Timer className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-wider">Pomodoro</span>
+      <div className="p-1.5 mx-3 mb-1.5 bg-zinc-900 rounded-md border border-zinc-800">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-1 text-zinc-200">
+            <Timer className="w-3 h-3" />
+            <span className="text-[9px] font-bold uppercase tracking-wider">Pomodoro</span>
           </div>
-          <span className="text-xs font-mono text-red-600">{formatTime(timeLeft)}</span>
+          <span className="text-[10px] font-mono text-red-600">{formatTime(timeLeft)}</span>
         </div>
         <button 
           onClick={() => setIsActive(!isActive)}
           className={cn(
-            "w-full py-1.5 rounded-lg text-xs font-bold transition-all",
+            "w-full py-0.5 rounded text-[9px] font-bold transition-all uppercase tracking-wide",
             isActive 
               ? "bg-zinc-800 text-red-600 hover:bg-zinc-700" 
               : "bg-red-600 text-white hover:bg-red-700"
           )}
         >
-          {isActive ? "Pausar" : "Focar Agora"}
+          {isActive ? "Pausar" : "Focar"}
         </button>
       </div>
 

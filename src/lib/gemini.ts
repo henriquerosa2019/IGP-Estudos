@@ -13,6 +13,29 @@ const cleanJson = (text: string) => {
   return match ? match[0] : text;
 };
 
+const enforceRevisions = (schedule: any[]) => {
+  if (!schedule || !Array.isArray(schedule)) return schedule;
+  
+  for (let i = 1; i < schedule.length; i++) {
+    // Pegar apenas os tópicos de estudo do dia anterior (limitado a 2)
+    const previousDayTopics = schedule[i - 1].topics?.filter((t: any) => t.type === 'study') || [];
+    
+    // Pegar apenas os tópicos de estudo do dia atual (remover revisões geradas pela IA para forçar a ordem)
+    const currentDayStudies = schedule[i].topics?.filter((t: any) => t.type === 'study') || [];
+
+    const revisionsToAdd = previousDayTopics.slice(0, 2).map((prevTopic: any) => ({
+      title: `Revisão: ${prevTopic.title}`,
+      subject: prevTopic.subject,
+      duration: 15,
+      type: 'revision'
+    }));
+
+    // Forçar a estrutura exata: 2 revisões primeiro, depois os 2 estudos do dia
+    schedule[i].topics = [...revisionsToAdd, ...currentDayStudies.slice(0, 2)];
+  }
+  return schedule;
+};
+
 export const generateStudyPlanFromNotices = async (
   notices: { name: string; content: string }[],
   examDate: string,
@@ -32,8 +55,8 @@ export const generateStudyPlanFromNotices = async (
     1. Mapeie ABSOLUTAMENTE TODOS os tópicos listados no conteúdo programático acima. Não resuma, não pule tópicos e não agrupe de forma que se perca o detalhamento.
     2. Crie um plano de estudos de LONGO PRAZO que cubra 100% do edital. Se o edital for grande, gere um plano de 60, 90, 120 ou mais dias.
     3. O plano deve ser sequencial (Dia 1, Dia 2, Dia 3...).
-    4. Para cada tópico estudado, inclua obrigatoriamente uma "Revisão" no início do dia seguinte.
-    5. Distribua os tópicos respeitando o limite de ${hoursPerDay} horas por dia. Se um tópico for complexo, dedique mais tempo ou divida-o em partes (Parte 1, Parte 2).
+    4. OBRIGATÓRIO: Cada dia de estudo deve conter EXATAMENTE 2 tópicos novos (type: 'study'). Divida o conteúdo para caber em 2 tópicos por dia.
+    5. OBRIGATÓRIO: O primeiro item de estudo de cada dia (a partir do Dia 2) DEVE SER uma "Revisão" (type: "revision") das 2 matérias estudadas no dia anterior.
     6. O campo 'day' deve conter o número do dia, o dia da semana e a data (ex: 'Dia 1 (Segunda, 06/04)', 'Dia 2 (Terça, 07/04)'). Calcule as datas corretamente a partir de hoje.
     7. NÃO pare de gerar até que TODO o conteúdo programático tenha sido incluído no cronograma.`;
 
@@ -79,6 +102,11 @@ export const generateStudyPlanFromNotices = async (
 
     if (!response.text) throw new Error("A IA não retornou conteúdo.");
     const result = JSON.parse(cleanJson(response.text));
+    
+    if (result.schedule) {
+      result.schedule = enforceRevisions(result.schedule);
+    }
+
     return {
       ...result,
       id: Date.now().toString(),
@@ -157,7 +185,8 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
       1. Mapeie ABSOLUTAMENTE TODOS os tópicos das matérias citadas. Não resuma.
       2. O plano deve ser organizado por dias sequenciais e incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04), Dia 2 (Terça, 07/04), etc.).
       3. O plano deve ser EXAUSTIVO o suficiente para cobrir TODO o conteúdo. NÃO se limite a uma semana ou um mês. Gere 30, 60 ou 90 dias se necessário.
-      4. Para cada tópico estudado, inclua uma "Revisão" no início do dia seguinte.`,
+      4. OBRIGATÓRIO: Cada dia de estudo deve conter EXATAMENTE 2 tópicos novos (type: 'study'). Divida o conteúdo para caber em 2 tópicos por dia.
+      5. OBRIGATÓRIO: O primeiro item de estudo de cada dia (a partir do Dia 2) DEVE SER uma "Revisão" (type: "revision") das 2 matérias estudadas no dia anterior.`,
       config: {
         systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) das matérias. Gere um plano extenso e detalhado. Nunca resuma. Retorne APENAS o JSON. Use 'type': 'study' e 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
         responseMimeType: "application/json",
@@ -201,6 +230,11 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
 
     const cleanedText = cleanJson(response.text);
     const result = JSON.parse(cleanedText);
+    
+    if (result.schedule) {
+      result.schedule = enforceRevisions(result.schedule);
+    }
+
     return {
       ...result,
       id: Date.now().toString(),
