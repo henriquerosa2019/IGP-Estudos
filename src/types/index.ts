@@ -38,6 +38,7 @@ export interface Topic {
   actualDuration?: number; // in minutes
   completedAt?: string; // ISO date string when it was marked as completed
   type: 'study' | 'revision';
+  videoUrl?: string;
 }
 
 export interface Flashcard {

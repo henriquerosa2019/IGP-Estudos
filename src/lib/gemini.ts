@@ -44,27 +44,28 @@ export const generateStudyPlanFromNotices = async (
   if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
 
   try {
-    const prompt = `Analise EXAUSTIVAMENTE os seguintes editais:
+    const prompt = `Analise EXAUSTIVAMENTE os seguintes editais/cronogramas:
     ${notices.map(n => `Edital: ${n.name}\nConteúdo: ${n.content}`).join("\n\n")}
     
-    Data prevista do concurso: ${examDate}.
+    Data prevista do concurso: ${examDate || 'Não definida'}.
     Tempo disponível: ${hoursPerDay} horas por dia.
     Data de início (hoje): ${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}.
     
     Sua tarefa CRÍTICA:
-    1. Mapeie ABSOLUTAMENTE TODOS os tópicos listados no conteúdo programático acima. Não resuma, não pule tópicos e não agrupe de forma que se perca o detalhamento.
-    2. Crie um plano de estudos de LONGO PRAZO que cubra 100% do edital. Se o edital for grande, gere um plano de 60, 90, 120 ou mais dias.
-    3. O plano deve ser sequencial (Dia 1, Dia 2, Dia 3...).
-    4. OBRIGATÓRIO: Cada dia de estudo deve conter EXATAMENTE 2 tópicos novos (type: 'study'). Divida o conteúdo para caber em 2 tópicos por dia.
+    1. Mapeie ABSOLUTAMENTE TODOS os tópicos listados no conteúdo programático acima. Se o conteúdo for uma lista de aulas (ex: "Aula 01 - Parte 01..."), inclua CADA AULA como um tópico individual.
+    2. SE O CONTEÚDO FOR HTML (outerHTML da Hotmart), extraia os links das aulas (href) e inclua no campo 'videoUrl' de cada tópico correspondente.
+    3. NÃO RESUMA, NÃO PULE TÓPICOS e NÃO AGRUPE de forma que se perca o detalhamento. Se houver 100 aulas, o plano deve ter 100 tópicos de estudo distribuídos nos dias.
+    3. Crie um plano de estudos sequencial (Dia 1, Dia 2, Dia 3...) que cubra 100% do conteúdo.
+    4. OBRIGATÓRIO: Cada dia de estudo deve conter EXATAMENTE 2 tópicos novos (type: 'study'). 
     5. OBRIGATÓRIO: O primeiro item de estudo de cada dia (a partir do Dia 2) DEVE SER uma "Revisão" (type: "revision") das 2 matérias estudadas no dia anterior.
-    6. O campo 'day' deve conter o número do dia, o dia da semana e a data (ex: 'Dia 1 (Segunda, 06/04)', 'Dia 2 (Terça, 07/04)'). Calcule as datas corretamente a partir de hoje.
-    7. NÃO pare de gerar até que TODO o conteúdo programático tenha sido incluído no cronograma.`;
+    6. O campo 'day' deve conter o número do dia, o dia da semana e a data (ex: 'Dia 1 (Segunda, 06/04)').
+    7. Se o conteúdo for muito grande, gere quantos dias forem necessários (60, 90, 120 dias...).`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
-        systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Use 'type': 'study' e 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
+        systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Se houver links de vídeo no conteúdo, preserve-os no campo videoUrl. Use 'type': 'study' e 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -85,7 +86,8 @@ export const generateStudyPlanFromNotices = async (
                         title: { type: Type.STRING },
                         subject: { type: Type.STRING },
                         duration: { type: Type.NUMBER },
-                        type: { type: Type.STRING, enum: ["study", "revision"] }
+                        type: { type: Type.STRING, enum: ["study", "revision"] },
+                        videoUrl: { type: Type.STRING }
                       },
                       required: ["title", "subject", "duration", "type"]
                     }
@@ -105,13 +107,31 @@ export const generateStudyPlanFromNotices = async (
     
     if (result.schedule) {
       result.schedule = enforceRevisions(result.schedule);
+      // Ensure each topic has an ID and completed status
+      result.schedule.forEach((day: any) => {
+        day.topics.forEach((topic: any) => {
+          topic.id = Math.random().toString(36).substring(2, 11);
+          topic.completed = false;
+          // Fix relative Hotmart links
+          if (topic.videoUrl && topic.videoUrl.startsWith('/')) {
+            topic.videoUrl = `https://hotmart.com${topic.videoUrl}`;
+          }
+        });
+      });
     }
+
+    const startDate = new Date();
+    const totalDays = result.schedule?.length || 30;
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + totalDays);
 
     return {
       ...result,
       id: Date.now().toString(),
       goal: notices.map(n => n.name).join(" + "),
-      examDate: examDate
+      examDate: examDate,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
     };
   } catch (error) {
     console.error("Erro ao cruzar editais:", error);
@@ -125,19 +145,21 @@ export const extractSubjectsFromNotice = async (content: string) => {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-lite-preview",
-      contents: `Analise o seguinte conteúdo de um edital de concurso e extraia as matérias principais com seu peso/importância sugerida e a lista de tópicos detalhados de cada matéria.
+      contents: `Analise o seguinte conteúdo de um edital de concurso ou cronograma de curso e extraia as matérias principais com seu peso/importância sugerida e a lista de tópicos detalhados de cada matéria.
       
-      CONTEÚDO DO EDITAL:
+      CONTEÚDO:
       ${content}
       
-      INSTRUÇÕES:
-      1. Identifique a BANCA EXAMINADORA (ex: Cebraspe, FGV, FCC, Vunesp) se estiver mencionada. Se não, use o padrão geral.
-      2. Identifique cada disciplina (ex: Português, Matemática, etc).
-      3. Para CADA disciplina, extraia TODOS os tópicos listados no conteúdo programático.
-      4. Não resuma os tópicos. Se o edital diz "1. Ortografia oficial. 2. Acentuação gráfica.", extraia exatamente esses itens.
-      5. Atribua um peso de 1 a 5 baseado na relevância comum para concursos e no histórico de cobrança da banca identificada.`,
+      INSTRUÇÕES CRÍTICAS:
+      1. Identifique cada disciplina ou módulo (ex: Português, Direito Penal, Informática).
+      2. Para CADA disciplina, extraia TODOS os tópicos listados. 
+      3. IMPORTANTE: Se o conteúdo estiver estruturado como aulas (ex: "Aula 01 - Parte 01 - Tópico"), você DEVE manter exatamente essa nomenclatura no título do tópico.
+      4. TEMPOS DE AULA: Se houver tempos de duração (ex: 33:57, 40:06), você DEVE incluí-los no final do título do tópico entre parênteses. Exemplo: "Aula 01 - Parte 01 - Lei de drogas (33:57)".
+      5. Capture a hierarquia: Se houver um nome de matéria seguido por várias aulas, agrupe essas aulas dentro dessa matéria.
+      6. Não pule nenhum item.
+      7. Atribua um peso de 1 a 5 baseado na relevância comum para concursos.`,
       config: {
-        systemInstruction: "Você é um especialista em editais de concursos e bancas examinadoras. Sua tarefa é decompor o conteúdo programático em matérias e tópicos detalhados, ajustando a importância (peso) com base no perfil da banca. Retorne APENAS o JSON. Seja exaustivo na extração dos tópicos.",
+        systemInstruction: "Você é um especialista em editais e cronogramas de cursos. Sua tarefa é decompor o conteúdo em matérias e tópicos detalhados, PRESERVANDO INTEGRALMENTE a nomenclatura original das aulas e INCLUINDO os tempos de duração se disponíveis. Retorne APENAS o JSON. Seja exaustivo.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -234,12 +256,30 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
     
     if (result.schedule) {
       result.schedule = enforceRevisions(result.schedule);
+      // Ensure each topic has an ID and completed status
+      result.schedule.forEach((day: any) => {
+        day.topics.forEach((topic: any) => {
+          topic.id = Math.random().toString(36).substring(2, 11);
+          topic.completed = false;
+          // Fix relative Hotmart links
+          if (topic.videoUrl && topic.videoUrl.startsWith('/')) {
+            topic.videoUrl = `https://hotmart.com${topic.videoUrl}`;
+          }
+        });
+      });
     }
+
+    const startDate = new Date();
+    const totalDays = result.schedule?.length || 30;
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + totalDays);
 
     return {
       ...result,
       id: Date.now().toString(),
-      goal: goal
+      goal: goal,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
     };
   } catch (error) {
     console.error("Erro ao gerar plano de estudos:", error);

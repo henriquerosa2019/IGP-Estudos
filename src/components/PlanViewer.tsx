@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, CheckCircle2, Clock, Play, Square, Layers } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, Clock, Play, Square, Layers, Copy, Check, ExternalLink } from "lucide-react";
 import { StudyPlan } from "@/types";
+import { toast } from "sonner";
 
 interface PlanViewerProps {
   plan: StudyPlan;
@@ -13,9 +14,77 @@ interface PlanViewerProps {
 }
 
 export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const formatVideoUrl = (url?: string) => {
+    if (!url) return "";
+    const hotmartBase = "https://hotmart.com";
+    
+    // If it's a relative path, add the Hotmart base
+    if (url.startsWith('/')) return `${hotmartBase}${url}`;
+    
+    // If it somehow got the app's own domain, fix it
+    if (url.includes(window.location.host)) {
+      const path = url.split(window.location.host)[1];
+      return `${hotmartBase}${path}`;
+    }
+
+    // Ensure it uses the domain provided by the user
+    if (url.includes('app.hotmart.com') || url.includes('app-vlc.hotmart.com')) {
+      return url.replace(/https:\/\/[^/]+/, hotmartBase);
+    }
+    
+    return url;
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    toast.success(`${field} copiado!`);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const HotmartHelper = () => (
+    <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-amber-100 rounded-lg">
+          <ExternalLink className="w-5 h-5 text-amber-600" />
+        </div>
+        <div>
+          <h4 className="text-sm font-bold text-amber-900">Acesso Rápido Hotmart</h4>
+          <p className="text-xs text-amber-700">Use as credenciais abaixo se o site pedir login:</p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <div className="flex items-center bg-white border border-amber-200 rounded-lg overflow-hidden">
+          <span className="px-2 py-1 text-[10px] font-mono text-zinc-500 border-r border-amber-100">brunool.rj@gmail.com</span>
+          <button 
+            onClick={() => copyToClipboard("brunool.rj@gmail.com", "E-mail")}
+            className="p-1.5 hover:bg-amber-50 text-amber-600 transition-colors"
+            title="Copiar E-mail"
+          >
+            {copiedField === "E-mail" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+        <div className="flex items-center bg-white border border-amber-200 rounded-lg overflow-hidden">
+          <span className="px-2 py-1 text-[10px] font-mono text-zinc-500 border-r border-amber-100">Ad16eoh28@=</span>
+          <button 
+            onClick={() => copyToClipboard("Ad16eoh28@=", "Senha")}
+            className="p-1.5 hover:bg-amber-50 text-amber-600 transition-colors"
+            title="Copiar Senha"
+          >
+            {copiedField === "Senha" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (viewMode === 'calendar') {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-6">
+        <HotmartHelper />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plan.schedule.map((day, idx) => (
           <Card key={idx} className="border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="bg-zinc-50/50 border-b border-zinc-100 py-4">
@@ -63,6 +132,16 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                           <Clock className="w-3 h-3" />
                           {topic.completed ? `${topic.actualDuration} min (real)` : `${topic.duration} min`}
                         </span>
+                        {topic.videoUrl && (
+                          <a 
+                            href={formatVideoUrl(topic.videoUrl)} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-indigo-600 hover:underline flex items-center gap-1"
+                          >
+                            <Play className="w-3 h-3" /> Ver Aula
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -104,11 +183,14 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
           </Card>
         ))}
       </div>
+    </div>
     );
   }
 
   return (
-    <Card className="border-none shadow-lg shadow-zinc-100 overflow-hidden">
+    <div className="space-y-6">
+      <HotmartHelper />
+      <Card className="border-none shadow-lg shadow-zinc-100 overflow-hidden">
       <CardHeader className="bg-zinc-50/50 border-b border-zinc-100">
         <CardTitle className="text-lg flex items-center gap-2 text-zinc-800">
           <Layers className="w-5 h-5 text-indigo-500" />
@@ -142,6 +224,16 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                   )}>
                     {topic.title}
                   </p>
+                  {topic.videoUrl && (
+                    <a 
+                      href={formatVideoUrl(topic.videoUrl)} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-indigo-600 hover:underline flex items-center gap-1 ml-2"
+                    >
+                      <Play className="w-2.5 h-2.5" /> Aula
+                    </a>
+                  )}
                 </div>
                 <p className="text-[10px] text-zinc-500 mt-0.5">{topic.subject}</p>
               </div>
@@ -173,5 +265,6 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
         </div>
       </CardContent>
     </Card>
+  </div>
   );
 }

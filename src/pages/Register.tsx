@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
   Card, 
@@ -25,7 +25,8 @@ import { auth, db } from "@/lib/firebase";
 import { 
   createUserWithEmailAndPassword, 
   sendPasswordResetEmail,
-  signOut
+  signOut,
+  onAuthStateChanged
 } from "firebase/auth";
 import { 
   doc, 
@@ -48,6 +49,15 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [tempPassword, setTempPassword] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        navigate("/");
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -211,7 +221,7 @@ export default function Register() {
             </div>
 
             <Button className="w-full p-0 bg-indigo-600 hover:bg-indigo-700">
-              <Link to="/editais" className="flex items-center justify-center w-full h-full py-2">Ir para o Login</Link>
+              <Link to="/login" className="flex items-center justify-center w-full h-full py-2">Ir para o Login</Link>
             </Button>
           </CardContent>
         </Card>
@@ -251,6 +261,14 @@ export default function Register() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex justify-center mb-4">
+              <p className="text-sm text-zinc-600">
+                Já tem uma conta?{" "}
+                <Link to="/login" className="text-indigo-600 font-bold hover:underline">
+                  Faça Login
+                </Link>
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome</Label>

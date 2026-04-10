@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Card, 
   CardContent, 
@@ -28,11 +28,13 @@ import {
   BarChart3,
   LogIn,
   LogOut as LogOutIcon,
-  UserPlus
+  UserPlus,
+  AlertCircle,
+  Clock
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ExamNotice, Subject } from "@/types";
-import { extractSubjectsFromNotice } from "@/lib/gemini";
+import { extractSubjectsFromNotice, generateStudyPlanFromNotices } from "@/lib/gemini";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +58,7 @@ import {
 
 import { PlanViewer } from "@/components/PlanViewer";
 import { StudyPlan } from "@/types";
+import { cn } from "@/lib/utils";
 
 export default function Notices() {
   const [notices, setNotices] = useState<ExamNotice[]>([]);
@@ -72,6 +75,7 @@ export default function Notices() {
   const [content, setContent] = useState("");
   const [examDate, setExamDate] = useState("");
   const [url, setUrl] = useState("");
+  const [manualText, setManualText] = useState("");
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [generatingPlan, setGeneratingPlan] = useState(false);
@@ -81,6 +85,64 @@ export default function Notices() {
   // Plan viewing state
   const [currentPlan, setCurrentPlan] = useState<StudyPlan | null>(null);
   const [noticeViewMode, setNoticeViewMode] = useState<'subjects' | 'vertical' | 'calendar'>('subjects');
+  const [dailyStudyHours, setDailyStudyHours] = useState<number>(4);
+  const [manualExamDate, setManualExamDate] = useState<string>("");
+
+  const estimates = useMemo(() => {
+    if (!currentPlan) return null;
+
+    const totalMinutes = currentPlan.schedule.reduce((acc, day) => {
+      return acc + day.topics.reduce((tAcc, topic) => tAcc + (topic.duration || 0), 0);
+    }, 0);
+
+    const remainingMinutes = currentPlan.schedule.reduce((acc, day) => {
+      return acc + day.topics.reduce((tAcc, topic) => {
+        if (topic.completed) return tAcc;
+        return tAcc + (topic.duration || 0);
+      }, 0);
+    }, 0);
+
+    const dailyMinutes = dailyStudyHours * 60;
+    const daysToFinish = Math.ceil(remainingMinutes / dailyMinutes);
+    
+    const finishDate = new Date();
+    finishDate.setDate(finishDate.getDate() + daysToFinish);
+
+    const targetExamDate = selectedNotice?.examDate || manualExamDate;
+    let status: 'on-track' | 'behind' | 'no-date' = 'no-date';
+    let daysDiff = 0;
+    let requiredDailyHours = 0;
+
+    if (targetExamDate) {
+      const exam = new Date(targetExamDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffTime = exam.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays > 0) {
+        requiredDailyHours = (remainingMinutes / diffDays) / 60;
+      }
+
+      if (daysToFinish <= diffDays) {
+        status = 'on-track';
+      } else {
+        status = 'behind';
+      }
+      daysDiff = diffDays;
+    }
+
+    return {
+      totalMinutes,
+      remainingMinutes,
+      daysToFinish,
+      finishDate,
+      status,
+      daysDiff,
+      targetExamDate,
+      requiredDailyHours
+    };
+  }, [currentPlan, dailyStudyHours, manualExamDate, selectedNotice?.examDate]);
 
   const getUid = () => {
     if (user) return user.uid;
@@ -239,72 +301,34 @@ export default function Notices() {
   };
 
   const handleGeneratePlan = async () => {
-    if (!selectedNotice || !user) return;
+    const uid = getUid();
+    if (!selectedNotice || !uid) return;
     
     setGeneratingPlan(true);
     setPlanProgress(10);
     const toastId = toast.loading("Gerando plano de estudos personalizado...");
 
     try {
-      setPlanProgress(40);
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Crie um plano de estudos de 30 dias para o concurso: ${selectedNotice.name}.
-        Conteúdo programático: ${selectedNotice.content}
-        
-        Retorne o plano em formato JSON seguindo a interface StudyPlan (schedule: DaySchedule[]).
-        Cada DaySchedule deve ter 'day' (data) e 'topics' (lista de tópicos).
-        Cada tópico deve ter 'title', 'subject', 'duration' (em minutos), 'completed' (false), 'type' ('study' ou 'revision').`,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              schedule: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    day: { type: Type.STRING },
-                    topics: {
-                      type: Type.ARRAY,
-                      items: {
-                        type: Type.OBJECT,
-                        properties: {
-                          title: { type: Type.STRING },
-                          subject: { type: Type.STRING },
-                          duration: { type: Type.NUMBER },
-                          completed: { type: Type.BOOLEAN },
-                          type: { type: Type.STRING, enum: ["study", "revision"] }
-                        },
-                        required: ["title", "subject", "duration", "completed", "type"]
-                      }
-                    }
-                  },
-                  required: ["day", "topics"]
-                }
-              }
-            },
-            required: ["schedule"]
-          }
-        }
-      });
-      setPlanProgress(80);
-
-      if (!response.text) throw new Error("Não foi possível gerar o plano.");
-
-      const planData = JSON.parse(response.text);
+      setPlanProgress(30);
+      console.log("Iniciando geração de plano para:", selectedNotice.name);
       
+      // Use the shared function which is more robust and handles large content better
+      const planData = await generateStudyPlanFromNotices(
+        [selectedNotice],
+        selectedNotice.examDate || "",
+        4 // Default to 4 hours per day
+      );
+      
+      console.log("Plano gerado com sucesso:", planData.title);
+      setPlanProgress(90);
+
       const newPlan = {
         ...planData,
-        uid: user.uid,
-        title: `Plano para ${selectedNotice.name}`,
-        goal: "Aprovação",
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        uid: uid,
         notices: [selectedNotice.id]
       };
 
+      console.log("Salvando plano no Firestore...");
       await addDoc(collection(db, "plans"), newPlan);
       setPlanProgress(100);
       
@@ -474,6 +498,68 @@ export default function Notices() {
     }
   };
 
+  const handleManualImport = async () => {
+    if (!manualText) return;
+    setImporting(true);
+    setImportProgress(10);
+    const toastId = toast.loading("Analisando texto...");
+
+    try {
+      setImportProgress(40);
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Analise o seguinte conteúdo que contém informações de um edital ou curso (pode ser texto puro ou código HTML de uma página de curso como Hotmart):
+        
+        ${manualText}
+        
+        Extraia as informações do concurso/curso:
+        1. Nome do Concurso/Curso (Se não encontrar, use "Carreira Policial - Kverna")
+        2. Previsão (se houver)
+        3. Número de Vagas (se houver)
+        4. Banca Organizadora/Plataforma
+        5. Salário/Preço (se houver)
+        6. Conteúdo Programático DETALHADO (Liste todas as matérias/módulos e tópicos/aulas)
+
+        REGRAS CRÍTICAS:
+        - Mantenha INTEGRALMENTE a estrutura de aulas (ex: "Aula 01 - Parte 01 - Princípios").
+        - Se houver tempos (ex: 33:57), INCLUA-OS no final do título da aula entre parênteses. Exemplo: "Aula 01 - Parte 01 - Lei de drogas (33:57)".
+        - SE O CONTEÚDO FOR HTML, extraia os links (href) das aulas e coloque-os ao lado do título da aula entre colchetes. Exemplo: "Aula 01 - Parte 01 - Princípios (30:00) [https://hotmart.com/...]".
+        - Organize por Matéria/Módulo.
+
+        Retorne os dados formatados como:
+        Nome: [Nome]
+        Previsão: [Previsão]
+        Vagas: [Vagas]
+        Banca: [Banca]
+        Salário: [Salário]
+
+        Conteúdo Programático:
+        [Texto completo do conteúdo programático]`
+      });
+      setImportProgress(80);
+
+      if (!response.text) throw new Error("Não foi possível analisar o texto.");
+
+      const extractedContent = response.text;
+      
+      const nameMatch = extractedContent.match(/Nome: (.*)/);
+      if (nameMatch && nameMatch[1].trim() !== "" && nameMatch[1] !== "[Nome]") {
+        setName(nameMatch[1]);
+      } else {
+        setName("Carreira Policial - Kverna");
+      }
+
+      setContent(extractedContent);
+      setImportProgress(100);
+      toast.success("Texto analisado! Agora salve o edital.", { id: toastId });
+    } catch (error) {
+      toast.error("Erro ao analisar texto.", { id: toastId });
+    } finally {
+      setImporting(false);
+      setImportProgress(0);
+    }
+  };
+
   const deleteNotice = async (id: string) => {
     try {
       await deleteDoc(doc(db, "notices", id));
@@ -584,6 +670,55 @@ export default function Notices() {
                       }}
                       className="bg-white text-zinc-900 border-red-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
                     />
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-red-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-2 text-red-600">Ou</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-red-600">Colar conteúdo do Edital/Curso</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Button variant="ghost" size="sm" className="h-6 text-[10px] text-zinc-400 hover:text-red-600">
+                              Como extrair da Hotmart?
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-zinc-900 text-white border-zinc-800 max-w-sm p-4">
+                            <div className="space-y-2 text-xs">
+                              <p className="font-bold text-red-500">Passo a passo para "Scraping" manual:</p>
+                              <ol className="list-decimal ml-4 space-y-1">
+                                <li>Abra seu curso na Hotmart.</li>
+                                <li>Clique com o botão direito sobre a lista de aulas à direita.</li>
+                                <li>Selecione <strong>Inspecionar</strong> (ou aperte F12).</li>
+                                <li>No painel que abriu, procure a <code>&lt;div&gt;</code> ou <code>&lt;aside&gt;</code> que contém a lista.</li>
+                                <li>Clique com o botão direito nela, vá em <strong>Copy</strong> &gt; <strong>Copy outerHTML</strong>.</li>
+                                <li>Cole o código aqui e clique em Importar.</li>
+                              </ol>
+                              <p className="italic text-zinc-500 mt-2">Dica: Se preferir, apenas selecione todo o texto da lista com o mouse, copie e cole aqui.</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Textarea 
+                      placeholder="Cole aqui o texto ou o HTML da lista de aulas..."
+                      value={manualText}
+                      onChange={(e) => setManualText(e.target.value)}
+                      className="min-h-[150px] bg-white text-zinc-900 border-red-200 placeholder:text-red-300"
+                    />
+                    <Button 
+                      onClick={handleManualImport} 
+                      disabled={importing || !manualText}
+                      className="w-full bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {importing ? "Analisando Texto..." : "Importar Texto"}
+                    </Button>
                   </div>
                   {importing && (
                     <div className="space-y-1">
@@ -820,6 +955,98 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                     />
                   </CardContent>
                 </Card>
+
+                {currentPlan && (
+                  <Card className="border-zinc-200 shadow-sm">
+                    <CardHeader className="py-4">
+                      <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-indigo-600" />
+                        Estimativa de Conclusão
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500">Horas de estudo por dia</Label>
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            type="number" 
+                            min="1" 
+                            max="24" 
+                            value={dailyStudyHours} 
+                            onChange={(e) => setDailyStudyHours(Number(e.target.value))}
+                            className="h-8 text-sm"
+                          />
+                          <span className="text-xs text-zinc-400">horas</span>
+                        </div>
+                      </div>
+
+                      {!selectedNotice?.examDate && (
+                        <div className="space-y-2">
+                          <Label className="text-xs text-zinc-500">Data provável da prova</Label>
+                          <Input 
+                            type="date" 
+                            value={manualExamDate} 
+                            onChange={(e) => setManualExamDate(e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      )}
+
+                      {estimates && (
+                        <div className="pt-2 space-y-3 border-t border-zinc-100">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-zinc-500">Tempo restante:</span>
+                            <span className="text-sm font-bold text-zinc-900">{Math.round(estimates.remainingMinutes / 60)}h</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-zinc-500">Dias para concluir:</span>
+                            <span className="text-sm font-bold text-zinc-900">{estimates.daysToFinish} dias</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-zinc-500">Data de conclusão:</span>
+                            <span className="text-sm font-bold text-indigo-600">{estimates.finishDate.toLocaleDateString()}</span>
+                          </div>
+
+                          {estimates.status !== 'no-date' && (
+                            <div className="space-y-3">
+                              <div className={cn(
+                                "p-3 rounded-xl text-xs font-medium flex items-start gap-2",
+                                estimates.status === 'on-track' ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                              )}>
+                                {estimates.status === 'on-track' ? (
+                                  <>
+                                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                    <span>Você concluirá o estudo {estimates.daysDiff - estimates.daysToFinish} dias antes da prova!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    <span>Atenção: Você concluirá o estudo {estimates.daysToFinish - estimates.daysDiff} dias APÓS a prova. Aumente sua carga horária diária.</span>
+                                  </>
+                                )}
+                              </div>
+                              
+                              {estimates.requiredDailyHours > 0 && (
+                                <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                                  <p className="text-[10px] text-indigo-600 font-bold uppercase mb-1">Carga Horária Recomendada</p>
+                                  <p className="text-xs text-indigo-900">
+                                    Para concluir exatamente no dia da prova, você precisa estudar <strong>{estimates.requiredDailyHours.toFixed(1)}h</strong> por dia.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {estimates.status === 'no-date' && !manualExamDate && (
+                            <div className="p-3 bg-zinc-50 rounded-xl text-[10px] text-zinc-500 italic">
+                              Insira a data da prova para verificar se você conseguirá concluir o edital a tempo.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               <div className="flex-1 space-y-4">

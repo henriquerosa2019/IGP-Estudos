@@ -14,6 +14,7 @@ import Flashcards from "./pages/Flashcards";
 import Tutor from "./pages/Tutor";
 import Settings from "./pages/Settings";
 import Register from "./pages/Register";
+import Login from "./pages/Login";
 import { Toaster } from "sonner";
 
 export default function App() {
@@ -56,6 +57,7 @@ export default function App() {
     <Router>
       <Toaster position="top-right" expand={false} richColors />
       <Routes>
+        <Route path="/login" element={<Login />} />
         <Route path="/registrar" element={<Register />} />
         <Route element={<MainLayout />}>
           <Route path="/" element={<Dashboard />} />
