@@ -19,9 +19,11 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
   const [finishingTopic, setFinishingTopic] = useState<{ dayIdx: number, topicIdx: number } | null>(null);
   const [manualMinutes, setManualMinutes] = useState<string>("");
 
-  const handleFinish = (dayIdx: number, topicIdx: number, currentStartTime?: string) => {
+  const handleFinish = (dayIdx: number, topicIdx: number, currentStartTime?: string, currentActualDuration?: number) => {
     let initialMinutes = "";
-    if (currentStartTime) {
+    if (currentActualDuration !== undefined) {
+      initialMinutes = currentActualDuration.toString();
+    } else if (currentStartTime) {
       const start = new Date(currentStartTime).getTime();
       const now = new Date().getTime();
       initialMinutes = Math.round((now - start) / (1000 * 60)).toString();
@@ -172,6 +174,38 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                       </div>
                     </div>
                   </div>
+
+                  {topic.completed && (
+                    <div className="pl-8 mt-1">
+                      {finishingTopic?.dayIdx === idx && finishingTopic?.topicIdx === tIdx ? (
+                        <div className="flex items-center gap-2 bg-green-50 p-2 rounded-lg border border-green-100">
+                          <div className="flex-1">
+                            <p className="text-[9px] font-bold text-green-600 uppercase mb-1">Editar minutos:</p>
+                            <Input 
+                              type="number" 
+                              value={manualMinutes} 
+                              onChange={(e) => setManualMinutes(e.target.value)}
+                              className="h-7 text-xs bg-white"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Button size="sm" className="h-7 text-[10px] bg-green-600 hover:bg-green-700" onClick={confirmFinish}>Salvar</Button>
+                            <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setFinishingTopic(null)}>Cancelar</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 text-[9px] text-zinc-400 hover:text-indigo-600 p-0"
+                          onClick={() => handleFinish(idx, tIdx, undefined, topic.actualDuration)}
+                        >
+                          <Clock className="w-3 h-3 mr-1" /> Editar tempo
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
                   {!topic.completed && (
                     <div className="flex flex-col gap-2 mt-1 pl-8">
@@ -342,8 +376,33 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                     )}
                   </div>
                 ) : (
-                  <div className="w-[60px] flex justify-center">
-                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  <div className="w-[60px] flex justify-center items-center gap-2">
+                    {finishingTopic?.dayIdx === topic.dIdx && finishingTopic?.topicIdx === topic.tIdx ? (
+                      <div className="flex items-center gap-2 bg-green-50 p-1 rounded-lg border border-green-100">
+                        <Input 
+                          type="number" 
+                          value={manualMinutes} 
+                          onChange={(e) => setManualMinutes(e.target.value)}
+                          className="h-7 w-16 text-xs bg-white"
+                          autoFocus
+                        />
+                        <Button size="sm" className="h-7 text-[10px] bg-green-600 px-2" onClick={confirmFinish}>Ok</Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-[10px] px-2" onClick={() => setFinishingTopic(null)}>X</Button>
+                      </div>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0 text-zinc-300 hover:text-indigo-600"
+                          onClick={() => handleFinish(topic.dIdx, topic.tIdx, undefined, topic.actualDuration)}
+                          title="Editar tempo"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

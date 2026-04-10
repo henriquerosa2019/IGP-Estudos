@@ -270,14 +270,14 @@ export default function Notices() {
     const newPlan = { ...currentPlan };
     const topic = newPlan.schedule[dayIdx].topics[topicIdx];
     
-    if (!topic.completed) {
-      if (manualDuration !== undefined) {
-        topic.completed = true;
-        topic.actualDuration = manualDuration;
-        topic.endTime = new Date().toISOString();
-        if (!topic.startTime) topic.startTime = new Date().toISOString();
-        toast.success(`Concluído! Tempo registrado: ${manualDuration} minutos.`);
-      } else if (!topic.startTime) {
+    if (manualDuration !== undefined) {
+      topic.completed = true;
+      topic.actualDuration = manualDuration;
+      topic.endTime = new Date().toISOString();
+      if (!topic.startTime) topic.startTime = new Date().toISOString();
+      toast.success(`Tempo atualizado: ${manualDuration} minutos.`);
+    } else if (!topic.completed) {
+      if (!topic.startTime) {
         topic.startTime = new Date().toISOString();
         toast.info(`Estudo iniciado: ${topic.title}`);
       } else {
