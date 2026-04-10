@@ -2,19 +2,46 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, CheckCircle2, Clock, Play, Square, Layers, Copy, Check, ExternalLink } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, Clock, Play, Square, Layers, Copy, Check, ExternalLink, CheckCircle } from "lucide-react";
 import { StudyPlan } from "@/types";
 import { toast } from "sonner";
 
 interface PlanViewerProps {
   plan: StudyPlan;
   viewMode: 'calendar' | 'vertical';
-  onToggleTopic: (dayIdx: number, topicIdx: number) => void;
+  onToggleTopic: (dayIdx: number, topicIdx: number, manualDuration?: number) => void;
 }
 
 export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [finishingTopic, setFinishingTopic] = useState<{ dayIdx: number, topicIdx: number } | null>(null);
+  const [manualMinutes, setManualMinutes] = useState<string>("");
+
+  const handleFinish = (dayIdx: number, topicIdx: number, currentStartTime?: string) => {
+    let initialMinutes = "";
+    if (currentStartTime) {
+      const start = new Date(currentStartTime).getTime();
+      const now = new Date().getTime();
+      initialMinutes = Math.round((now - start) / (1000 * 60)).toString();
+    }
+    setManualMinutes(initialMinutes);
+    setFinishingTopic({ dayIdx, topicIdx });
+  };
+
+  const confirmFinish = () => {
+    if (finishingTopic) {
+      const mins = parseInt(manualMinutes);
+      if (isNaN(mins) || mins < 0) {
+        toast.error("Por favor, insira um tempo válido em minutos.");
+        return;
+      }
+      onToggleTopic(finishingTopic.dayIdx, finishingTopic.topicIdx, mins);
+      setFinishingTopic(null);
+      setManualMinutes("");
+    }
+  };
 
   const formatVideoUrl = (url?: string) => {
     if (!url) return "";
@@ -147,24 +174,55 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                   </div>
 
                   {!topic.completed && (
-                    <div className="flex gap-2 mt-1 pl-8">
-                      {!topic.startTime ? (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-7 text-[10px] border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-                          onClick={() => onToggleTopic(idx, tIdx)}
-                        >
-                          <Play className="w-3 h-3 mr-1" /> Iniciar
-                        </Button>
+                    <div className="flex flex-col gap-2 mt-1 pl-8">
+                      {finishingTopic?.dayIdx === idx && finishingTopic?.topicIdx === tIdx ? (
+                        <div className="flex items-center gap-2 bg-indigo-50 p-2 rounded-lg border border-indigo-100">
+                          <div className="flex-1">
+                            <p className="text-[9px] font-bold text-indigo-600 uppercase mb-1">Minutos estudados:</p>
+                            <Input 
+                              type="number" 
+                              value={manualMinutes} 
+                              onChange={(e) => setManualMinutes(e.target.value)}
+                              className="h-7 text-xs bg-white"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Button size="sm" className="h-7 text-[10px] bg-indigo-600" onClick={confirmFinish}>Confirmar</Button>
+                            <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setFinishingTopic(null)}>Cancelar</Button>
+                          </div>
+                        </div>
                       ) : (
-                        <Button 
-                          size="sm" 
-                          className="h-7 text-[10px] bg-indigo-600 hover:bg-indigo-700"
-                          onClick={() => onToggleTopic(idx, tIdx)}
-                        >
-                          <Square className="w-3 h-3 mr-1" /> Finalizar
-                        </Button>
+                        <div className="flex gap-2">
+                          {!topic.startTime ? (
+                            <>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-7 text-[10px] border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                                onClick={() => onToggleTopic(idx, tIdx)}
+                              >
+                                <Play className="w-3 h-3 mr-1" /> Iniciar
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-7 text-[10px] text-zinc-400 hover:text-indigo-600"
+                                onClick={() => handleFinish(idx, tIdx)}
+                              >
+                                <CheckCircle className="w-3 h-3 mr-1" /> Concluir Manual
+                              </Button>
+                            </>
+                          ) : (
+                            <Button 
+                              size="sm" 
+                              className="h-7 text-[10px] bg-indigo-600 hover:bg-indigo-700"
+                              onClick={() => handleFinish(idx, tIdx, topic.startTime)}
+                            >
+                              <Square className="w-3 h-3 mr-1" /> Finalizar
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
@@ -242,18 +300,47 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                   {topic.completed ? `${topic.actualDuration} min` : `${topic.duration} min`}
                 </span>
                 {!topic.completed ? (
-                  <Button 
-                    size="sm" 
-                    variant={topic.startTime ? "default" : "outline"}
-                    className={cn(
-                      "h-8 text-[10px] gap-1 px-3",
-                      topic.startTime ? "bg-indigo-600 text-white" : "border-indigo-200 text-indigo-600"
+                  <div className="flex items-center gap-2">
+                    {finishingTopic?.dayIdx === topic.dIdx && finishingTopic?.topicIdx === topic.tIdx ? (
+                      <div className="flex items-center gap-2 bg-indigo-50 p-1 rounded-lg border border-indigo-100">
+                        <Input 
+                          type="number" 
+                          value={manualMinutes} 
+                          onChange={(e) => setManualMinutes(e.target.value)}
+                          className="h-7 w-16 text-xs bg-white"
+                          autoFocus
+                        />
+                        <Button size="sm" className="h-7 text-[10px] bg-indigo-600 px-2" onClick={confirmFinish}>Ok</Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-[10px] px-2" onClick={() => setFinishingTopic(null)}>X</Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Button 
+                          size="sm" 
+                          variant={topic.startTime ? "default" : "outline"}
+                          className={cn(
+                            "h-8 text-[10px] gap-1 px-3",
+                            topic.startTime ? "bg-indigo-600 text-white" : "border-indigo-200 text-indigo-600"
+                          )}
+                          onClick={topic.startTime ? () => handleFinish(topic.dIdx, topic.tIdx, topic.startTime) : () => onToggleTopic(topic.dIdx, topic.tIdx)}
+                        >
+                          {topic.startTime ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                          {topic.startTime ? "Fim" : "Início"}
+                        </Button>
+                        {!topic.startTime && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 text-[10px] text-zinc-400 hover:text-indigo-600 px-2"
+                            onClick={() => handleFinish(topic.dIdx, topic.tIdx)}
+                            title="Concluir Manualmente"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </>
                     )}
-                    onClick={() => onToggleTopic(topic.dIdx, topic.tIdx)}
-                  >
-                    {topic.startTime ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                    {topic.startTime ? "Fim" : "Início"}
-                  </Button>
+                  </div>
                 ) : (
                   <div className="w-[60px] flex justify-center">
                     <CheckCircle2 className="w-5 h-5 text-green-500" />
