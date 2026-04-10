@@ -41,7 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Type } from "@google/genai";
-import { auth, db, googleProvider } from "@/lib/firebase";
+import { auth, db, googleProvider, handleFirestoreError, OperationType } from "@/lib/firebase";
 import { ai } from "@/lib/gemini";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
 import { 
@@ -172,6 +172,8 @@ export default function Notices() {
       } else {
         setCurrentPlan(null);
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "plans");
     });
 
     return () => unsubscribe();
@@ -192,7 +194,7 @@ export default function Notices() {
       const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
       setNotices(data);
     }, (error) => {
-      console.error("Firestore error:", error);
+      handleFirestoreError(error, OperationType.LIST, "notices");
       toast.error("Erro ao carregar editais do Firebase.");
     });
 
@@ -610,10 +612,13 @@ export default function Notices() {
           {!isAdding && !selectedNotice && (
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={() => setIsAdding(true)} className="gap-2 bg-indigo-600">
+                <TooltipTrigger>
+                  <span 
+                    onClick={() => setIsAdding(true)} 
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 h-10 px-4 py-2 gap-2 cursor-pointer"
+                  >
                     <Plus className="w-4 h-4" /> Novo Edital
-                  </Button>
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent className="bg-zinc-900 text-white border-zinc-800 max-w-xs">
                   <p>Cadastre editais (ex: PRF, PF, PC, PM) para que a IA cruze os dados, determine as matérias comuns da carreira policial e ajude na criação de um planejamento mais efetivo para sua aprovação.</p>
@@ -697,9 +702,9 @@ export default function Notices() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                            <Button variant="ghost" size="sm" className="h-6 text-[10px] text-zinc-400 hover:text-red-600">
+                            <span className="inline-flex items-center justify-center rounded-md text-[10px] font-medium text-zinc-400 hover:text-red-600 h-6 px-2 cursor-pointer">
                               Como extrair da Hotmart?
-                            </Button>
+                            </span>
                           </TooltipTrigger>
                           <TooltipContent className="bg-zinc-900 text-white border-zinc-800 max-w-sm p-4">
                             <div className="space-y-2 text-xs">

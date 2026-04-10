@@ -43,26 +43,22 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    function isDocOwner() {
-      return isAuthenticated() && request.auth.uid == resource.data.uid;
-    }
-
-    function isRequestOwner() {
-      return isAuthenticated() && request.auth.uid == request.resource.data.uid;
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "henrique.rosa@poli.ufrj.br" && request.auth.token.email_verified == true);
     }
 
     // Support for the app's custom anonymous UID (localUid)
-    // WARNING: This is less secure than Firebase Anonymous Auth
     function isAnonDoc(data) {
       return data.uid.startsWith('anon_');
     }
 
     function canReadDoc(data) {
-      return (isAuthenticated() && request.auth.uid == data.uid) || isAnonDoc(data);
+      return (isAuthenticated() && request.auth.uid == data.uid) || isAnonDoc(data) || isAdmin();
     }
 
     function canWriteDoc(data) {
-      return (isAuthenticated() && request.auth.uid == data.uid) || isAnonDoc(data);
+      return (isAuthenticated() && request.auth.uid == data.uid) || isAnonDoc(data) || isAdmin();
     }
 
     // ===============================================================
@@ -70,9 +66,12 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      // Allow users to read/write their own profile
-      // If not authenticated, allow if it's an anon profile (risky but matches app logic)
-      allow read, write: if isOwner(userId) || (userId.startsWith('anon_'));
+      allow read, write: if isOwner(userId) || userId.startsWith('anon_') || isAdmin();
+    }
+
+    match /unauthorized_attempts/{attemptId} {
+      allow create: if true;
+      allow read: if isAdmin();
     }
 
     match /notices/{noticeId} {

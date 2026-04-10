@@ -40,7 +40,7 @@ import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot, query, where } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { db, auth, handleFirestoreError, OperationType } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -64,6 +64,7 @@ export default function StudyPlan() {
   const [error, setError] = useState<string | null>(null);
 
   const [viewMode, setViewMode] = useState<'calendar' | 'vertical'>('calendar');
+  const [user, setUser] = useState<any>(null);
 
   // Timer State
   const [timerTime, setTimerTime] = useState(25 * 60);
@@ -114,23 +115,35 @@ export default function StudyPlan() {
   };
 
   useEffect(() => {
-    const qPlans = query(collection(db, "plans"));
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
+    const uid = getUid();
+    const qPlans = query(collection(db, "plans"), where("uid", "==", uid));
     const unsubscribePlans = onSnapshot(qPlans, (snapshot) => {
       const parsedPlans = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlanType));
       setSavedPlans(parsedPlans);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "plans");
     });
 
-    const qNotices = query(collection(db, "notices"));
+    const qNotices = query(collection(db, "notices"), where("uid", "==", uid));
     const unsubscribeNotices = onSnapshot(qNotices, (snapshot) => {
       const parsedNotices = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
       setSavedNotices(parsedNotices);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "notices");
     });
 
     return () => {
       unsubscribePlans();
       unsubscribeNotices();
     };
-  }, []);
+  }, [user]);
 
   const handleCreateManualPlan = async () => {
     setLoading(true);
@@ -321,18 +334,24 @@ export default function StudyPlan() {
                       <Label>Horas por Dia</Label>
                       <Input type="number" value={hours} onChange={(e) => setHours(Number(e.target.value))} />
                     </div>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Button className="w-full bg-red-600 hover:bg-red-700 text-white font-bold" onClick={handleCreateManualPlan} disabled={loading}>
-                            {loading ? "Gerando..." : "Gerar Plano"}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 text-white border-zinc-800 max-w-xs">
-                          <p>A ação Gerar Plano utiliza Inteligência Artificial para criar um cronograma personalizado com base nos seus objetivos, matérias e tempo disponível.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <span 
+                              onClick={handleCreateManualPlan} 
+                              className={cn(
+                                "w-full inline-flex items-center justify-center rounded-md text-sm font-bold bg-red-600 text-white hover:bg-red-700 h-10 px-4 py-2 cursor-pointer transition-opacity",
+                                loading && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              {loading ? "Gerando..." : "Gerar Plano"}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-zinc-900 text-white border-zinc-800 max-w-xs">
+                            <p>A ação Gerar Plano utiliza Inteligência Artificial para criar um cronograma personalizado com base nos seus objetivos, matérias e tempo disponível.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -384,8 +403,8 @@ export default function StudyPlan() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Link to="/editais">
-                                    <Button variant="secondary" size="sm">Cadastrar Editais</Button>
+                                  <Link to="/editais" className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-3">
+                                    Cadastrar Editais
                                   </Link>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-zinc-900 text-white border-zinc-800 max-w-xs">

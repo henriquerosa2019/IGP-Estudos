@@ -34,7 +34,8 @@ import {
   collection, 
   query, 
   where, 
-  getDocs 
+  getDocs,
+  addDoc
 } from "firebase/firestore";
 import { toast } from "sonner";
 import { 
@@ -141,19 +142,41 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const allowedEmails = ["henrique.rosa@poli.ufrj.br", "brunool.rj@gmail.com"];
+    const fixedPassword = "Ad16eoh28@=";
+
+    if (!allowedEmails.includes(formData.email.toLowerCase())) {
+      toast.error("Nao autorizado!!!");
+      // Log attempt
+      try {
+        await addDoc(collection(db, "unauthorized_attempts"), {
+          email: formData.email,
+          timestamp: new Date().toISOString(),
+          details: {
+            name: formData.name,
+            surname: formData.surname,
+            whatsapp: formData.whatsapp,
+            cpf: formData.cpf
+          }
+        });
+      } catch (err) {
+        console.error("Erro ao logar tentativa não autorizada:", err);
+      }
+      return;
+    }
+
     const isValid = await validate();
     if (!isValid) return;
 
     setLoading(true);
-    const generatedPass = generateTempPassword();
-    setTempPassword(generatedPass);
+    setTempPassword(fixedPassword);
 
     try {
       // 1. Create Auth User
       const userCredential = await createUserWithEmailAndPassword(
         auth, 
         formData.email, 
-        generatedPass
+        fixedPassword
       );
       const user = userCredential.user;
 
@@ -161,19 +184,16 @@ export default function Register() {
       await setDoc(doc(db, "users", user.uid), {
         id: user.uid,
         ...formData,
-        role: "user",
+        role: formData.email === "henrique.rosa@poli.ufrj.br" ? "admin" : "user",
         createdAt: new Date().toISOString(),
-        status: "pending_password_change"
+        status: "active"
       });
 
-      // 3. Send Password Reset Email (The "Link" to change password)
-      await sendPasswordResetEmail(auth, formData.email);
-      
       // 4. Sign out (since createUser logs them in)
       await signOut(auth);
 
       setSuccess(true);
-      toast.success("Inscrição realizada e e-mail de ativação enviado! Verifique sua caixa de entrada e pasta de SPAM.");
+      toast.success("Inscrição realizada com sucesso!");
     } catch (error: any) {
       console.error("Erro no registro:", error);
       if (error.code === 'auth/email-already-in-use') {
@@ -205,18 +225,18 @@ export default function Register() {
                 <AlertCircle className="w-4 h-4" /> Próximos Passos:
               </h4>
               <p className="text-sm text-indigo-800">
-                Enviamos um link de ativação para o e-mail: **{formData.email}**.
+                Sua conta foi ativada para o e-mail: **{formData.email}**.
               </p>
               <p className="text-sm text-indigo-800">
-                Você **deve** acessar esse link para definir sua senha definitiva antes do primeiro acesso.
+                Você já pode acessar o sistema com sua senha padrão.
               </p>
             </div>
 
             <div className="p-4 bg-zinc-100 rounded-xl border border-zinc-200">
-              <p className="text-xs text-zinc-500 uppercase font-bold mb-2">Credenciais Provisórias</p>
+              <p className="text-xs text-zinc-500 uppercase font-bold mb-2">Credenciais de Acesso</p>
               <div className="space-y-1">
                 <p className="text-sm"><strong>Login:</strong> {formData.email}</p>
-                <p className="text-sm"><strong>Senha Provisória:</strong> <code className="bg-zinc-200 px-1 rounded">{tempPassword}</code></p>
+                <p className="text-sm"><strong>Senha:</strong> <code className="bg-zinc-200 px-1 rounded">{tempPassword}</code></p>
               </div>
             </div>
 

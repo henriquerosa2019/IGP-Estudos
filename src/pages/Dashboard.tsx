@@ -19,17 +19,21 @@ import {
   CheckCircle2, 
   Clock, 
   Trophy, 
-  TrendingUp 
+  TrendingUp,
+  AlertTriangle,
+  Mail as MailIcon,
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StudyPlan } from "@/types";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { db, auth, handleFirestoreError, OperationType } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function Dashboard() {
   const [plans, setPlans] = useState<StudyPlan[]>([]);
+  const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState([
     { label: "Tópicos Concluídos", value: "0", icon: CheckCircle2, color: "text-green-500", description: "", tooltip: "" },
     { label: "Horas de Estudo", value: "0h", icon: Clock, color: "text-blue-500", description: "", tooltip: "" },
@@ -37,6 +41,7 @@ export default function Dashboard() {
     { label: "Precisão", value: "0%", icon: TrendingUp, color: "text-indigo-500", description: "Acertos nos flashcards", tooltip: "Sua precisão é calculada com base na quantidade de flashcards que você acertou (marcou como fácil) durante as revisões." },
   ]);
   const [subjectProgress, setSubjectProgress] = useState<{subject: string, progress: number}[]>([]);
+  const [unauthorizedAttempts, setUnauthorizedAttempts] = useState<any[]>([]);
 
   const [weeklyData, setWeeklyData] = useState<{name: string, horas: number}[]>([
     { name: "Seg", horas: 0 }, { name: "Ter", horas: 0 }, { name: "Qua", horas: 0 },
@@ -54,14 +59,24 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const qPlans = query(collection(db, "plans"));
-    const qFlashcards = query(collection(db, "flashcards"));
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
+    const uid = getUid();
+    const qPlans = query(collection(db, "plans"), where("uid", "==", uid));
+    const qFlashcards = query(collection(db, "flashcardReviews"), where("uid", "==", uid));
 
     let flashcardsData: any[] = [];
     
     const unsubscribeFlashcards = onSnapshot(qFlashcards, (snapshot) => {
       flashcardsData = snapshot.docs.map(doc => doc.data());
       updateStats();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "flashcardReviews");
     });
 
     let plansData: StudyPlan[] = [];
@@ -70,7 +85,20 @@ export default function Dashboard() {
       plansData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlan));
       setPlans(plansData);
       updateStats();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "plans");
     });
+
+    let unsubscribeAttempts = () => {};
+    if (user?.email === "henrique.rosa@poli.ufrj.br") {
+      const qAttempts = query(collection(db, "unauthorized_attempts"));
+      unsubscribeAttempts = onSnapshot(qAttempts, (snapshot) => {
+        const attempts = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        setUnauthorizedAttempts(attempts.sort((a: any, b: any) => b.timestamp.localeCompare(a.timestamp)));
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, "unauthorized_attempts");
+      });
+    }
 
     const updateStats = () => {
       // Calculate stats
@@ -178,8 +206,9 @@ export default function Dashboard() {
     return () => {
       unsubscribePlans();
       unsubscribeFlashcards();
+      unsubscribeAttempts();
     };
-  }, []);
+  }, [user]);
 
   return (
     <div className="space-y-8 text-zinc-900 dark:text-zinc-50">
@@ -272,6 +301,44 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {user?.email === "henrique.rosa@poli.ufrj.br" && unauthorizedAttempts.length > 0 && (
+        <Card className="border-red-200 bg-red-50/30">
+          <CardHeader>
+            <CardTitle className="text-red-600 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Tentativas de Acesso Não Autorizadas
+            </CardTitle>
+            <CardDescription>Usuários que tentaram se cadastrar sem permissão</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {unauthorizedAttempts.map((attempt) => (
+                <div key={attempt.id} className="flex items-center justify-between p-3 bg-white border border-red-100 rounded-xl shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-red-100 rounded-full">
+                      <MailIcon className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-zinc-900">{attempt.email}</p>
+                      <p className="text-xs text-zinc-500">
+                        {attempt.details?.name} {attempt.details?.surname} • {attempt.details?.whatsapp}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-medium">
+                      <CalendarIcon className="w-3 h-3" />
+                      {new Date(attempt.timestamp).toLocaleString('pt-BR')}
+                    </div>
+                    <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Bloqueado</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

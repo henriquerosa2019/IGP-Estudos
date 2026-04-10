@@ -27,8 +27,9 @@ import { motion, AnimatePresence } from "motion/react";
 import { generateFlashcards } from "@/lib/gemini";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
-import { db, auth } from "@/lib/firebase";
+import { db, auth, handleFirestoreError, OperationType } from "@/lib/firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 interface Flashcard {
   id?: string;
@@ -67,6 +68,24 @@ export default function Flashcards() {
   const [reviewsMedium, setReviewsMedium] = useState<FlashcardReview[]>([]);
   const [reviewsHard, setReviewsHard] = useState<FlashcardReview[]>([]);
   const [reviewMode, setReviewMode] = useState<'medium' | 'hard' | null>(null);
+  const [user, setUser] = useState<any>(null);
+
+  const getUid = () => {
+    if (user) return user.uid;
+    let localUid = localStorage.getItem('localUid');
+    if (!localUid) {
+      localUid = 'anon_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('localUid', localUid);
+    }
+    return localUid;
+  };
+
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
+    return () => unsubscribeAuth();
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem("aestudamos_flashcards");
@@ -74,9 +93,9 @@ export default function Flashcards() {
       setSavedDecks(JSON.parse(saved));
     }
 
-    if (!auth.currentUser) return;
+    const uid = getUid();
 
-    const q = query(collection(db, "flashcardReviews"), where("uid", "==", auth.currentUser.uid));
+    const q = query(collection(db, "flashcardReviews"), where("uid", "==", uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const reviews: FlashcardReview[] = [];
       snapshot.forEach((doc) => {
@@ -86,11 +105,11 @@ export default function Flashcards() {
       setReviewsMedium(reviews.filter(r => r.status === 'medium'));
       setReviewsHard(reviews.filter(r => r.status === 'hard'));
     }, (error) => {
-      console.error("Error fetching reviews:", error);
+      handleFirestoreError(error, OperationType.LIST, "flashcardReviews");
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   const handleStartStudy = () => {
     setShowTopicInput(true);
@@ -136,10 +155,7 @@ export default function Flashcards() {
   const currentCard = flashcards[currentIndex];
 
   const handleReview = async (status: 'easy' | 'medium' | 'hard') => {
-    if (!auth.currentUser) {
-      toast.error("Você precisa estar logado para usar a repetição espaçada.");
-      return;
-    }
+    const uid = getUid();
 
     try {
       if (view === 'review' && currentCard.id) {
@@ -159,7 +175,7 @@ export default function Flashcards() {
         // We are studying a new deck
         if (status !== 'easy') {
           await addDoc(collection(db, "flashcardReviews"), {
-            uid: auth.currentUser.uid,
+            uid: uid,
             question: currentCard.question,
             answer: currentCard.answer,
             subject: currentCard.subject || topic,

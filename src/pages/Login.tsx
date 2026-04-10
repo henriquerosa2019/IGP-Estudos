@@ -23,7 +23,8 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   sendPasswordResetEmail,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "firebase/auth";
 import { toast } from "sonner";
 
@@ -51,6 +52,12 @@ export default function Login() {
     }
     if (!password) {
       toast.error("Informe sua senha.");
+      return;
+    }
+
+    const allowedEmails = ["henrique.rosa@poli.ufrj.br", "brunool.rj@gmail.com"];
+    if (!allowedEmails.includes(email.toLowerCase())) {
+      toast.error("Nao autorizado!!!");
       return;
     }
 
@@ -99,8 +106,17 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
+    const allowedEmails = ["henrique.rosa@poli.ufrj.br", "brunool.rj@gmail.com"];
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      if (!user.email || !allowedEmails.includes(user.email.toLowerCase())) {
+        await signOut(auth);
+        toast.error("Nao autorizado!!!");
+        return;
+      }
+
       toast.success("Login com Google realizado!");
       navigate("/");
     } catch (error) {
