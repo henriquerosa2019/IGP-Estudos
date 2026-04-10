@@ -11,7 +11,6 @@ service cloud.firestore {
     //   - id: string (required) - User ID
     //   - name: string (required) - Display name
     //   - email: string (required, email) - User email
-    //   - avatar: string (optional) - Avatar URL
     //   - role: string (optional, enum: ['user', 'admin']) - User role
     //
     // Collection: notices
@@ -21,17 +20,14 @@ service cloud.firestore {
     //   - uid: string (required) - Owner UID
     //   - name: string (required) - Notice name
     //   - content: string (required) - Full notice content
-    //   - examDate: string (optional, date) - Exam date
     //   - subjects: list (required) - List of Subject objects
-    //   - hasPlanoVertical: bool (optional)
-    //   - hasCalendario: bool (optional)
     //
-    // Subject (nested in notices):
-    //   - name: string (required)
-    //   - weight: number (required, 1-5)
-    //   - importance: string (required, enum: ['low', 'medium', 'high'])
-    //   - topics: list (required, strings)
-    //   - progress: number (optional, 0-100)
+    // Collection: plans
+    // Document ID: {planId}
+    // Fields:
+    //   - uid: string (required) - Owner UID
+    //   - title: string (required)
+    //   - notices: list (required) - List of notice IDs
     //
     // ===============================================================
 
@@ -55,51 +51,18 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == request.resource.data.uid;
     }
 
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    // Support for the app's custom anonymous UID (localUid)
+    // WARNING: This is less secure than Firebase Anonymous Auth
+    function isAnonDoc(data) {
+      return data.uid.startsWith('anon_');
     }
 
-    function isValidUser(data) {
-      return data.keys().hasAll(['id', 'name', 'surname', 'email']) &&
-             data.id is string && data.id == request.auth.uid &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.surname is string && data.surname.size() > 0 && data.surname.size() < 100 &&
-             isValidEmail(data.email) &&
-             (!('cpf' in data) || (data.cpf is string && data.cpf.size() <= 14)) &&
-             (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() <= 20)) &&
-             (!('enrolledContest' in data) || (data.enrolledContest is string && data.enrolledContest.size() < 200)) &&
-             (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() < 100)) &&
-             (!('role' in data) || data.role in ['user', 'admin']);
+    function canReadDoc(data) {
+      return (isAuthenticated() && request.auth.uid == data.uid) || isAnonDoc(data);
     }
 
-    function isValidSubject(subject) {
-      return subject.keys().hasAll(['name', 'weight', 'importance', 'topics']) &&
-             subject.name is string && subject.name.size() > 0 && subject.name.size() < 200 &&
-             subject.weight is number && subject.weight >= 1 && subject.weight <= 5 &&
-             subject.importance in ['low', 'medium', 'high'] &&
-             subject.topics is list &&
-             (!('progress' in subject) || (subject.progress is number && subject.progress >= 0 && subject.progress <= 100));
-    }
-
-    function isValidNotice(data) {
-      return data.keys().hasAll(['uid', 'name', 'content', 'subjects']) &&
-             data.uid is string && data.uid == request.auth.uid &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
-             data.content is string && data.content.size() < 500000 &&
-             data.subjects is list &&
-             data.subjects.size() < 100 &&
-             (!('id' in data) || data.id is string);
-    }
-
-    function isValidPlan(data) {
-      return data.keys().hasAll(['uid', 'title', 'goal', 'startDate', 'endDate', 'notices', 'schedule']) &&
-             data.uid is string && data.uid == request.auth.uid &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.goal is string &&
-             data.startDate is string &&
-             data.endDate is string &&
-             data.notices is list &&
-             data.schedule is list;
+    function canWriteDoc(data) {
+      return (isAuthenticated() && request.auth.uid == data.uid) || isAnonDoc(data);
     }
 
     // ===============================================================
@@ -107,19 +70,27 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read, write: if true;
+      // Allow users to read/write their own profile
+      // If not authenticated, allow if it's an anon profile (risky but matches app logic)
+      allow read, write: if isOwner(userId) || (userId.startsWith('anon_'));
     }
 
     match /notices/{noticeId} {
-      allow read, write: if true;
+      allow read: if canReadDoc(resource.data);
+      allow create: if canWriteDoc(request.resource.data);
+      allow update, delete: if canWriteDoc(resource.data);
     }
 
     match /plans/{planId} {
-      allow read, write: if true;
+      allow read: if canReadDoc(resource.data);
+      allow create: if canWriteDoc(request.resource.data);
+      allow update, delete: if canWriteDoc(resource.data);
     }
 
     match /flashcardReviews/{reviewId} {
-      allow read, write: if true;
+      allow read: if canReadDoc(resource.data);
+      allow create: if canWriteDoc(request.resource.data);
+      allow update, delete: if canWriteDoc(resource.data);
     }
   }
 }

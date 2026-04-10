@@ -160,7 +160,12 @@ export default function Notices() {
       return;
     }
 
-    const q = query(collection(db, "plans"), where("notices", "array-contains", selectedNotice.id));
+    const uid = getUid();
+    const q = query(
+      collection(db, "plans"), 
+      where("notices", "array-contains", selectedNotice.id),
+      where("uid", "==", uid)
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         setCurrentPlan({ ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as StudyPlan);
@@ -181,7 +186,8 @@ export default function Notices() {
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, "notices"));
+    const uid = getUid();
+    const q = query(collection(db, "notices"), where("uid", "==", uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
       setNotices(data);
@@ -191,7 +197,7 @@ export default function Notices() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   const handleLogin = async () => {
     try {
@@ -604,7 +610,7 @@ export default function Notices() {
           {!isAdding && !selectedNotice && (
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger>
+                <TooltipTrigger asChild>
                   <Button onClick={() => setIsAdding(true)} className="gap-2 bg-indigo-600">
                     <Plus className="w-4 h-4" /> Novo Edital
                   </Button>

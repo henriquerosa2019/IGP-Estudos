@@ -67,6 +67,22 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "question", "answer", "status", "createdAt"]
+    },
+    "StudyPlan": {
+      "title": "Study Plan",
+      "description": "A generated study plan for one or more notices",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "goal": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "notices": { "type": "array", "items": { "type": "string" } },
+        "schedule": { "type": "array", "items": { "type": "object" } }
+      },
+      "required": ["uid", "title", "goal", "startDate", "endDate", "notices", "schedule"]
     }
   },
   "firestore": {
@@ -77,6 +93,10 @@
     "/notices/{noticeId}": {
       "schema": "ExamNotice",
       "description": "Store exam notices and their subjects"
+    },
+    "/plans/{planId}": {
+      "schema": "StudyPlan",
+      "description": "Store generated study plans"
     },
     "/flashcardReviews/{reviewId}": {
       "schema": "FlashcardReview",
