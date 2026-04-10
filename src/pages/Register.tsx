@@ -168,12 +168,12 @@ export default function Register() {
 
       // 3. Send Password Reset Email (The "Link" to change password)
       await sendPasswordResetEmail(auth, formData.email);
-
+      
       // 4. Sign out (since createUser logs them in)
       await signOut(auth);
 
       setSuccess(true);
-      toast.success("Inscrição realizada com sucesso!");
+      toast.success("Inscrição realizada e e-mail de ativação enviado! Verifique sua caixa de entrada e pasta de SPAM.");
     } catch (error: any) {
       console.error("Erro no registro:", error);
       if (error.code === 'auth/email-already-in-use') {

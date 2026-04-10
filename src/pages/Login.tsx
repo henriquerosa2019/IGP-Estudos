@@ -82,10 +82,16 @@ export default function Login() {
     setResetLoading(true);
     try {
       await sendPasswordResetEmail(auth, email);
-      toast.success("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
+      toast.success("E-mail de recuperação enviado! Verifique sua caixa de entrada e também a pasta de SPAM.");
     } catch (error: any) {
       console.error("Erro reset senha:", error);
-      toast.error("Erro ao enviar e-mail de recuperação. Verifique se o e-mail está correto.");
+      if (error.code === 'auth/user-not-found') {
+        toast.error("Este e-mail não está cadastrado no sistema.");
+      } else if (error.code === 'auth/invalid-email') {
+        toast.error("O formato do e-mail é inválido.");
+      } else {
+        toast.error("Erro ao enviar e-mail de recuperação. Tente novamente mais tarde.");
+      }
     } finally {
       setResetLoading(false);
     }
