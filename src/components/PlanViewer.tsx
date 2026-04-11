@@ -178,20 +178,24 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                   {topic.completed && (
                     <div className="pl-8 mt-1">
                       {finishingTopic?.dayIdx === idx && finishingTopic?.topicIdx === tIdx ? (
-                        <div className="flex items-center gap-2 bg-green-50 p-2 rounded-lg border border-green-100">
-                          <div className="flex-1">
-                            <p className="text-[9px] font-bold text-green-600 uppercase mb-1">Editar minutos:</p>
-                            <Input 
-                              type="number" 
-                              value={manualMinutes} 
-                              onChange={(e) => setManualMinutes(e.target.value)}
-                              className="h-7 text-xs bg-white"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <Button size="sm" className="h-7 text-[10px] bg-green-600 hover:bg-green-700" onClick={confirmFinish}>Salvar</Button>
-                            <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setFinishingTopic(null)}>Cancelar</Button>
+                        <div className="flex flex-col gap-2 bg-green-50/80 p-3 rounded-xl border border-green-200 shadow-sm max-w-[200px]">
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-green-700 uppercase flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> Editar minutos:
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                type="number" 
+                                value={manualMinutes} 
+                                onChange={(e) => setManualMinutes(e.target.value)}
+                                className="h-9 w-20 text-sm bg-white border-green-200 focus-visible:ring-green-500 font-bold"
+                                autoFocus
+                              />
+                              <div className="flex flex-col gap-1">
+                                <Button size="sm" className="h-7 px-3 text-[10px] bg-green-600 hover:bg-green-700 font-bold" onClick={confirmFinish}>Salvar</Button>
+                                <Button size="sm" variant="ghost" className="h-7 px-3 text-[10px] text-green-700 hover:bg-green-100" onClick={() => setFinishingTopic(null)}>Cancelar</Button>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -210,20 +214,24 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                   {!topic.completed && (
                     <div className="flex flex-col gap-2 mt-1 pl-8">
                       {finishingTopic?.dayIdx === idx && finishingTopic?.topicIdx === tIdx ? (
-                        <div className="flex items-center gap-2 bg-indigo-50 p-2 rounded-lg border border-indigo-100">
-                          <div className="flex-1">
-                            <p className="text-[9px] font-bold text-indigo-600 uppercase mb-1">Minutos estudados:</p>
-                            <Input 
-                              type="number" 
-                              value={manualMinutes} 
-                              onChange={(e) => setManualMinutes(e.target.value)}
-                              className="h-7 text-xs bg-white"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <Button size="sm" className="h-7 text-[10px] bg-indigo-600" onClick={confirmFinish}>Confirmar</Button>
-                            <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setFinishingTopic(null)}>Cancelar</Button>
+                        <div className="flex flex-col gap-2 bg-indigo-50/80 p-3 rounded-xl border border-indigo-200 shadow-sm max-w-[220px]">
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-indigo-700 uppercase flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> Minutos estudados:
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                type="number" 
+                                value={manualMinutes} 
+                                onChange={(e) => setManualMinutes(e.target.value)}
+                                className="h-9 w-20 text-sm bg-white border-indigo-200 focus-visible:ring-indigo-500 font-bold"
+                                autoFocus
+                              />
+                              <div className="flex flex-col gap-1">
+                                <Button size="sm" className="h-7 px-3 text-[10px] bg-indigo-600 hover:bg-indigo-700 font-bold" onClick={confirmFinish}>Confirmar</Button>
+                                <Button size="sm" variant="ghost" className="h-7 px-3 text-[10px] text-indigo-700 hover:bg-indigo-100" onClick={() => setFinishingTopic(null)}>Cancelar</Button>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -336,16 +344,18 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                 {!topic.completed ? (
                   <div className="flex items-center gap-2">
                     {finishingTopic?.dayIdx === topic.dIdx && finishingTopic?.topicIdx === topic.tIdx ? (
-                      <div className="flex items-center gap-2 bg-indigo-50 p-1 rounded-lg border border-indigo-100">
+                      <div className="flex items-center gap-2 bg-indigo-50/80 p-2 rounded-xl border border-indigo-200 shadow-sm">
                         <Input 
                           type="number" 
                           value={manualMinutes} 
                           onChange={(e) => setManualMinutes(e.target.value)}
-                          className="h-7 w-16 text-xs bg-white"
+                          className="h-8 w-16 text-xs bg-white border-indigo-200 font-bold"
                           autoFocus
                         />
-                        <Button size="sm" className="h-7 text-[10px] bg-indigo-600 px-2" onClick={confirmFinish}>Ok</Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-[10px] px-2" onClick={() => setFinishingTopic(null)}>X</Button>
+                        <div className="flex gap-1">
+                          <Button size="sm" className="h-8 text-[10px] bg-indigo-600 px-3 font-bold" onClick={confirmFinish}>Ok</Button>
+                          <Button size="sm" variant="ghost" className="h-8 text-[10px] px-2 text-indigo-700 hover:bg-indigo-100" onClick={() => setFinishingTopic(null)}>X</Button>
+                        </div>
                       </div>
                     ) : (
                       <>
@@ -378,16 +388,18 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                 ) : (
                   <div className="w-[60px] flex justify-center items-center gap-2">
                     {finishingTopic?.dayIdx === topic.dIdx && finishingTopic?.topicIdx === topic.tIdx ? (
-                      <div className="flex items-center gap-2 bg-green-50 p-1 rounded-lg border border-green-100">
+                      <div className="flex items-center gap-2 bg-green-50/80 p-2 rounded-xl border border-green-200 shadow-sm">
                         <Input 
                           type="number" 
                           value={manualMinutes} 
                           onChange={(e) => setManualMinutes(e.target.value)}
-                          className="h-7 w-16 text-xs bg-white"
+                          className="h-8 w-16 text-xs bg-white border-green-200 font-bold"
                           autoFocus
                         />
-                        <Button size="sm" className="h-7 text-[10px] bg-green-600 px-2" onClick={confirmFinish}>Ok</Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-[10px] px-2" onClick={() => setFinishingTopic(null)}>X</Button>
+                        <div className="flex gap-1">
+                          <Button size="sm" className="h-8 text-[10px] bg-green-600 hover:bg-green-700 px-3 font-bold" onClick={confirmFinish}>Ok</Button>
+                          <Button size="sm" variant="ghost" className="h-8 text-[10px] px-2 text-green-700 hover:bg-green-100" onClick={() => setFinishingTopic(null)}>X</Button>
+                        </div>
                       </div>
                     ) : (
                       <>
