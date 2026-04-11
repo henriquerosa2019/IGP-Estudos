@@ -94,10 +94,20 @@ export default function ContentLibrary() {
     return () => unsubscribeAuth();
   }, []);
 
+  const getUid = () => {
+    if (user) return user.uid;
+    let localUid = localStorage.getItem('localUid');
+    if (!localUid) {
+      localUid = 'anon_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('localUid', localUid);
+    }
+    return localUid;
+  };
+
   useEffect(() => {
     if (!authReady) return;
 
-    const uid = user?.uid || localStorage.getItem('localUid');
+    const uid = getUid();
     if (!uid) {
       setLoading(false);
       return;
@@ -136,7 +146,7 @@ export default function ContentLibrary() {
     }
 
     setUploadLoading(true);
-    const uid = user?.uid || localStorage.getItem('localUid');
+    const uid = getUid();
 
     try {
       let contentValue = newContent;
