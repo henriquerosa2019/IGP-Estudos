@@ -154,18 +154,47 @@ export default function Notices() {
     return localUid;
   };
 
+  const getUids = () => {
+    const uids = [];
+    if (user) uids.push(user.uid);
+    const localUid = localStorage.getItem('localUid');
+    if (localUid) uids.push(localUid);
+    if (uids.length === 0) {
+      const newLocal = 'anon_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('localUid', newLocal);
+      uids.push(newLocal);
+    }
+    return uids;
+  };
+
   useEffect(() => {
-    if (!selectedNotice) {
+    if (!authReady || !selectedNotice) {
       setCurrentPlan(null);
       return;
     }
 
-    const uid = getUid();
-    const q = query(
-      collection(db, "plans"), 
-      where("notices", "array-contains", selectedNotice.id),
-      where("uid", "==", uid)
-    );
+    const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
+    const uids = getUids();
+    
+    let q;
+    if (isAdmin) {
+      q = query(
+        collection(db, "plans"), 
+        where("notices", "array-contains", selectedNotice.id)
+      );
+    } else {
+      q = uids.length === 1
+        ? query(
+            collection(db, "plans"), 
+            where("notices", "array-contains", selectedNotice.id),
+            where("uid", "==", uids[0])
+          )
+        : query(
+            collection(db, "plans"), 
+            where("notices", "array-contains", selectedNotice.id),
+            where("uid", "in", uids)
+          );
+    }
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         setCurrentPlan({ ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as StudyPlan);
@@ -177,7 +206,7 @@ export default function Notices() {
     });
 
     return () => unsubscribe();
-  }, [selectedNotice, user]);
+  }, [authReady, selectedNotice, user]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -188,8 +217,19 @@ export default function Notices() {
   }, []);
 
   useEffect(() => {
-    const uid = getUid();
-    const q = query(collection(db, "notices"), where("uid", "==", uid));
+    if (!authReady) return;
+    
+    const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
+    const uids = getUids();
+    
+    let q;
+    if (isAdmin) {
+      q = query(collection(db, "notices"));
+    } else {
+      q = uids.length === 1
+        ? query(collection(db, "notices"), where("uid", "==", uids[0]))
+        : query(collection(db, "notices"), where("uid", "in", uids));
+    }
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
       setNotices(data);
@@ -199,7 +239,7 @@ export default function Notices() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [authReady, user]);
 
   const handleLogin = async () => {
     try {

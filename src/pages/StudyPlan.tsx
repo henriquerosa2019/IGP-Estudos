@@ -75,13 +75,26 @@ export default function StudyPlan() {
   const [showTimerSettings, setShowTimerSettings] = useState(false);
 
   const getUid = () => {
-    if (auth.currentUser) return auth.currentUser.uid;
+    if (user) return user.uid;
     let localUid = localStorage.getItem('localUid');
     if (!localUid) {
       localUid = 'anon_' + Math.random().toString(36).substring(2, 15);
       localStorage.setItem('localUid', localUid);
     }
     return localUid;
+  };
+
+  const getUids = () => {
+    const uids = [];
+    if (user) uids.push(user.uid);
+    const localUid = localStorage.getItem('localUid');
+    if (localUid) uids.push(localUid);
+    if (uids.length === 0) {
+      const newLocal = 'anon_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('localUid', newLocal);
+      uids.push(newLocal);
+    }
+    return uids;
   };
 
   useEffect(() => {
@@ -114,16 +127,31 @@ export default function StudyPlan() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const [authReady, setAuthReady] = useState(false);
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
       setUser(u);
+      setAuthReady(true);
     });
     return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
-    const uid = getUid();
-    const qPlans = query(collection(db, "plans"), where("uid", "==", uid));
+    if (!authReady) return;
+    
+    const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
+    const uids = getUids();
+    
+    let qPlans;
+    if (isAdmin) {
+      qPlans = query(collection(db, "plans"));
+    } else {
+      qPlans = uids.length === 1
+        ? query(collection(db, "plans"), where("uid", "==", uids[0]))
+        : query(collection(db, "plans"), where("uid", "in", uids));
+    }
+      
     const unsubscribePlans = onSnapshot(qPlans, (snapshot) => {
       const parsedPlans = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudyPlanType));
       setSavedPlans(parsedPlans);
@@ -131,7 +159,14 @@ export default function StudyPlan() {
       handleFirestoreError(error, OperationType.LIST, "plans");
     });
 
-    const qNotices = query(collection(db, "notices"), where("uid", "==", uid));
+    let qNotices;
+    if (isAdmin) {
+      qNotices = query(collection(db, "notices"));
+    } else {
+      qNotices = uids.length === 1
+        ? query(collection(db, "notices"), where("uid", "==", uids[0]))
+        : query(collection(db, "notices"), where("uid", "in", uids));
+    }
     const unsubscribeNotices = onSnapshot(qNotices, (snapshot) => {
       const parsedNotices = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
       setSavedNotices(parsedNotices);
@@ -143,7 +178,7 @@ export default function StudyPlan() {
       unsubscribePlans();
       unsubscribeNotices();
     };
-  }, [user]);
+  }, [authReady, user]);
 
   const handleCreateManualPlan = async () => {
     setLoading(true);

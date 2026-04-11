@@ -80,22 +80,48 @@ export default function Flashcards() {
     return localUid;
   };
 
+  const getUids = () => {
+    const uids = [];
+    if (user) uids.push(user.uid);
+    const localUid = localStorage.getItem('localUid');
+    if (localUid) uids.push(localUid);
+    if (uids.length === 0) {
+      const newLocal = 'anon_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('localUid', newLocal);
+      uids.push(newLocal);
+    }
+    return uids;
+  };
+
+  const [authReady, setAuthReady] = useState(false);
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
       setUser(u);
+      setAuthReady(true);
     });
     return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
+    if (!authReady) return;
+    
     const saved = localStorage.getItem("aestudamos_flashcards");
     if (saved) {
       setSavedDecks(JSON.parse(saved));
     }
 
-    const uid = getUid();
+    const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
+    const uids = getUids();
 
-    const q = query(collection(db, "flashcardReviews"), where("uid", "==", uid));
+    let q;
+    if (isAdmin) {
+      q = query(collection(db, "flashcardReviews"));
+    } else {
+      q = uids.length === 1
+        ? query(collection(db, "flashcardReviews"), where("uid", "==", uids[0]))
+        : query(collection(db, "flashcardReviews"), where("uid", "in", uids));
+    }
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const reviews: FlashcardReview[] = [];
       snapshot.forEach((doc) => {
@@ -109,7 +135,7 @@ export default function Flashcards() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [authReady, user]);
 
   const handleStartStudy = () => {
     setShowTopicInput(true);

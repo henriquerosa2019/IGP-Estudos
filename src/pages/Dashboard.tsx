@@ -48,27 +48,52 @@ export default function Dashboard() {
     { name: "Qui", horas: 0 }, { name: "Sex", horas: 0 }, { name: "Sáb", horas: 0 }, { name: "Dom", horas: 0 }
   ]);
 
-  const getUid = () => {
-    if (auth.currentUser) return auth.currentUser.uid;
-    let localUid = localStorage.getItem('localUid');
-    if (!localUid) {
-      localUid = 'anon_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('localUid', localUid);
+  const getUids = () => {
+    const uids = [];
+    if (user) uids.push(user.uid);
+    const localUid = localStorage.getItem('localUid');
+    if (localUid) uids.push(localUid);
+    if (uids.length === 0) {
+      const newLocal = 'anon_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('localUid', newLocal);
+      uids.push(newLocal);
     }
-    return localUid;
+    return uids;
   };
+
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
       setUser(u);
+      setAuthReady(true);
     });
     return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
-    const uid = getUid();
-    const qPlans = query(collection(db, "plans"), where("uid", "==", uid));
-    const qFlashcards = query(collection(db, "flashcardReviews"), where("uid", "==", uid));
+    if (!authReady) return;
+    
+    const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
+    const uids = getUids();
+    
+    let qPlans;
+    if (isAdmin) {
+      qPlans = query(collection(db, "plans"));
+    } else {
+      qPlans = uids.length === 1 
+        ? query(collection(db, "plans"), where("uid", "==", uids[0]))
+        : query(collection(db, "plans"), where("uid", "in", uids));
+    }
+      
+    let qFlashcards;
+    if (isAdmin) {
+      qFlashcards = query(collection(db, "flashcardReviews"));
+    } else {
+      qFlashcards = uids.length === 1
+        ? query(collection(db, "flashcardReviews"), where("uid", "==", uids[0]))
+        : query(collection(db, "flashcardReviews"), where("uid", "in", uids));
+    }
 
     let flashcardsData: any[] = [];
     
@@ -208,7 +233,7 @@ export default function Dashboard() {
       unsubscribeFlashcards();
       unsubscribeAttempts();
     };
-  }, [user]);
+  }, [authReady, user]);
 
   return (
     <div className="space-y-8 text-zinc-900 dark:text-zinc-50">

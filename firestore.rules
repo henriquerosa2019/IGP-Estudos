@@ -45,7 +45,7 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && 
-        (request.auth.token.email == "henrique.rosa@poli.ufrj.br" && request.auth.token.email_verified == true);
+        (request.auth.token.email == "henrique.rosa@poli.ufrj.br" || request.auth.token.email == "brunool.rj@gmail.com");
     }
 
     // Support for the app's custom anonymous UID (localUid)
@@ -54,11 +54,11 @@ service cloud.firestore {
     }
 
     function canReadDoc(data) {
-      return (isAuthenticated() && request.auth.uid == data.uid) || isAnonDoc(data) || isAdmin();
+      return (isAuthenticated() && request.auth.uid == data.uid) || (data.uid != null && (data.uid.startsWith('anon_') || data.uid.size() <= 15)) || isAdmin();
     }
 
     function canWriteDoc(data) {
-      return (isAuthenticated() && request.auth.uid == data.uid) || isAnonDoc(data) || isAdmin();
+      return (isAuthenticated() && request.auth.uid == data.uid) || (data.uid != null && (data.uid.startsWith('anon_') || data.uid.size() <= 15)) || isAdmin();
     }
 
     // ===============================================================

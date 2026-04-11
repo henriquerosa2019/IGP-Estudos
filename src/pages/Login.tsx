@@ -55,21 +55,23 @@ export default function Login() {
       return;
     }
 
+    const cleanEmail = email.trim().toLowerCase();
     const allowedEmails = ["henrique.rosa@poli.ufrj.br", "brunool.rj@gmail.com"];
-    if (!allowedEmails.includes(email.toLowerCase())) {
+    
+    if (!allowedEmails.includes(cleanEmail)) {
       toast.error("Nao autorizado!!!");
       return;
     }
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, cleanEmail, password);
       toast.success("Login realizado com sucesso!");
       navigate("/");
     } catch (error: any) {
       console.error("Erro no login:", error);
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        toast.error("E-mail ou senha incorretos. Se você sempre entrou pelo Google, continue usando o botão do Google abaixo.");
+        toast.error("E-mail ou senha incorretos. Se você já tinha cadastro, use sua senha antiga ou clique em 'Esqueceu a senha?'.");
       } else if (error.code === 'auth/too-many-requests') {
         toast.error("Muitas tentativas sem sucesso. Tente novamente mais tarde ou recupere sua senha.");
       } else {
