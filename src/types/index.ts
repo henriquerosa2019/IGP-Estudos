@@ -78,3 +78,15 @@ export interface Subject {
   topics?: string[]; // The full content of the discipline (topics list)
   progress?: number; // 0 to 100
 }
+
+export interface ContentItem {
+  id: string;
+  uid: string;
+  title: string;
+  type: 'pdf' | 'text' | 'video';
+  content: string; // fileUrl for pdf, rich text for text, youtube link for video
+  subject: string;
+  createdAt: string;
+  summary?: string;
+  topics?: string[];
+}

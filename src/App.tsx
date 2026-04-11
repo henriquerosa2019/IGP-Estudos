@@ -11,6 +11,7 @@ import StartHere from "./pages/StartHere";
 import Notices from "./pages/Notices";
 import StudyPlan from "./pages/StudyPlan";
 import Flashcards from "./pages/Flashcards";
+import ContentLibrary from "./pages/ContentLibrary";
 import Tutor from "./pages/Tutor";
 import Settings from "./pages/Settings";
 import Register from "./pages/Register";
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/comece-aqui" element={<StartHere />} />
           <Route path="/editais" element={<Notices />} />
           <Route path="/plano" element={<StudyPlan />} />
+          <Route path="/acervo" element={<ContentLibrary />} />
           <Route path="/flashcards" element={<Flashcards />} />
           <Route path="/tutor" element={<Tutor />} />
           <Route path="/configuracoes" element={<Settings />} />

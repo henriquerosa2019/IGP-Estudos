@@ -348,3 +348,42 @@ export const generateFlashcardsFromMultimodal = async (
     throw new Error(error.message || "Erro desconhecido ao gerar flashcards.");
   }
 };
+
+export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'video') => {
+  if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash-lite-preview",
+      contents: `Analise o seguinte conteúdo (${type}) e gere um resumo executivo e uma lista dos tópicos principais abordados.
+      
+      CONTEÚDO:
+      ${content.substring(0, 30000)} // Limit content size
+      
+      Retorne APENAS o JSON.`,
+      config: {
+        systemInstruction: "Você é um assistente de estudos. Sua tarefa é resumir conteúdos e extrair tópicos principais para facilitar o aprendizado. Retorne APENAS o JSON.",
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            summary: { type: Type.STRING, description: "Resumo do conteúdo" },
+            topics: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Lista de tópicos principais"
+            },
+            suggestedSubject: { type: Type.STRING, description: "Sugestão de disciplina (ex: Direito Penal, Português)" }
+          },
+          required: ["summary", "topics", "suggestedSubject"]
+        }
+      }
+    });
+
+    if (!response.text) throw new Error("A IA não retornou conteúdo.");
+    return JSON.parse(cleanJson(response.text));
+  } catch (error) {
+    console.error("Erro ao analisar conteúdo:", error);
+    throw error;
+  }
+};

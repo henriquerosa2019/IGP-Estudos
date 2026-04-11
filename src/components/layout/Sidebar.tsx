@@ -8,6 +8,7 @@ import {
   GraduationCap,
   Timer,
   FileText,
+  Layers,
   Moon,
   Sun,
   HelpCircle
@@ -25,7 +26,8 @@ const menuItems = [
   { icon: HelpCircle, label: "Comece aqui", path: "/comece-aqui" },
   { icon: FileText, label: "Editais", path: "/editais" },
   { icon: Calendar, label: "Plano de Estudos", path: "/plano" },
-  { icon: BookOpen, label: "Flashcards", path: "/flashcards" },
+  { icon: BookOpen, label: "Acervo Inteligente", path: "/acervo" },
+  { icon: Layers, label: "Flashcards", path: "/flashcards" },
   { icon: MessageSquare, label: "KvernAI", path: "/tutor" },
 ];
 
