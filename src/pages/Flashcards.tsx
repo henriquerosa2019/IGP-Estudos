@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Card, 
   CardContent, 
@@ -21,10 +21,18 @@ import {
   BrainCircuit,
   Save,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  CheckCircle2,
+  Upload,
+  Link as LinkIcon,
+  FileText,
+  Image as ImageIcon,
+  Youtube,
+  Search,
+  Plus
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { generateFlashcards } from "@/lib/gemini";
+import { generateFlashcardsFromMultimodal } from "@/lib/gemini";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
 import { db, auth, handleFirestoreError, OperationType } from "@/lib/firebase";
@@ -36,10 +44,13 @@ interface Flashcard {
   question: string;
   answer: string;
   subject: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty?: 'easy' | 'medium' | 'hard';
+  deckId?: string;
+  cardId?: string;
 }
 
 interface FlashcardDeck {
+  id: string;
   name: string;
   cards: Flashcard[];
 }
@@ -50,10 +61,17 @@ interface FlashcardReview {
   question: string;
   answer: string;
   subject: string;
-  status: 'medium' | 'hard';
+  status: 'easy' | 'medium' | 'hard';
   nextReviewDate: string;
   createdAt: string;
+  deckId?: string;
+  cardId?: string;
 }
+
+type ContentSource = 
+  | { id: string; type: 'topic'; text: string }
+  | { id: string; type: 'file'; file: File }
+  | { id: string; type: 'link'; url: string };
 
 export default function Flashcards() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -62,12 +80,21 @@ export default function Flashcards() {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [savedDecks, setSavedDecks] = useState<FlashcardDeck[]>([]);
   const [topic, setTopic] = useState("");
+  const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
+  
+  const [deckName, setDeckName] = useState("");
+  const [sources, setSources] = useState<ContentSource[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [showTopicInput, setShowTopicInput] = useState(false);
   
+  const [allReviews, setAllReviews] = useState<FlashcardReview[]>([]);
+  const [reviewsEasy, setReviewsEasy] = useState<FlashcardReview[]>([]);
   const [reviewsMedium, setReviewsMedium] = useState<FlashcardReview[]>([]);
   const [reviewsHard, setReviewsHard] = useState<FlashcardReview[]>([]);
-  const [reviewMode, setReviewMode] = useState<'medium' | 'hard' | null>(null);
+  const [reviewMode, setReviewMode] = useState<'easy' | 'medium' | 'hard' | null>(null);
   const [user, setUser] = useState<any>(null);
 
   const getUid = () => {
@@ -108,7 +135,23 @@ export default function Flashcards() {
     
     const saved = localStorage.getItem("aestudamos_flashcards");
     if (saved) {
-      setSavedDecks(JSON.parse(saved));
+      try {
+        const parsedDecks = JSON.parse(saved);
+        const decksWithIds = parsedDecks.map((deck: any, deckIndex: number) => ({
+          ...deck,
+          id: deck.id || `legacy-deck-${Date.now()}-${deckIndex}`,
+          cards: deck.cards.map((card: any, cardIndex: number) => ({
+            ...card,
+            id: card.id || `legacy-card-${Date.now()}-${deckIndex}-${cardIndex}`
+          }))
+        }));
+        setSavedDecks(decksWithIds);
+        if (JSON.stringify(parsedDecks) !== JSON.stringify(decksWithIds)) {
+          localStorage.setItem("aestudamos_flashcards", JSON.stringify(decksWithIds));
+        }
+      } catch (e) {
+        console.error("Failed to parse saved decks", e);
+      }
     }
 
     const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
@@ -127,9 +170,7 @@ export default function Flashcards() {
       snapshot.forEach((doc) => {
         reviews.push({ id: doc.id, ...doc.data() } as FlashcardReview);
       });
-      
-      setReviewsMedium(reviews.filter(r => r.status === 'medium'));
-      setReviewsHard(reviews.filter(r => r.status === 'hard'));
+      setAllReviews(reviews);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, "flashcardReviews");
     });
@@ -137,78 +178,252 @@ export default function Flashcards() {
     return () => unsubscribe();
   }, [authReady, user]);
 
+  // Periodic refresh for review lists to catch cards as they become ready
+  useEffect(() => {
+    const filterReviews = () => {
+      const now = new Date();
+      const ready = allReviews.filter(r => new Date(r.nextReviewDate) <= now);
+      
+      setReviewsEasy(ready.filter(r => r.status === 'easy'));
+      setReviewsMedium(ready.filter(r => r.status === 'medium'));
+      setReviewsHard(ready.filter(r => r.status === 'hard'));
+    };
+
+    filterReviews();
+    const interval = setInterval(filterReviews, 30000); // Refresh every 30 seconds
+    return () => clearInterval(interval);
+  }, [allReviews]);
+
   const handleStartStudy = () => {
+    setDeckName("");
+    setSources([]);
     setShowTopicInput(true);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newSources: ContentSource[] = Array.from(e.target.files).map(file => {
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`O arquivo ${file.name} excede 10MB e foi ignorado.`);
+          return null;
+        }
+        return { id: Math.random().toString(36).substring(2), type: 'file', file };
+      }).filter(Boolean) as ContentSource[];
+      
+      setSources(prev => [...prev, ...newSources]);
+      e.target.value = '';
+    }
+  };
+
+  const addSource = (type: 'topic' | 'link') => {
+    setSources(prev => [...prev, { id: Math.random().toString(36).substring(2), type, text: '', url: '' } as ContentSource]);
+  };
+
+  const updateSource = (id: string, value: string) => {
+    setSources(prev => prev.map(s => {
+      if (s.id === id) {
+        if (s.type === 'topic') return { ...s, text: value };
+        if (s.type === 'link') return { ...s, url: value };
+      }
+      return s;
+    }));
+  };
+
+  const removeSource = (id: string) => {
+    setSources(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setLoading(false);
+    setShowTopicInput(false);
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        resolve(base64String);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleGenerate = async () => {
-    if (!topic.trim()) {
-      toast.error("Informe o tópico estudado hoje.");
+    if (!deckName.trim()) {
+      toast.error("Informe o nome do Deck (Disciplina, Professor, Data).");
       return;
     }
+    
+    const validSources = sources.filter(s => 
+      (s.type === 'topic' && s.text.trim()) || 
+      (s.type === 'link' && s.url.trim()) || 
+      s.type === 'file'
+    );
+
+    if (validSources.length === 0) {
+      toast.error("Adicione pelo menos uma fonte de conteúdo válida.");
+      return;
+    }
+
     setLoading(true);
+    abortControllerRef.current = new AbortController();
+
     try {
-      const newCards = await generateFlashcards(topic);
+      const parts: any[] = [];
+      for (const source of validSources) {
+        if (source.type === 'topic') {
+          parts.push({ text: `Tópico: ${source.text}` });
+        } else if (source.type === 'link') {
+          parts.push({ text: `Link/Vídeo: ${source.url}` });
+        } else if (source.type === 'file') {
+          const base64 = await fileToBase64(source.file);
+          parts.push({
+            inlineData: {
+              mimeType: source.file.type,
+              data: base64
+            }
+          });
+          parts.push({ text: `Arquivo anexado: ${source.file.name}` });
+        }
+      }
+
+      const newCards = (await generateFlashcardsFromMultimodal(parts, deckName)).map((card: any, index: number) => ({
+        ...card,
+        id: `card-${Date.now()}-${index}`,
+        difficulty: 'easy' // Default to easy so they don't show up in review queues initially
+      }));
+      
+      if (abortControllerRef.current?.signal.aborted) return;
+
+      const finalDeckName = deckName.trim() || `Flashcards - ${new Date().toLocaleDateString('pt-BR')}`;
+      const newDeckId = Date.now().toString();
+      const newDeck: FlashcardDeck = { id: newDeckId, name: finalDeckName, cards: newCards };
+      
+      setSavedDecks(prev => {
+        const updatedDecks = [...prev, newDeck];
+        localStorage.setItem("aestudamos_flashcards", JSON.stringify(updatedDecks));
+        return updatedDecks;
+      });
+
       setFlashcards(newCards);
+      setTopic(finalDeckName);
+      setCurrentDeckId(newDeckId);
       setCurrentIndex(0);
       setIsFlipped(false);
       setView('study');
       setShowTopicInput(false);
-      toast.success("20 Flashcards gerados com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao gerar flashcards.");
+      toast.success(`Deck "${finalDeckName}" gerado e salvo na biblioteca!`);
+    } catch (error: any) {
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log("Geração cancelada pelo usuário.");
+      } else {
+        console.error("Erro ao gerar flashcards:", error);
+        toast.error(`Erro ao gerar flashcards: ${error.message || "Verifique os dados e tente novamente."}`);
+      }
     } finally {
-      setLoading(false);
+      if (!abortControllerRef.current?.signal.aborted) {
+        setLoading(false);
+      }
     }
   };
 
   const handleFinishStudy = () => {
-    const today = new Date().toLocaleDateString('pt-BR');
-    const deckName = `Flashcard {${topic} - ${today}}`;
-    
-    const newDeck: FlashcardDeck = { name: deckName, cards: flashcards };
-    const updatedDecks = [...savedDecks, newDeck];
-    
-    setSavedDecks(updatedDecks);
-    localStorage.setItem("aestudamos_flashcards", JSON.stringify(updatedDecks));
-    
-    toast.success(`Estudo finalizado! Salvo como ${deckName}`);
     setView('list');
     setTopic("");
+    setCurrentDeckId(null);
     setFlashcards([]);
   };
 
   const currentCard = flashcards[currentIndex];
 
+  const updateLocalDeckCardDifficulty = (deckId: string, cardId: string, newDifficulty: 'easy' | 'medium' | 'hard') => {
+    setSavedDecks(prev => {
+      const updatedDecks = prev.map(deck => {
+        if (deck.id === deckId) {
+          const updatedCards = deck.cards.map(card => {
+            if (card.id === cardId) {
+              return { ...card, difficulty: newDifficulty };
+            }
+            return card;
+          });
+          return { ...deck, cards: updatedCards };
+        }
+        return deck;
+      });
+      localStorage.setItem("aestudamos_flashcards", JSON.stringify(updatedDecks));
+      return updatedDecks;
+    });
+  };
+
+  const getNextReviewDate = (status: 'easy' | 'medium' | 'hard') => {
+    const now = new Date();
+    if (status === 'easy') {
+      now.setDate(now.getDate() + 1); // 1 day
+    } else if (status === 'medium') {
+      now.setMinutes(now.getMinutes() + 30); // 30 mins
+    } else if (status === 'hard') {
+      now.setMinutes(now.getMinutes() + 10); // 10 mins
+    }
+    return now.toISOString();
+  };
+
   const handleReview = async (status: 'easy' | 'medium' | 'hard') => {
     const uid = getUid();
+    const nextDate = getNextReviewDate(status);
 
     try {
       if (view === 'review' && currentCard.id) {
-        // We are reviewing an existing saved card
-        if (status === 'easy') {
-          await deleteDoc(doc(db, "flashcardReviews", currentCard.id));
-          toast.success("Card removido da revisão!");
-        } else {
-          // Update status if it changed
-          await updateDoc(doc(db, "flashcardReviews", currentCard.id), {
-            status,
-            nextReviewDate: new Date().toISOString() // Simplified logic
-          });
-          toast.success("Revisão agendada!");
+        // We are reviewing an existing saved card from Firestore
+        // Update status and next review date
+        await updateDoc(doc(db, "flashcardReviews", currentCard.id), {
+          status,
+          nextReviewDate: nextDate
+        });
+        toast.success("Revisão agendada!");
+
+        // Also update the local deck if we have the references
+        if (currentCard.deckId && currentCard.cardId) {
+          updateLocalDeckCardDifficulty(currentCard.deckId, currentCard.cardId, status);
         }
+
       } else {
-        // We are studying a new deck
-        if (status !== 'easy') {
-          await addDoc(collection(db, "flashcardReviews"), {
-            uid: uid,
-            question: currentCard.question,
-            answer: currentCard.answer,
-            subject: currentCard.subject || topic,
-            status,
-            nextReviewDate: new Date().toISOString(),
-            createdAt: new Date().toISOString()
-          });
+        // We are studying a deck directly
+        
+        // Update the card's difficulty in the local deck
+        if (currentDeckId && currentCard.id) {
+          const updatedCards = [...flashcards];
+          updatedCards[currentIndex] = { ...updatedCards[currentIndex], difficulty: status };
+          setFlashcards(updatedCards);
+          updateLocalDeckCardDifficulty(currentDeckId, currentCard.id, status);
+
+          // Sync with Firestore review queue
+          // First, check if this card is already in the review queue
+          const allReviews = [...reviewsEasy, ...reviewsMedium, ...reviewsHard];
+          const existingReview = allReviews.find(r => r.deckId === currentDeckId && r.cardId === currentCard.id);
+
+          if (existingReview && existingReview.id) {
+            await updateDoc(doc(db, "flashcardReviews", existingReview.id), {
+              status,
+              nextReviewDate: nextDate
+            });
+          } else {
+            await addDoc(collection(db, "flashcardReviews"), {
+              uid: uid,
+              question: currentCard.question,
+              answer: currentCard.answer,
+              subject: currentCard.subject || topic,
+              status,
+              nextReviewDate: nextDate,
+              createdAt: new Date().toISOString(),
+              deckId: currentDeckId,
+              cardId: currentCard.id
+            });
+          }
           toast.success("Salvo para revisão!");
         }
       }
@@ -232,8 +447,8 @@ export default function Flashcards() {
     }
   };
 
-  const startReview = (mode: 'medium' | 'hard') => {
-    const cardsToReview = mode === 'medium' ? reviewsMedium : reviewsHard;
+  const startReview = (mode: 'easy' | 'medium' | 'hard') => {
+    const cardsToReview = mode === 'easy' ? reviewsEasy : (mode === 'medium' ? reviewsMedium : reviewsHard);
     if (cardsToReview.length === 0) {
       toast.info("Nenhum card para revisar nesta categoria.");
       return;
@@ -245,7 +460,9 @@ export default function Flashcards() {
       question: r.question,
       answer: r.answer,
       subject: r.subject,
-      difficulty: r.status
+      difficulty: r.status,
+      deckId: r.deckId,
+      cardId: r.cardId
     }));
 
     setFlashcards(mappedCards);
@@ -280,45 +497,103 @@ export default function Flashcards() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="max-w-2xl mx-auto"
+            className="max-w-3xl mx-auto"
           >
-            <Card className="border-indigo-100 shadow-xl shadow-indigo-50">
+            <Card className="border-indigo-100 shadow-xl shadow-indigo-50 dark:bg-zinc-900 dark:border-zinc-800">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BrainCircuit className="w-5 h-5 text-indigo-600" />
-                  O que você estudou hoje?
+                <CardTitle className="flex items-center gap-2 text-indigo-600 dark:text-red-600">
+                  <BrainCircuit className="w-5 h-5" />
+                  Gerar Novos Flashcards
                 </CardTitle>
-                <CardDescription>
-                  Informe o tópico para que possamos gerar 20 flashcards personalizados para sua revisão.
+                <CardDescription className="dark:text-zinc-400">
+                  Escolha como deseja gerar seus flashcards: por tópico, arquivo (PDF/Imagem) ou link de vídeo.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="topic">Tópico ou Matéria</Label>
+                  <Label htmlFor="deckName" className="text-zinc-900 dark:text-white font-bold">Nome do Deck (Ex: Dir. Penal - Prof. Silva - 10/04)</Label>
                   <Input 
-                    id="topic"
-                    placeholder="Ex: Concordância Verbal, Leis de Newton, Revolução Francesa..." 
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
+                    id="deckName"
+                    placeholder="Identifique este conjunto de flashcards..." 
+                    value={deckName}
+                    onChange={(e) => setDeckName(e.target.value)}
                     disabled={loading}
+                    className="bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                   />
                 </div>
-                <div className="flex gap-3">
+
+                <div className="space-y-4">
+                  <Label className="text-zinc-900 dark:text-white font-bold">Fontes de Conteúdo (Adicione várias)</Label>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => addSource('topic')} disabled={loading} className="border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                      <FileText className="w-4 h-4 mr-2"/> Texto / Tópico
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => document.getElementById('file-upload')?.click()} disabled={loading} className="border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                      <Upload className="w-4 h-4 mr-2"/> Arquivo (PDF/Img)
+                    </Button>
+                    <input id="file-upload" type="file" multiple accept="application/pdf,image/*" className="hidden" onChange={handleFileChange} />
+                    <Button variant="outline" size="sm" onClick={() => addSource('link')} disabled={loading} className="border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                      <LinkIcon className="w-4 h-4 mr-2"/> Link / Vídeo
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                    {sources.map(source => (
+                      <div key={source.id} className="flex items-center gap-2 p-2 border rounded-md border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+                        {source.type === 'topic' && (
+                          <Input 
+                            value={source.text} 
+                            onChange={(e) => updateSource(source.id, e.target.value)} 
+                            placeholder="Digite o texto ou tópico..." 
+                            disabled={loading}
+                            className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 border-zinc-200 dark:border-zinc-700"
+                          />
+                        )}
+                        {source.type === 'link' && (
+                          <Input 
+                            value={source.url} 
+                            onChange={(e) => updateSource(source.id, e.target.value)} 
+                            placeholder="Cole o link do YouTube ou site..." 
+                            disabled={loading}
+                            className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 border-zinc-200 dark:border-zinc-700"
+                          />
+                        )}
+                        {source.type === 'file' && (
+                          <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-white dark:bg-zinc-800 rounded-md border border-zinc-200 dark:border-zinc-700">
+                            {source.file.type.includes('pdf') ? <FileText className="w-4 h-4 text-red-500" /> : <ImageIcon className="w-4 h-4 text-blue-500" />}
+                            <span className="text-sm truncate text-zinc-900 dark:text-white font-medium">{source.file.name}</span>
+                          </div>
+                        )}
+                        <Button variant="ghost" size="icon" onClick={() => removeSource(source.id)} disabled={loading} className="shrink-0 text-zinc-400 hover:text-red-500">
+                          <X className="w-4 h-4"/>
+                        </Button>
+                      </div>
+                    ))}
+                    {sources.length === 0 && (
+                      <div className="text-center p-4 border-2 border-dashed rounded-md text-zinc-500 border-zinc-200 dark:border-zinc-700 text-sm font-medium">
+                        Nenhuma fonte adicionada. Adicione textos, arquivos ou links acima.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t dark:border-zinc-800">
                   <Button 
                     onClick={handleGenerate} 
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
-                    disabled={loading || !topic.trim()}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-red-600 dark:hover:bg-red-700 text-white"
+                    disabled={loading || sources.length === 0 || !deckName.trim()}
                   >
                     {loading ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...</>
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processando...</>
                     ) : (
                       <><Sparkles className="w-4 h-4 mr-2" /> Gerar 20 Flashcards</>
                     )}
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={() => setShowTopicInput(false)}
+                    onClick={handleCancel}
                     disabled={loading}
+                    className="dark:border-zinc-700"
                   >
                     Cancelar
                   </Button>
@@ -331,8 +606,31 @@ export default function Flashcards() {
 
       {view === 'list' ? (
         <div className="space-y-8">
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <BrainCircuit className="w-5 h-5 text-red-500" />
+              Cards para Revisar Agora
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="hover:border-green-400 transition-colors cursor-pointer group bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-900/50" onClick={() => startReview('easy')}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-bold text-green-700 dark:text-green-500 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5" />
+                    Revisão Questões Fáceis
+                  </div>
+                  <Badge variant="secondary" className="bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200">
+                    {reviewsEasy.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-green-600 dark:text-green-400/80">
+                  Flashcards para revisão diária (1 dia).
+                </p>
+              </CardContent>
+            </Card>
+
             <Card className="hover:border-yellow-400 transition-colors cursor-pointer group bg-yellow-50/50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-900/50" onClick={() => startReview('medium')}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-bold text-yellow-700 dark:text-yellow-500 flex items-center justify-between">
@@ -347,7 +645,7 @@ export default function Flashcards() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-yellow-600 dark:text-yellow-400/80">
-                  Flashcards que você marcou como média dificuldade.
+                  Revisão rápida (30 min).
                 </p>
               </CardContent>
             </Card>
@@ -366,23 +664,47 @@ export default function Flashcards() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-red-600 dark:text-red-400/80">
-                  Flashcards que você marcou como alta dificuldade.
+                  Revisão imediata (10 min).
                 </p>
               </CardContent>
             </Card>
           </div>
+        </div>
 
-          {savedDecks.length > 0 && (
-            <div className="space-y-4">
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Save className="w-5 h-5 text-indigo-500" />
-                Seus Estudos Salvos
+                Biblioteca de Cards
               </h2>
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <Input 
+                  placeholder="Buscar por tópico, nome..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 dark:bg-zinc-900 dark:border-zinc-800"
+                />
+              </div>
+            </div>
+            
+            {savedDecks.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {savedDecks.map((deck, idx) => (
-                  <Card key={idx} className="hover:border-indigo-200 transition-colors cursor-pointer group" onClick={() => {
+                {savedDecks
+                  .filter(deck => 
+                    deck.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    deck.cards.some(c => c.subject.toLowerCase().includes(searchTerm.toLowerCase()))
+                  )
+                  .map((deck) => {
+                    const easyCount = deck.cards.filter(c => c.difficulty === 'easy').length;
+                    const mediumCount = deck.cards.filter(c => c.difficulty === 'medium').length;
+                    const hardCount = deck.cards.filter(c => c.difficulty === 'hard').length;
+                    
+                    return (
+                  <Card key={deck.id} className="hover:border-indigo-200 transition-colors cursor-pointer group" onClick={() => {
                     setFlashcards(deck.cards);
-                    setTopic(deck.name.replace("Flashcard {", "").split(" - ")[0]);
+                    setTopic(deck.name);
+                    setCurrentDeckId(deck.id);
                     setCurrentIndex(0);
                     setIsFlipped(false);
                     setView('study');
@@ -393,37 +715,29 @@ export default function Flashcards() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xs text-zinc-500">{deck.cards.length} cards para revisar</p>
+                      <div className="flex flex-col gap-2">
+                        <p className="text-xs text-zinc-500 font-medium">{deck.cards.length} cards no total</p>
+                        <div className="flex gap-2">
+                          <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-[10px] px-1.5 py-0">
+                            Fácil: {easyCount}
+                          </Badge>
+                          <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50 text-[10px] px-1.5 py-0">
+                            Médio: {mediumCount}
+                          </Badge>
+                          <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 text-[10px] px-1.5 py-0">
+                            Difícil: {hardCount}
+                          </Badge>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
-                ))}
+                )})}
               </div>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-white">Exemplos de Flashcards</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-70">
-              {[
-                { id: "1", question: "O que é Mitocôndria?", answer: "Organela responsável pela respiração celular e produção de ATP.", subject: "Biologia", difficulty: "easy" },
-                { id: "2", question: "Fórmula da Segunda Lei de Newton", answer: "F = m * a (Força é igual a massa vezes aceleração).", subject: "Física", difficulty: "medium" },
-                { id: "3", question: "Quem descobriu o Brasil?", answer: "Pedro Álvares Cabral em 1500.", subject: "História", difficulty: "easy" },
-              ].map((card) => (
-                <Card key={card.id} className="cursor-not-allowed">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <Badge variant="secondary">{card.subject}</Badge>
-                      <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
-                        {card.difficulty}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-medium text-zinc-900">{card.question}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            ) : (
+              <div className="text-center p-8 border-2 border-dashed rounded-lg border-zinc-200 dark:border-zinc-800">
+                <p className="text-zinc-500 dark:text-zinc-400">Sua biblioteca está vazia. Gere novos flashcards para salvá-los aqui.</p>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -533,9 +847,9 @@ export default function Flashcards() {
             {view !== 'review' && (
               <Button 
                 onClick={handleFinishStudy}
-                className="w-full bg-green-600 hover:bg-green-700 font-bold"
+                className="w-full bg-green-600 hover:bg-green-700 font-bold text-white"
               >
-                Finalizar Estudo e Salvar Deck
+                Concluir Estudo e Voltar para Biblioteca
               </Button>
             )}
           </div>

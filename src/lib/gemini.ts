@@ -62,7 +62,7 @@ export const generateStudyPlanFromNotices = async (
     7. Se o conteúdo for muito grande, gere quantos dias forem necessários (60, 90, 120 dias...).`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-flash-lite-preview",
       contents: prompt,
       config: {
         systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Se houver links de vídeo no conteúdo, preserve-os no campo videoUrl. Use 'type': 'study' e 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
@@ -199,7 +199,7 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-flash-lite-preview",
       contents: `Crie um plano de estudos detalhado para o objetivo: "${goal}". 
       Matérias de foco: ${subjects.join(", ")}. 
       Tempo disponível: ${hoursPerDay} horas por dia. 
@@ -290,19 +290,25 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
   }
 };
 
-export const generateFlashcards = async (topic: string) => {
+export const generateFlashcardsFromMultimodal = async (
+  parts: any[],
+  contentName: string
+) => {
   if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Gere exatamente 20 flashcards detalhados e variados sobre o tópico: "${topic}". 
-      Cada flashcard deve ter uma pergunta instigante e uma resposta clara e completa.
-      IMPORTANTE: A resposta deve OBRIGATORIAMENTE concluir com um exemplo prático ou uma aplicação real do conceito.
-      DESTAQUE: Nos exemplos citados, coloque em negrito (usando markdown **) o termo ou conceito principal que está sendo estudado (ex: **há**, **mal**, **mau**).
-      Retorne APENAS o JSON.`,
+      model: "gemini-3.1-pro-preview",
+      contents: { parts },
       config: {
-        systemInstruction: "Você é um especialista em memorização e concursos. Crie flashcards eficazes (pergunta/resposta) para ajudar no aprendizado de longo prazo. Use linguagem simples e direta. Certifique-se de que toda resposta termine com um exemplo prático e que o termo estudado esteja em negrito dentro do exemplo. Retorne APENAS o JSON conforme o esquema solicitado.",
+        systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido (que pode ser texto, imagens de livros/anotações, PDFs ou referências a vídeos) e gerar exatamente 20 flashcards detalhados e variados.
+        
+        O nome do conteúdo é: "${contentName}".
+        
+        Cada flashcard deve ter uma pergunta instigante e uma resposta clara e completa.
+        IMPORTANTE: A resposta deve OBRIGATORIAMENTE concluir com um exemplo prático ou uma aplicação real do conceito.
+        DESTAQUE: Nos exemplos citados, coloque em negrito (usando markdown **) o termo ou conceito principal que está sendo estudado.
+        Retorne APENAS o JSON conforme o esquema solicitado.`,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -314,10 +320,9 @@ export const generateFlashcards = async (topic: string) => {
                 properties: {
                   question: { type: Type.STRING },
                   answer: { type: Type.STRING },
-                  subject: { type: Type.STRING },
-                  difficulty: { type: Type.STRING, enum: ["easy", "medium", "hard"] }
+                  subject: { type: Type.STRING }
                 },
-                required: ["question", "answer", "subject", "difficulty"]
+                required: ["question", "answer", "subject"]
               }
             }
           },
@@ -327,9 +332,19 @@ export const generateFlashcards = async (topic: string) => {
     });
 
     if (!response.text) throw new Error("A IA não retornou conteúdo.");
-    return JSON.parse(cleanJson(response.text)).flashcards;
-  } catch (error) {
-    console.error("Erro ao gerar flashcards:", error);
-    throw error;
+    const cleanedJson = cleanJson(response.text);
+    try {
+      const parsed = JSON.parse(cleanedJson);
+      if (!parsed.flashcards || !Array.isArray(parsed.flashcards)) {
+        throw new Error("O formato retornado pela IA é inválido.");
+      }
+      return parsed.flashcards;
+    } catch (parseError) {
+      console.error("Erro ao fazer parse do JSON:", cleanedJson);
+      throw new Error("Erro ao processar a resposta da IA.");
+    }
+  } catch (error: any) {
+    console.error("Erro ao gerar flashcards multimodais:", error);
+    throw new Error(error.message || "Erro desconhecido ao gerar flashcards.");
   }
 };
