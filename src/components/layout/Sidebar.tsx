@@ -72,11 +72,11 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   return (
     <div className="w-64 h-screen bg-zinc-950 text-zinc-400 flex flex-col border-r border-zinc-800">
       <div className="p-6 flex flex-col items-center justify-center mb-2 bg-white/5">
-        <div className="bg-white p-4 rounded-full mb-4 shadow-lg">
+        <div className="border border-[#FF9900] p-1 rounded-full mb-4 shadow-sm">
           <img 
             src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
             alt="IGP Estudos 2.0 Logo" 
-            className="h-32 w-auto object-contain"
+            className="h-32 w-auto object-contain rounded-full"
             referrerPolicy="no-referrer"
           />
         </div>

@@ -56,8 +56,7 @@ import {
   where, 
   onSnapshot, 
   deleteDoc, 
-  doc,
-  orderBy
+  doc
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
@@ -99,12 +98,14 @@ export default function ContentLibrary() {
     if (!authReady) return;
 
     const uid = user?.uid || localStorage.getItem('localUid');
-    if (!uid) return;
+    if (!uid) {
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(db, "contentItems"),
-      where("uid", "==", uid),
-      orderBy("createdAt", "desc")
+      where("uid", "==", uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -121,8 +122,8 @@ export default function ContentLibrary() {
       setExistingSubjects(Array.from(subjectsSet));
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, "contentItems");
       setLoading(false);
+      handleFirestoreError(error, OperationType.LIST, "contentItems");
     });
 
     return () => unsubscribe();
