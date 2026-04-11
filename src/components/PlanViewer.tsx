@@ -141,23 +141,25 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                         )} 
                       />
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant={topic.type === 'revision' ? 'secondary' : 'default'} className="text-[10px] uppercase tracking-wider h-4">
-                          {topic.type === 'revision' ? 'Revisão' : 'Estudo'}
-                        </Badge>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2 mb-1">
+                        <div className="shrink-0 mt-0.5">
+                          <Badge variant={topic.type === 'revision' ? 'secondary' : 'default'} className="text-[10px] uppercase tracking-wider h-4 px-1.5">
+                            {topic.type === 'revision' ? 'Revisão' : 'Estudo'}
+                          </Badge>
+                        </div>
                         <p className={cn(
-                          "font-semibold text-sm",
+                          "font-semibold text-sm leading-tight flex-1 break-words",
                           topic.completed ? "text-zinc-400 line-through" : "text-zinc-900"
                         )}>
                           {topic.title}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="text-[10px] font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded shrink-0">
                           {topic.subject}
                         </span>
-                        <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+                        <span className="text-[10px] text-zinc-400 flex items-center gap-1 shrink-0">
                           <Clock className="w-3 h-3" />
                           {topic.completed ? `${topic.actualDuration} min (real)` : `${topic.duration} min`}
                         </span>
@@ -166,7 +168,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                             href={formatVideoUrl(topic.videoUrl)} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-[10px] text-indigo-600 hover:underline flex items-center gap-1"
+                            className="text-[10px] text-indigo-600 hover:underline flex items-center gap-1 shrink-0"
                           >
                             <Play className="w-3 h-3" /> Ver Aula
                           </a>
@@ -235,13 +237,13 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {!topic.startTime ? (
                             <>
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="h-7 text-[10px] border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                                className="h-7 text-[10px] border-indigo-200 text-indigo-600 hover:bg-indigo-50 shrink-0"
                                 onClick={() => onToggleTopic(idx, tIdx)}
                               >
                                 <Play className="w-3 h-3 mr-1" /> Iniciar
@@ -249,16 +251,16 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                               <Button 
                                 size="sm" 
                                 variant="ghost" 
-                                className="h-7 text-[10px] text-zinc-400 hover:text-indigo-600"
+                                className="h-7 text-[10px] text-zinc-400 hover:text-indigo-600 shrink-0"
                                 onClick={() => handleFinish(idx, tIdx)}
                               >
-                                <CheckCircle className="w-3 h-3 mr-1" /> Concluir Manual
+                                <CheckCircle className="w-3 h-3 mr-1" /> Concluir
                               </Button>
                             </>
                           ) : (
                             <Button 
                               size="sm" 
-                              className="h-7 text-[10px] bg-indigo-600 hover:bg-indigo-700"
+                              className="h-7 text-[10px] bg-indigo-600 hover:bg-indigo-700 shrink-0"
                               onClick={() => handleFinish(idx, tIdx, topic.startTime)}
                             >
                               <Square className="w-3 h-3 mr-1" /> Finalizar
@@ -314,12 +316,14 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                 {topic.dayName}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <Badge variant={topic.type === 'revision' ? 'secondary' : 'default'} className="text-[9px] h-3.5 px-1">
-                    {topic.type === 'revision' ? 'REV' : 'EST'}
-                  </Badge>
+                <div className="flex items-start gap-2">
+                  <div className="shrink-0 mt-0.5">
+                    <Badge variant={topic.type === 'revision' ? 'secondary' : 'default'} className="text-[9px] h-3.5 px-1">
+                      {topic.type === 'revision' ? 'REV' : 'EST'}
+                    </Badge>
+                  </div>
                   <p className={cn(
-                    "font-semibold text-sm truncate",
+                    "font-semibold text-sm leading-tight break-words",
                     topic.completed ? "text-zinc-400 line-through" : "text-zinc-900"
                   )}>
                     {topic.title}
@@ -329,7 +333,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                       href={formatVideoUrl(topic.videoUrl)} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-[10px] text-indigo-600 hover:underline flex items-center gap-1 ml-2"
+                      className="text-[10px] text-indigo-600 hover:underline flex items-center gap-1 ml-2 shrink-0 mt-0.5"
                     >
                       <Play className="w-2.5 h-2.5" /> Aula
                     </a>

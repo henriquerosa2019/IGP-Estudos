@@ -1,93 +1,114 @@
-# PRD - AEstudamos: Plataforma Inteligente de Estudos
+# PRD - AEstudamos: Ecossistema Inteligente de Aprovação
 
 ## 1. Visão Geral do Produto
-O **AEstudamos** é um ecossistema completo de preparação para concursos e exames, que utiliza Inteligência Artificial (Gemini API) para automatizar a organização, criação de materiais e acompanhamento do desempenho do estudante. A plataforma integra análise de editais, planejamento de estudos, flashcards com repetição espaçada e tutoria inteligente.
+O **AEstudamos** é uma plataforma "all-in-one" de preparação para concursos e exames de alto nível. Utilizando Inteligência Artificial de ponta (Gemini API), a plataforma automatiza o ciclo completo do estudante: desde a análise bruta de editais e criação de cronogramas personalizados até a geração de materiais de revisão (flashcards) e suporte pedagógico 24/7 via tutor inteligente.
 
-## 2. Objetivos
-- **Automatização:** Reduzir o tempo gasto na organização manual de editais e planos de estudo.
-- **Eficiência:** Otimizar a memorização através de repetição espaçada e estudo ativo.
-- **Personalização:** Adaptar o ritmo de estudo ao desempenho real do usuário.
-- **Centralização:** Reunir todas as ferramentas de estudo (cronograma, material, tutor e métricas) em um único lugar.
+## 2. Objetivos Estratégicos
+- **Eliminar a Paralisia de Planejamento:** Automatizar a extração de tópicos e a criação de cronogramas.
+- **Maximização da Retenção:** Implementar Repetição Espaçada (SRS) automática para combater a curva do esquecimento.
+- **Centralização de Conteúdo:** Unificar PDFs, videoaulas e anotações em um acervo dinâmico e inteligente.
+- **Suporte Individualizado:** Oferecer um tutor de IA que compreende o contexto específico do material de estudo do usuário.
 
-## 3. Funcionalidades Principais
+## 3. Funcionalidades Detalhadas
 
-### 3.1. Gestão de Editais (Análise e Extração)
-- **Importação de Editais:** Upload de textos ou PDFs de editais de concursos.
-- **Extração Inteligente:** A IA identifica automaticamente as disciplinas, tópicos e sub-tópicos do edital.
-- **Cruzamentos:** Capacidade de analisar múltiplos editais para identificar conteúdos comuns e divergentes (estudo incremental).
-- **Status de Cobertura:** Acompanhamento visual do que já foi estudado em cada tópico do edital.
+### 3.1. Gestão Inteligente de Editais (`/editais`)
+- **Importação Multimodal:** Suporte para links (ex: QConcursos), upload de PDFs ou colagem manual de texto (incluindo HTML de plataformas como Hotmart).
+- **Extração via IA:** Identificação automática de disciplinas, pesos, importância e lista detalhada de tópicos.
+- **Cruzamento de Matérias:** Capacidade de analisar o que é comum entre diferentes editais para otimizar o estudo incremental.
+- **Status de Cobertura:** Controle granular do progresso em cada tópico (Teoria, Questões, Revisão).
 
-### 3.2. Planos de Estudo (Vertical e Calendário)
-- **Plano de Estudo Vertical:** Organização linear de todos os tópicos do edital, permitindo marcar "Teoria", "Questões" e "Revisão" para cada item.
-- **Calendário de Estudos:** Distribuição automática da carga horária semanal entre as disciplinas, gerando uma agenda diária.
-- **Flexibilidade:** Ajuste manual de horas diárias e metas de estudo.
-- **Pomodoro Timer:** Cronômetro integrado para ciclos de estudo focado com intervalos.
+### 3.2. Planejamento de Estudos Dinâmico (`/planos`)
+- **Geração Automática:** Criação de cronogramas baseados na carga horária diária do usuário e na data da prova.
+- **Visualização Vertical:** Lista linear de tópicos para controle de "check-list" de edital.
+- **Visualização Calendário:** Agenda diária com distribuição inteligente de matérias.
+- **Estimativa de Conclusão:** Cálculo em tempo real de quando o usuário terminará o edital com base no ritmo atual.
+- **Controle de Tempo Real:** Timer integrado para registrar o tempo real de estudo vs. tempo planejado.
 
-### 3.3. Flashcards Inteligentes (Spaced Repetition)
-- **Geração Multimodal:** Criação de cards a partir de textos, PDFs, imagens ou links de vídeos (YouTube).
-- **Algoritmo de Repetição Espaçada (Estilo Anki):**
-    - **Fácil:** Revisão em **1 dia**.
-    - **Médio:** Revisão em **30 minutos**.
-    - **Difícil:** Revisão em **10 minutos**.
-- **Biblioteca de Cards:** Organização por disciplinas e busca global.
+### 3.3. Acervo Inteligente de Disciplinas (`/acervo`)
+- **Categorização Dinâmica:** Disciplinas criadas automaticamente no momento da importação.
+- **Suporte a Mídias:** Armazenamento e visualização de PDFs, textos ricos e links de YouTube.
+- **Análise de Conteúdo via IA:** Geração automática de resumos e extração de tópicos-chave para cada material importado.
+- **Geração de Flashcards:** Botão "mágico" que transforma qualquer material do acervo em um deck de flashcards prontos para estudo.
 
-### 3.4. Tutor IA
-- **Chat Interativo:** Tutor disponível 24/7 para tirar dúvidas sobre qualquer conteúdo.
-- **Contextualização:** O tutor pode acessar o contexto dos planos de estudo e editais do usuário para fornecer respostas mais precisas.
+### 3.4. Sistema de Flashcards (SRS) (`/flashcards`)
+- **Algoritmo de Repetição Espaçada:** Lógica baseada em Anki para otimizar a memorização de longo prazo.
+- **Interface de Estudo Ativo:** Modo de revisão focado com feedback imediato de dificuldade (Fácil, Médio, Difícil).
+- **Biblioteca Organizada:** Busca e filtragem de cards por disciplina e data de revisão.
 
-### 3.5. Dashboard e Analytics
-- **Métricas de Desempenho:** Gráficos de precisão nos flashcards e horas de estudo semanais.
-- **Ofensiva (Streak):** Gamificação para incentivar a constância diária.
-- **Progresso por Disciplina:** Visualização clara da porcentagem de conclusão de cada matéria.
+### 3.5. Tutor IA e Suporte (`/tutor`)
+- **Chat Contextual:** Tutor que responde dúvidas baseando-se nos materiais do usuário.
+- **Explicações Simplificadas:** Capacidade de pedir para a IA "explicar como se eu tivesse 5 anos" sobre tópicos complexos do edital.
 
 ---
 
-## 4. Arquitetura de Dados
+## 4. Interfaces e UX
+A plataforma utiliza uma estética **"Modern Dark/Light Professional"** com foco em legibilidade e redução de carga cognitiva.
 
-O sistema utiliza uma estrutura robusta baseada em **Firebase (Firestore)** para sincronização em tempo real e **LocalStorage** para cache e performance de decks.
+- **Sidebar de Navegação:** Acesso rápido a todos os módulos (Dashboard, Editais, Acervo, Flashcards, Tutor).
+- **Modais de Importação:** Fluxos guiados para adição de novos conteúdos.
+- **Badges de Status:** Identificação visual rápida de importância de matérias e prazos.
+- **Feedback Visual:** Uso de `sonner` para notificações e `framer-motion` para transições suaves entre estados.
 
-### 4.1. Entidades Principais (Firestore)
+---
 
-#### A. Users
-- `uid`: ID único do Firebase Auth.
-- `email`: E-mail do usuário.
-- `role`: Nível de acesso (user/admin).
+## 5. Arquitetura de Dados (Firestore)
 
-#### B. ExamNotices (Editais)
-- `id`: ID do edital.
-- `name`: Nome do concurso.
-- `subjects`: Lista de disciplinas e tópicos extraídos.
-- `examDate`: Data da prova.
+### 5.1. Entidades e Esquemas
 
-#### C. StudyPlans
-- `id`: ID do plano.
-- `goal`: Objetivo do plano.
-- `schedule`: Array de dias com disciplinas e tópicos alocados.
-- `viewMode`: Preferência do usuário (vertical/calendar).
+#### `users` (Coleção)
+- `uid`: string (PK)
+- `name`, `surname`, `email`: string
+- `role`: 'user' | 'admin'
+- `enrolledContest`: string (referência ao edital principal)
 
-#### D. FlashcardReviews
-- `uid`: Referência ao usuário.
-- `deckId / cardId`: Referência ao card original.
-- `nextReviewDate`: Timestamp para a próxima aparição na fila.
-- `status`: Nível de dificuldade atual.
+#### `notices` (Coleção)
+- `id`: string (PK)
+- `uid`: string (FK)
+- `name`: string
+- `content`: string (texto bruto do edital)
+- `subjects`: Array<{ name, weight, importance, topics: string[], progress }>
+- `examDate`: timestamp
 
-### 4.2. Relacionamentos
+#### `plans` (Coleção)
+- `id`: string (PK)
+- `uid`: string (FK)
+- `notices`: string[] (IDs dos editais relacionados)
+- `schedule`: Array<{ day, topics: Array<{ title, subject, duration, completed, startTime, endTime, actualDuration, type }> }>
+
+#### `content` (Coleção - Acervo)
+- `id`: string (PK)
+- `uid`: string (FK)
+- `title`, `type` (pdf/text/video), `content` (URL ou texto): string
+- `subject`: string
+- `summary`: string
+- `topics`: string[]
+
+#### `flashcards` (Coleção)
+- `id`: string (PK)
+- `uid`: string (FK)
+- `question`, `answer`, `subject`: string
+- `nextReview`: timestamp
+- `difficulty`: 'easy' | 'medium' | 'hard'
+- `interval`, `easeFactor`, `repetitions`: number (Dados do algoritmo SRS)
+
+### 5.2. Relacionamentos (ERD)
 
 ```mermaid
 erDiagram
-    USER ||--o{ EXAM_NOTICE : "analisa"
-    USER ||--o{ STUDY_PLAN : "segue"
-    USER ||--o{ FLASHCARD_REVIEW : "revisa"
-    EXAM_NOTICE ||--o{ STUDY_PLAN : "gera"
-    STUDY_PLAN ||--o{ FLASHCARD_REVIEW : "origina"
+    USER ||--o{ NOTICE : "possui"
+    USER ||--o{ PLAN : "segue"
+    USER ||--o{ CONTENT : "armazena"
+    USER ||--o{ FLASHCARD : "revisa"
+    NOTICE ||--o{ PLAN : "gera"
+    CONTENT ||--o{ FLASHCARD : "origina"
 ```
 
 ---
 
-## 5. Tecnologias Utilizadas
-- **Frontend:** React + Vite + TypeScript.
-- **Estilização:** Tailwind CSS + Shadcn/UI.
-- **Animações:** Framer Motion.
-- **Backend/DB:** Firebase (Auth & Firestore).
-- **IA:** Google Generative AI (Gemini 1.5 Pro/Flash).
-- **Gráficos:** Recharts.
+## 6. Stack Tecnológica
+- **Core:** React 19 + TypeScript + Vite.
+- **UI/UX:** Tailwind CSS + Shadcn/UI + Lucide Icons + Framer Motion.
+- **Backend:** Firebase (Authentication, Firestore, Storage).
+- **Inteligência Artificial:** Google Generative AI (Gemini 1.5 Flash para análise rápida e Pro para geração complexa).
+- **Gestão de Estado:** React Hooks (Context API para Auth).
+- **Métricas:** Recharts para visualização de dados.
