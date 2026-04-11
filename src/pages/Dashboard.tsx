@@ -239,17 +239,17 @@ export default function Dashboard() {
     <div className="space-y-8 text-zinc-900 dark:text-zinc-50">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Bem-vindo de volta!</h1>
+          <h1 className="text-5xl tracking-wide text-[#FF9900]" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Bem-vindo de volta!</h1>
           <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Seu progresso é medido por cada tópico concluído nos seus editais.</p>
         </div>
-        <div className="p-4 bg-black rounded-2xl border border-zinc-800 shadow-sm flex flex-col items-center justify-center gap-2">
+        <div className="p-4 bg-white rounded-2xl border border-zinc-200 shadow-sm flex flex-col items-center justify-center gap-2">
           <img 
             src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
             alt="IGP Estudos 2.0 Logo" 
-            className="h-36 w-auto object-contain"
+            className="h-32 w-auto object-contain"
             referrerPolicy="no-referrer"
           />
-          <span className="text-red-600 text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
+          <span className="text-[#FF9900] text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
         </div>
       </div>
 

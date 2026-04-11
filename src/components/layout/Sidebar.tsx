@@ -71,14 +71,16 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
   return (
     <div className="w-64 h-screen bg-zinc-950 text-zinc-400 flex flex-col border-r border-zinc-800">
-      <div className="p-6 flex flex-col items-center justify-center mb-2">
-        <img 
-          src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
-          alt="IGP Estudos 2.0 Logo" 
-          className="h-48 w-auto object-contain"
-          referrerPolicy="no-referrer"
-        />
-        <span className="mt-4 text-red-600 text-2xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
+      <div className="p-6 flex flex-col items-center justify-center mb-2 bg-white/5">
+        <div className="bg-white p-4 rounded-full mb-4 shadow-lg">
+          <img 
+            src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
+            alt="IGP Estudos 2.0 Logo" 
+            className="h-32 w-auto object-contain"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+        <span className="text-[#FF9900] text-2xl tracking-wide text-center" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1">
@@ -90,8 +92,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
               location.pathname === item.path 
-                ? "bg-zinc-900 text-red-600" 
-                : "hover:bg-zinc-900 hover:text-red-600"
+                ? "bg-zinc-900 text-[#FF9900]" 
+                : "hover:bg-zinc-900 hover:text-[#FF9900]"
             )}
           >
             <item.icon className="w-5 h-5" />
@@ -102,18 +104,18 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
       <div className="p-2 mx-3 mb-2 bg-black rounded-md border border-red-900/50 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5 text-red-600">
+          <div className="flex items-center gap-1.5 text-[#FF9900]">
             <Timer className="w-4 h-4" />
             <span className="text-xs font-bold uppercase tracking-wider" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Pomodoro</span>
           </div>
-          <span className="text-xs font-mono font-bold text-red-600">{formatTime(timeLeft)}</span>
+          <span className="text-xs font-mono font-bold text-[#FF9900]">{formatTime(timeLeft)}</span>
         </div>
         <button 
           onClick={() => setIsActive(!isActive)}
           className={cn(
             "w-full py-1 rounded text-[10px] font-bold transition-all uppercase tracking-widest",
             isActive 
-              ? "bg-zinc-900 text-red-600 border border-red-900/50 hover:bg-zinc-800" 
+              ? "bg-zinc-900 text-[#FF9900] border border-red-900/50 hover:bg-zinc-800" 
               : "bg-red-700 text-white hover:bg-red-600 shadow-md shadow-red-900/20"
           )}
         >
@@ -124,7 +126,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="p-4 border-t border-zinc-800 space-y-1">
         <button
           onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-zinc-900 hover:text-red-600 text-zinc-400"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-zinc-900 hover:text-[#FF9900] text-zinc-400"
         >
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           <span className="font-medium">Trocar Tela</span>
@@ -135,8 +137,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
             location.pathname === "/configuracoes" 
-              ? "bg-zinc-900 text-red-600" 
-              : "hover:bg-zinc-900 hover:text-red-600"
+              ? "bg-zinc-900 text-[#FF9900]" 
+              : "hover:bg-zinc-900 hover:text-[#FF9900]"
           )}
         >
           <Settings className="w-5 h-5" />

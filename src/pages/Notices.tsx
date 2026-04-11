@@ -637,7 +637,7 @@ export default function Notices() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Meus Editais</h1>
+          <h1 className="text-5xl tracking-wide text-[#FF9900]" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Meus Editais</h1>
           <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Gerencie os editais para cruzamento de matérias e criação de planos.</p>
         </div>
         <div className="flex gap-2">

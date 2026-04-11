@@ -258,7 +258,7 @@ export default function Register() {
           className="h-48 w-auto object-contain mb-4"
           referrerPolicy="no-referrer"
         />
-        <h1 className="text-4xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</h1>
+        <h1 className="text-4xl tracking-wide text-[#FF9900]" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</h1>
         <p className="text-zinc-500 mt-2">Inscrição de Novo Aluno</p>
       </div>
 
