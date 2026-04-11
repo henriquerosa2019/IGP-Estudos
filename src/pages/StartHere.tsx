@@ -7,7 +7,7 @@ export default function StartHere() {
       <div>
         <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Comece Aqui</h1>
         <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>
-          Siga este passo a passo para aproveitar ao máximo a plataforma Kverna Concurso 2.0.
+          Siga este passo a passo para aproveitar ao máximo a plataforma IGP Estudos 2.0.
         </p>
       </div>
 

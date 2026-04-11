@@ -244,12 +244,12 @@ export default function Dashboard() {
         </div>
         <div className="p-4 bg-black rounded-2xl border border-zinc-800 shadow-sm flex flex-col items-center justify-center gap-2">
           <img 
-            src="https://www.dropbox.com/scl/fi/buu29rs0lp3l1j21fm3yz/kverna-removebg-preview.png?rlkey=j8t4uqgb0ec2x0xjm83jwn13z&st=utvwkcjt&raw=1" 
-            alt="Kverna Logo" 
+            src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
+            alt="IGP Estudos 2.0 Logo" 
             className="h-36 w-auto object-contain"
             referrerPolicy="no-referrer"
           />
-          <span className="text-red-600 text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Kverna Concurso 2.0</span>
+          <span className="text-red-600 text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
         </div>
       </div>
 

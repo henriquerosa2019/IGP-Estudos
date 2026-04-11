@@ -131,12 +131,12 @@ export default function Login() {
     <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-4 py-12">
       <div className="mb-8 flex flex-col items-center">
         <img 
-          src="https://www.dropbox.com/scl/fi/buu29rs0lp3l1j21fm3yz/kverna-removebg-preview.png?rlkey=j8t4uqgb0ec2x0xjm83jwn13z&st=utvwkcjt&raw=1" 
-          alt="Kverna Logo" 
+          src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
+          alt="IGP Estudos 2.0 Logo" 
           className="h-48 w-auto object-contain mb-4"
           referrerPolicy="no-referrer"
         />
-        <h1 className="text-4xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Kverna Concurso 2.0</h1>
+        <h1 className="text-4xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</h1>
         <p className="text-zinc-500 mt-2">Acesso ao Portal do Aluno</p>
       </div>
 

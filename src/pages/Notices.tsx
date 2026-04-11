@@ -568,7 +568,7 @@ export default function Notices() {
         ${manualText}
         
         Extraia as informações do concurso/curso:
-        1. Nome do Concurso/Curso (Se não encontrar, use "Carreira Policial - Kverna")
+        1. Nome do Concurso/Curso (Se não encontrar, use "Carreira Policial - IGP Estudos 2.0")
         2. Previsão (se houver)
         3. Número de Vagas (se houver)
         4. Banca Organizadora/Plataforma
@@ -601,7 +601,7 @@ export default function Notices() {
       if (nameMatch && nameMatch[1].trim() !== "" && nameMatch[1] !== "[Nome]") {
         setName(nameMatch[1]);
       } else {
-        setName("Carreira Policial - Kverna");
+        setName("Carreira Policial - IGP Estudos 2.0");
       }
 
       setContent(extractedContent);

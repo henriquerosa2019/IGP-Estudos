@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FlashcardMetrics } from "@/components/FlashcardMetrics";
 import { 
   RotateCcw, 
   Check, 
@@ -29,7 +30,8 @@ import {
   Image as ImageIcon,
   Youtube,
   Search,
-  Plus
+  Plus,
+  BarChart3
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { generateFlashcardsFromMultimodal } from "@/lib/gemini";
@@ -76,7 +78,7 @@ type ContentSource =
 export default function Flashcards() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [view, setView] = useState<'list' | 'study' | 'review'>('list');
+  const [view, setView] = useState<'list' | 'study' | 'review' | 'metrics'>('list');
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [savedDecks, setSavedDecks] = useState<FlashcardDeck[]>([]);
   const [topic, setTopic] = useState("");
@@ -480,10 +482,16 @@ export default function Flashcards() {
           <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Memorização ativa com repetição espaçada.</p>
         </div>
         {view === 'list' ? (
-          <Button onClick={handleStartStudy} className="bg-indigo-600 hover:bg-indigo-700 dark:bg-zinc-900 dark:text-red-600 dark:hover:bg-zinc-800 dark:border dark:border-red-900/50 gap-2">
-            <Layers className="w-4 h-4" />
-            Estudar Agora
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setView('metrics')} variant="outline" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Métricas
+            </Button>
+            <Button onClick={handleStartStudy} className="bg-indigo-600 hover:bg-indigo-700 dark:bg-zinc-900 dark:text-red-600 dark:hover:bg-zinc-800 dark:border dark:border-red-900/50 gap-2">
+              <Layers className="w-4 h-4" />
+              Estudar Agora
+            </Button>
+          </div>
         ) : (
           <Button onClick={() => setView('list')} variant="outline">
             Voltar para Lista
@@ -612,67 +620,67 @@ export default function Flashcards() {
               Cards para Revisar Agora
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="hover:border-green-400 transition-colors cursor-pointer group bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-900/50" onClick={() => startReview('easy')}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-bold text-green-700 dark:text-green-500 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5" />
-                    Revisão Questões Fáceis
-                  </div>
-                  <Badge variant="secondary" className="bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200">
-                    {reviewsEasy.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-green-600 dark:text-green-400/80">
-                  Flashcards para revisão diária (1 dia).
-                </p>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-green-400 transition-colors cursor-pointer group bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-900/50" onClick={() => startReview('easy')}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-bold text-green-700 dark:text-green-500 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5" />
+                      Revisão Questões Fáceis
+                    </div>
+                    <Badge variant="secondary" className="bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200">
+                      {reviewsEasy.length}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-green-600 dark:text-green-400/80">
+                    Flashcards para revisão diária (1 dia).
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-yellow-400 transition-colors cursor-pointer group bg-yellow-50/50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-900/50" onClick={() => startReview('medium')}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-bold text-yellow-700 dark:text-yellow-500 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5" />
-                    Revisão Questões Médias
-                  </div>
-                  <Badge variant="secondary" className="bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200">
-                    {reviewsMedium.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-yellow-600 dark:text-yellow-400/80">
-                  Revisão rápida (30 min).
-                </p>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-yellow-400 transition-colors cursor-pointer group bg-yellow-50/50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-900/50" onClick={() => startReview('medium')}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-bold text-yellow-700 dark:text-yellow-500 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5" />
+                      Revisão Questões Médias
+                    </div>
+                    <Badge variant="secondary" className="bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200">
+                      {reviewsMedium.length}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400/80">
+                    Revisão rápida (30 min).
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-red-400 transition-colors cursor-pointer group bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-900/50" onClick={() => startReview('hard')}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-bold text-red-700 dark:text-red-500 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5" />
-                    Revisão Questões Difíceis
-                  </div>
-                  <Badge variant="secondary" className="bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200">
-                    {reviewsHard.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-red-600 dark:text-red-400/80">
-                  Revisão imediata (10 min).
-                </p>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-red-400 transition-colors cursor-pointer group bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-900/50" onClick={() => startReview('hard')}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-bold text-red-700 dark:text-red-500 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5" />
+                      Revisão Questões Difíceis
+                    </div>
+                    <Badge variant="secondary" className="bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200">
+                      {reviewsHard.length}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-red-600 dark:text-red-400/80">
+                    Revisão imediata (10 min).
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Save className="w-5 h-5 text-indigo-500" />
                 Biblioteca de Cards
@@ -701,37 +709,38 @@ export default function Flashcards() {
                     const hardCount = deck.cards.filter(c => c.difficulty === 'hard').length;
                     
                     return (
-                  <Card key={deck.id} className="hover:border-indigo-200 transition-colors cursor-pointer group" onClick={() => {
-                    setFlashcards(deck.cards);
-                    setTopic(deck.name);
-                    setCurrentDeckId(deck.id);
-                    setCurrentIndex(0);
-                    setIsFlipped(false);
-                    setView('study');
-                  }}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-bold text-zinc-700 group-hover:text-indigo-600 transition-colors">
-                        {deck.name}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col gap-2">
-                        <p className="text-xs text-zinc-500 font-medium">{deck.cards.length} cards no total</p>
-                        <div className="flex gap-2">
-                          <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-[10px] px-1.5 py-0">
-                            Fácil: {easyCount}
-                          </Badge>
-                          <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50 text-[10px] px-1.5 py-0">
-                            Médio: {mediumCount}
-                          </Badge>
-                          <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 text-[10px] px-1.5 py-0">
-                            Difícil: {hardCount}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )})}
+                      <Card key={deck.id} className="hover:border-indigo-200 transition-colors cursor-pointer group" onClick={() => {
+                        setFlashcards(deck.cards);
+                        setTopic(deck.name);
+                        setCurrentDeckId(deck.id);
+                        setCurrentIndex(0);
+                        setIsFlipped(false);
+                        setView('study');
+                      }}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm font-bold text-zinc-700 group-hover:text-indigo-600 transition-colors">
+                            {deck.name}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex flex-col gap-2">
+                            <p className="text-xs text-zinc-500 font-medium">{deck.cards.length} cards no total</p>
+                            <div className="flex gap-2">
+                              <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-[10px] px-1.5 py-0">
+                                Fácil: {easyCount}
+                              </Badge>
+                              <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50 text-[10px] px-1.5 py-0">
+                                Médio: {mediumCount}
+                              </Badge>
+                              <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 text-[10px] px-1.5 py-0">
+                                Difícil: {hardCount}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
               </div>
             ) : (
               <div className="text-center p-8 border-2 border-dashed rounded-lg border-zinc-200 dark:border-zinc-800">
@@ -740,6 +749,8 @@ export default function Flashcards() {
             )}
           </div>
         </div>
+      ) : view === 'metrics' ? (
+        <FlashcardMetrics reviews={allReviews} />
       ) : (
         <div className="max-w-xl mx-auto space-y-8">
           <div className="flex items-center justify-between text-sm text-zinc-500 px-2">
