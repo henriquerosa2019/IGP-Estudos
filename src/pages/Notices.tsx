@@ -57,6 +57,7 @@ import {
 } from "firebase/firestore";
 
 import { PlanViewer } from "@/components/PlanViewer";
+import { PerformanceDashboard } from "@/components/PerformanceDashboard";
 import { StudyPlan } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +85,7 @@ export default function Notices() {
 
   // Plan viewing state
   const [currentPlan, setCurrentPlan] = useState<StudyPlan | null>(null);
-  const [noticeViewMode, setNoticeViewMode] = useState<'subjects' | 'vertical' | 'calendar'>('subjects');
+  const [noticeViewMode, setNoticeViewMode] = useState<'subjects' | 'vertical' | 'calendar' | 'performance'>('subjects');
   const [dailyStudyHours, setDailyStudyHours] = useState<number>(4);
   const [manualExamDate, setManualExamDate] = useState<string>("");
 
@@ -988,8 +989,9 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                       Calendário
                     </Button>
                     <Button 
-                      variant="ghost" 
+                      variant={noticeViewMode === 'performance' ? 'secondary' : 'ghost'} 
                       className="w-full justify-start gap-3 text-zinc-600 hover:text-indigo-600 hover:bg-indigo-50"
+                      onClick={() => setNoticeViewMode('performance')}
                     >
                       <BarChart3 className="w-4 h-4" />
                       Desempenho Geral
@@ -1196,6 +1198,27 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                           <h3 className="text-lg font-bold text-zinc-700 mb-2">Nenhum plano gerado</h3>
                           <p className="text-zinc-500 max-w-md mb-6">
                             Você ainda não gerou um plano de estudos para este edital. Clique no botão "Gerar Plano de Estudos" acima para começar.
+                          </p>
+                          <Button onClick={handleGeneratePlan} disabled={generatingPlan} className="bg-indigo-600 hover:bg-indigo-700">
+                            {generatingPlan ? "Gerando..." : "Gerar Plano Agora"}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+
+                {noticeViewMode === 'performance' && (
+                  <>
+                    {currentPlan ? (
+                      <PerformanceDashboard plan={currentPlan} />
+                    ) : (
+                      <Card className="border-dashed border-2 border-zinc-200 bg-zinc-50/50">
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                          <BarChart3 className="w-12 h-12 text-zinc-300 mb-4" />
+                          <h3 className="text-lg font-bold text-zinc-700 mb-2">Sem dados de desempenho</h3>
+                          <p className="text-zinc-500 max-w-md mb-6">
+                            Gere um plano de estudos e comece a marcar tópicos como concluídos para visualizar seu desempenho.
                           </p>
                           <Button onClick={handleGeneratePlan} disabled={generatingPlan} className="bg-indigo-600 hover:bg-indigo-700">
                             {generatingPlan ? "Gerando..." : "Gerar Plano Agora"}
