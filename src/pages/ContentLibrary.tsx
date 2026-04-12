@@ -63,6 +63,10 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configurar o worker do PDF.js usando um CDN para evitar problemas de carregamento local
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 import { ContentItem } from "@/types";
 import { analyzeContent, generateFlashcardsFromMultimodal } from "@/lib/gemini";
 import { toast } from "sonner";
@@ -86,6 +90,28 @@ export default function ContentLibrary() {
   const [showDebug, setShowDebug] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isExtracting, setIsExtracting] = useState(false);
+
+  // Função para extrair texto do PDF localmente (Fallback para erro de CORS)
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = "";
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(" ");
+        fullText += pageText + "\n\n";
+      }
+      
+      return fullText.trim();
+    } catch (error) {
+      console.error("Erro ao extrair texto do PDF:", error);
+      throw new Error("Não foi possível ler o texto deste PDF. Tente copiar e colar o texto manualmente.");
+    }
+  };
   const [newTitle, setNewTitle] = useState("");
   const [newType, setNewType] = useState<'pdf' | 'text' | 'video' | 'link'>('text');
   const [newContent, setNewContent] = useState("");
@@ -240,32 +266,44 @@ export default function ContentLibrary() {
 
     try {
       let contentValue = newContent;
+      let finalType = newType;
 
       if (newType === 'pdf' && newFile) {
-        console.log("Iniciando upload de PDF (Simple):", newFile.name);
+        console.log("Tentando upload de PDF...");
         toast.loading("Enviando arquivo PDF...", { id: loadingToast });
         
-        if (newFile.size > 10 * 1024 * 1024) {
-          throw new Error("Arquivo muito grande. O limite é 10MB.");
-        }
-
         const sanitizedName = newFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const storageRef = ref(storage, `content/${uid}/${Date.now()}_${sanitizedName}`);
         
         try {
-          // Using simple uploadBytes instead of uploadBytesResumable for better CORS compatibility
+          // Tenta o upload, mas com um timeout curto (8s) para detectar falha de CORS rapidamente
           const uploadPromise = uploadBytes(storageRef, newFile);
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Timeout no upload")), 60000)
+            setTimeout(() => reject(new Error("CORS_OR_TIMEOUT")), 8000)
           );
 
           await Promise.race([uploadPromise, timeoutPromise]);
-          console.log("Upload concluído, obtendo URL...");
+          console.log("Upload concluído com sucesso.");
           contentValue = await getDownloadURL(storageRef);
           setUploadProgress(100);
         } catch (error: any) {
-          console.error("Erro no upload:", error);
-          throw new Error("Falha no servidor de arquivos. Isso geralmente é causado pela falta de configuração de CORS no Firebase. Tente usar a opção de 'Link' ou configure o CORS no Google Cloud.");
+          console.warn("Upload falhou ou travou (provavelmente CORS). Usando extração de texto local...");
+          setIsExtracting(true);
+          toast.loading("Upload bloqueado pelo servidor. Extraindo texto do PDF para salvar como texto...", { id: loadingToast });
+          
+          try {
+            const extractedText = await extractTextFromPDF(newFile);
+            if (!extractedText) throw new Error("PDF vazio ou sem texto legível.");
+            
+            contentValue = extractedText;
+            finalType = 'text'; // Converte para texto para salvar no Firestore (que não tem erro de CORS)
+            toast.success("Texto extraído com sucesso!", { id: loadingToast });
+          } catch (extractError: any) {
+            console.error("Erro na extração local:", extractError);
+            throw new Error("Falha total: O upload foi bloqueado e não conseguimos ler o texto do arquivo. Tente copiar e colar o texto na aba 'Texto'.");
+          } finally {
+            setIsExtracting(false);
+          }
         }
       }
 
@@ -288,7 +326,7 @@ export default function ContentLibrary() {
       await addDoc(collection(db, "contentItems"), {
         uid,
         title: newTitle,
-        type: newType,
+        type: finalType,
         content: contentValue,
         subject: newSubject,
         createdAt: new Date().toISOString(),
