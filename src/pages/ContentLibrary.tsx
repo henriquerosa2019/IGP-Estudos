@@ -244,6 +244,12 @@ export default function ContentLibrary() {
       if (newType === 'pdf' && newFile) {
         console.log("Iniciando upload de PDF:", newFile.name, "Tamanho:", newFile.size);
         toast.loading("Enviando arquivo PDF...", { id: loadingToast });
+        
+        // Check file size (max 10MB for safety)
+        if (newFile.size > 10 * 1024 * 1024) {
+          throw new Error("Arquivo muito grande. O limite é 10MB.");
+        }
+
         const sanitizedName = newFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const storageRef = ref(storage, `content/${uid}/${Date.now()}_${sanitizedName}`);
         
@@ -253,8 +259,8 @@ export default function ContentLibrary() {
           const timeout = setTimeout(() => {
             console.error("Upload Timeout: O servidor de arquivos não respondeu.");
             uploadTask.cancel();
-            reject(new Error("O upload demorou demais. Verifique se o arquivo não é muito grande ou se há bloqueio de rede."));
-          }, 30000); // 30 seconds timeout
+            reject(new Error("O upload demorou demais. Isso geralmente acontece por falta de configuração de CORS no Firebase Storage ou bloqueio de rede."));
+          }, 45000); // Increased to 45s
 
           uploadTask.on('state_changed', 
             (snapshot) => {
@@ -262,10 +268,14 @@ export default function ContentLibrary() {
               console.log(`Progresso do Upload: ${progress}% (${snapshot.bytesTransferred}/${snapshot.totalBytes})`);
               setUploadProgress(progress);
             }, 
-            (error) => {
+            (error: any) => {
               clearTimeout(timeout);
               console.error("Erro detalhado no Storage:", error);
-              reject(new Error(`Erro no servidor de arquivos: ${error.message} (Código: ${error.code})`));
+              let msg = error.message;
+              if (error.code === 'storage/unauthorized') msg = "Sem permissão para upload. Verifique as regras do Storage.";
+              if (error.code === 'storage/retry-limit-exceeded') msg = "Limite de tentativas excedido. Verifique sua conexão.";
+              if (error.code === 'storage/canceled') msg = "Upload cancelado.";
+              reject(new Error(`Erro no servidor de arquivos: ${msg}`));
             }, 
             async () => {
               clearTimeout(timeout);
@@ -697,6 +707,13 @@ export default function ContentLibrary() {
                   Salvar Conteúdo
                 </Button>
               </div>
+              {uploadLoading && (
+                <div className="w-full mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-300 leading-relaxed">
+                    <strong>Dica Técnica:</strong> Se o upload não sair de 0%, você precisa configurar o <strong>CORS</strong> no seu Google Cloud Console para o bucket do Firebase. Isso é necessário para permitir que sites externos (como o Vercel) enviem arquivos para o seu servidor.
+                  </p>
+                </div>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
