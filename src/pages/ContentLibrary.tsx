@@ -61,7 +61,7 @@ import {
   deleteDoc, 
   doc
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
 import { ContentItem } from "@/types";
 import { analyzeContent, generateFlashcardsFromMultimodal } from "@/lib/gemini";
@@ -242,10 +242,9 @@ export default function ContentLibrary() {
       let contentValue = newContent;
 
       if (newType === 'pdf' && newFile) {
-        console.log("Iniciando upload de PDF:", newFile.name, "Tamanho:", newFile.size);
+        console.log("Iniciando upload de PDF (Simple):", newFile.name);
         toast.loading("Enviando arquivo PDF...", { id: loadingToast });
         
-        // Check file size (max 10MB for safety)
         if (newFile.size > 10 * 1024 * 1024) {
           throw new Error("Arquivo muito grande. O limite é 10MB.");
         }
@@ -253,44 +252,21 @@ export default function ContentLibrary() {
         const sanitizedName = newFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const storageRef = ref(storage, `content/${uid}/${Date.now()}_${sanitizedName}`);
         
-        const uploadTask = uploadBytesResumable(storageRef, newFile);
-
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            console.error("Upload Timeout: O servidor de arquivos não respondeu.");
-            uploadTask.cancel();
-            reject(new Error("O upload demorou demais. Isso geralmente acontece por falta de configuração de CORS no Firebase Storage ou bloqueio de rede."));
-          }, 45000); // Increased to 45s
-
-          uploadTask.on('state_changed', 
-            (snapshot) => {
-              const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 90);
-              console.log(`Progresso do Upload: ${progress}% (${snapshot.bytesTransferred}/${snapshot.totalBytes})`);
-              setUploadProgress(progress);
-            }, 
-            (error: any) => {
-              clearTimeout(timeout);
-              console.error("Erro detalhado no Storage:", error);
-              let msg = error.message;
-              if (error.code === 'storage/unauthorized') msg = "Sem permissão para upload. Verifique as regras do Storage.";
-              if (error.code === 'storage/retry-limit-exceeded') msg = "Limite de tentativas excedido. Verifique sua conexão.";
-              if (error.code === 'storage/canceled') msg = "Upload cancelado.";
-              reject(new Error(`Erro no servidor de arquivos: ${msg}`));
-            }, 
-            async () => {
-              clearTimeout(timeout);
-              try {
-                console.log("Upload concluído, obtendo URL...");
-                contentValue = await getDownloadURL(uploadTask.snapshot.ref);
-                setUploadProgress(100);
-                resolve(true);
-              } catch (e) {
-                console.error("Erro ao obter URL de download:", e);
-                reject(new Error("Erro ao obter link do arquivo após o upload."));
-              }
-            }
+        try {
+          // Using simple uploadBytes instead of uploadBytesResumable for better CORS compatibility
+          const uploadPromise = uploadBytes(storageRef, newFile);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Timeout no upload")), 60000)
           );
-        });
+
+          await Promise.race([uploadPromise, timeoutPromise]);
+          console.log("Upload concluído, obtendo URL...");
+          contentValue = await getDownloadURL(storageRef);
+          setUploadProgress(100);
+        } catch (error: any) {
+          console.error("Erro no upload:", error);
+          throw new Error("Falha no servidor de arquivos. Isso geralmente é causado pela falta de configuração de CORS no Firebase. Tente usar a opção de 'Link' ou configure o CORS no Google Cloud.");
+        }
       }
 
       toast.loading("Salvando no acervo...", { id: loadingToast });
