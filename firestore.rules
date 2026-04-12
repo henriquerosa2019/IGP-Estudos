@@ -91,5 +91,11 @@ service cloud.firestore {
       allow create: if canWriteDoc(request.resource.data);
       allow update, delete: if canWriteDoc(resource.data);
     }
+
+    match /contentItems/{itemId} {
+      allow read: if canReadDoc(resource.data);
+      allow create: if canWriteDoc(request.resource.data);
+      allow update, delete: if canWriteDoc(resource.data);
+    }
   }
 }

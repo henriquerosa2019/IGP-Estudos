@@ -83,7 +83,7 @@ export interface ContentItem {
   id: string;
   uid: string;
   title: string;
-  type: 'pdf' | 'text' | 'video';
+  type: 'pdf' | 'text' | 'video' | 'link';
   content: string; // fileUrl for pdf, rich text for text, youtube link for video
   subject: string;
   createdAt: string;

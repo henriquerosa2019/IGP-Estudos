@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { 
   Search, 
   Plus, 
@@ -23,7 +24,8 @@ import {
   MoreVertical,
   Loader2,
   BookOpen,
-  Sparkles
+  Sparkles,
+  Link as LinkIcon
 } from "lucide-react";
 import { 
   Dialog, 
@@ -58,7 +60,7 @@ import {
   deleteDoc, 
   doc
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
 import { ContentItem } from "@/types";
 import { analyzeContent, generateFlashcardsFromMultimodal } from "@/lib/gemini";
@@ -78,8 +80,9 @@ export default function ContentLibrary() {
   // Upload Modal State
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [newTitle, setNewTitle] = useState("");
-  const [newType, setNewType] = useState<'pdf' | 'text' | 'video'>('text');
+  const [newType, setNewType] = useState<'pdf' | 'text' | 'video' | 'link'>('text');
   const [newContent, setNewContent] = useState("");
   const [newFile, setNewFile] = useState<File | null>(null);
   const [newSubject, setNewSubject] = useState("");
@@ -145,23 +148,58 @@ export default function ContentLibrary() {
       return;
     }
 
+    if (newType === 'pdf' && !newFile) {
+      toast.error("Por favor, selecione um arquivo PDF.");
+      return;
+    }
+
+    if ((newType === 'video' || newType === 'link') && !newContent) {
+      toast.error("Por favor, insira o link.");
+      return;
+    }
+
     setUploadLoading(true);
+    setUploadProgress(0);
     const uid = getUid();
 
     try {
       let contentValue = newContent;
 
       if (newType === 'pdf' && newFile) {
+        // Limit to 25MB for better stability
+        if (newFile.size > 25 * 1024 * 1024) {
+          toast.error("O arquivo excede o limite de 25MB.");
+          setUploadLoading(false);
+          return;
+        }
+
         const storageRef = ref(storage, `content/${uid}/${Date.now()}_${newFile.name}`);
-        const uploadResult = await uploadBytes(storageRef, newFile);
-        contentValue = await getDownloadURL(uploadResult.ref);
+        const uploadTask = uploadBytesResumable(storageRef, newFile);
+
+        contentValue = await new Promise((resolve, reject) => {
+          uploadTask.on('state_changed', 
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadProgress(progress);
+            }, 
+            (error) => {
+              console.error("Upload error:", error);
+              reject(error);
+            }, 
+            () => {
+              getDownloadURL(uploadTask.snapshot.ref)
+                .then(resolve)
+                .catch(reject);
+            }
+          );
+        });
       }
 
       // IA Analysis (Optional but recommended)
       let analysis = { summary: "", topics: [] as string[] };
       try {
         // If it's text, we can analyze it directly
-        if (newType === 'text') {
+        if (newType === 'text' && newContent) {
           const result = await analyzeContent(newContent, 'text');
           analysis = { summary: result.summary, topics: result.topics };
         }
@@ -185,9 +223,15 @@ export default function ContentLibrary() {
       resetUploadForm();
     } catch (error) {
       console.error("Error uploading content:", error);
-      toast.error("Erro ao adicionar conteúdo.");
+      try {
+        handleFirestoreError(error, OperationType.WRITE, "contentItems");
+      } catch (e) {
+        // handleFirestoreError throws, which is expected for logging
+      }
+      toast.error("Erro ao adicionar conteúdo. Verifique sua conexão.");
     } finally {
       setUploadLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -206,6 +250,7 @@ export default function ContentLibrary() {
       await deleteDoc(doc(db, "contentItems", id));
       toast.success("Conteúdo excluído.");
     } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `contentItems/${id}`);
       toast.error("Erro ao excluir conteúdo.");
     }
   };
@@ -377,27 +422,34 @@ export default function ContentLibrary() {
 
               <div className="space-y-2">
                 <Label>Tipo de Conteúdo</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <Button 
                     variant={newType === 'text' ? 'default' : 'outline'} 
                     onClick={() => setNewType('text')}
-                    className="gap-2"
+                    className="gap-2 text-xs px-2"
                   >
                     <Type className="w-4 h-4" /> Texto
                   </Button>
                   <Button 
                     variant={newType === 'pdf' ? 'default' : 'outline'} 
                     onClick={() => setNewType('pdf')}
-                    className="gap-2"
+                    className="gap-2 text-xs px-2"
                   >
                     <FileText className="w-4 h-4" /> PDF
                   </Button>
                   <Button 
                     variant={newType === 'video' ? 'default' : 'outline'} 
                     onClick={() => setNewType('video')}
-                    className="gap-2"
+                    className="gap-2 text-xs px-2"
                   >
                     <Video className="w-4 h-4" /> Vídeo
+                  </Button>
+                  <Button 
+                    variant={newType === 'link' ? 'default' : 'outline'} 
+                    onClick={() => setNewType('link')}
+                    className="gap-2 text-xs px-2"
+                  >
+                    <LinkIcon className="w-4 h-4" /> Link
                   </Button>
                 </div>
               </div>
@@ -435,17 +487,39 @@ export default function ContentLibrary() {
                   />
                 </div>
               )}
+
+              {newType === 'link' && (
+                <div className="space-y-2">
+                  <Label>Link Externo (Artigo, Notícia, etc.)</Label>
+                  <Input 
+                    placeholder="https://exemplo.com/artigo" 
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsUploadOpen(false)}>Cancelar</Button>
-              <Button 
-                onClick={handleUpload} 
-                disabled={uploadLoading}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                {uploadLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Salvar Conteúdo
-              </Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              {uploadLoading && newType === 'pdf' && (
+                <div className="w-full mb-2">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span>Enviando PDF...</span>
+                    <span>{Math.round(uploadProgress)}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-1" />
+                </div>
+              )}
+              <div className="flex justify-end gap-2 w-full">
+                <Button variant="outline" onClick={() => setIsUploadOpen(false)}>Cancelar</Button>
+                <Button 
+                  onClick={handleUpload} 
+                  disabled={uploadLoading}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  {uploadLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Salvar Conteúdo
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -510,6 +584,7 @@ export default function ContentLibrary() {
                     <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600">
                       {item.type === 'pdf' ? <FileText className="w-5 h-5" /> : 
                        item.type === 'video' ? <Video className="w-5 h-5" /> : 
+                       item.type === 'link' ? <LinkIcon className="w-5 h-5" /> :
                        <Type className="w-5 h-5" />}
                     </div>
                     <DropdownMenu>
@@ -571,10 +646,10 @@ export default function ContentLibrary() {
                       >
                         <Download className="w-3.5 h-3.5" /> Baixar
                       </a>
-                    ) : (
+                    ) : item.type === 'video' || item.type === 'link' ? (
                       <a 
-                        href={item.type === 'video' ? item.content : '#'} 
-                        target={item.type === 'video' ? "_blank" : "_self"} 
+                        href={item.content} 
+                        target="_blank" 
                         rel="noopener noreferrer"
                         className={cn(
                           buttonVariants({ variant: "outline", size: "sm" }),
@@ -583,6 +658,18 @@ export default function ContentLibrary() {
                       >
                         <ExternalLink className="w-3.5 h-3.5" /> Abrir
                       </a>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 gap-2"
+                        onClick={() => {
+                          // Logic to view text content could be added here
+                          toast.info("Conteúdo de texto: " + item.title);
+                        }}
+                      >
+                        <Type className="w-3.5 h-3.5" /> Ver Texto
+                      </Button>
                     )}
                     
                     <Button 

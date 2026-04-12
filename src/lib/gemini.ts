@@ -349,7 +349,7 @@ export const generateFlashcardsFromMultimodal = async (
   }
 };
 
-export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'video') => {
+export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'video' | 'link') => {
   if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
 
   try {
