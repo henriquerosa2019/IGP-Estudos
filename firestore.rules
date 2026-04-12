@@ -54,11 +54,11 @@ service cloud.firestore {
     }
 
     function canReadDoc(data) {
-      return (isAuthenticated() && request.auth.uid == data.uid) || (data.uid != null && (data.uid.startsWith('anon_') || data.uid.size() <= 15)) || isAdmin();
+      return (isAuthenticated() && request.auth.uid == data.uid) || (data.uid != null && data.uid.startsWith('anon_')) || isAdmin();
     }
 
     function canWriteDoc(data) {
-      return (isAuthenticated() && request.auth.uid == data.uid) || (data.uid != null && (data.uid.startsWith('anon_') || data.uid.size() <= 15)) || isAdmin();
+      return (isAuthenticated() && request.auth.uid == data.uid) || (data.uid != null && data.uid.startsWith('anon_')) || isAdmin();
     }
 
     // ===============================================================

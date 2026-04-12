@@ -161,14 +161,16 @@ export default function ContentLibrary() {
     setUploadLoading(true);
     setUploadProgress(0);
     const uid = getUid();
+    const loadingToast = toast.loading("Iniciando upload...");
 
     try {
       let contentValue = newContent;
 
       if (newType === 'pdf' && newFile) {
+        toast.loading("Enviando arquivo PDF...", { id: loadingToast });
         // Limit to 25MB for better stability
         if (newFile.size > 25 * 1024 * 1024) {
-          toast.error("O arquivo excede o limite de 25MB.");
+          toast.error("O arquivo excede o limite de 25MB.", { id: loadingToast });
           setUploadLoading(false);
           return;
         }
@@ -195,6 +197,8 @@ export default function ContentLibrary() {
         });
       }
 
+      toast.loading("Salvando no banco de dados...", { id: loadingToast });
+      console.log("Saving contentItem with contentValue:", contentValue);
       // IA Analysis (Optional but recommended)
       let analysis = { summary: "", topics: [] as string[] };
       try {
@@ -218,7 +222,7 @@ export default function ContentLibrary() {
         topics: analysis.topics
       });
 
-      toast.success("Conteúdo adicionado com sucesso!");
+      toast.success("Conteúdo adicionado com sucesso!", { id: loadingToast });
       setIsUploadOpen(false);
       resetUploadForm();
     } catch (error) {
@@ -228,7 +232,7 @@ export default function ContentLibrary() {
       } catch (e) {
         // handleFirestoreError throws, which is expected for logging
       }
-      toast.error("Erro ao adicionar conteúdo. Verifique sua conexão.");
+      toast.error("Erro ao adicionar conteúdo. Verifique sua conexão.", { id: loadingToast });
     } finally {
       setUploadLoading(false);
       setUploadProgress(0);
