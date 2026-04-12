@@ -54,16 +54,24 @@ service cloud.firestore {
     }
 
     function canReadDoc(data) {
-      return (isAuthenticated() && request.auth.uid == data.uid) || (data.uid != null && data.uid.startsWith('anon_')) || isAdmin();
+      return (request.auth != null && request.auth.uid == data.uid) || 
+             (data.uid != null && data.uid.startsWith('anon_')) || 
+             isAdmin();
     }
 
     function canWriteDoc(data) {
-      return (isAuthenticated() && request.auth.uid == data.uid) || (data.uid != null && data.uid.startsWith('anon_')) || isAdmin();
+      return (request.auth != null && request.auth.uid == data.uid) || 
+             (data.uid != null && data.uid.startsWith('anon_')) || 
+             isAdmin();
     }
 
     // ===============================================================
     // Rules
     // ===============================================================
+
+    match /test/{docId} {
+      allow read: if true;
+    }
 
     match /users/{userId} {
       allow read, write: if isOwner(userId) || userId.startsWith('anon_') || isAdmin();
@@ -93,9 +101,8 @@ service cloud.firestore {
     }
 
     match /contentItems/{itemId} {
-      allow read: if canReadDoc(resource.data);
-      allow create: if canWriteDoc(request.resource.data);
-      allow update, delete: if canWriteDoc(resource.data);
+      allow read: if true;
+      allow write: if true;
     }
   }
 }

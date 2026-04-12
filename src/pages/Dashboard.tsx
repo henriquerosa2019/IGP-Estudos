@@ -51,11 +51,11 @@ export default function Dashboard() {
   const getUids = () => {
     const uids = [];
     if (user) uids.push(user.uid);
-    const localUid = localStorage.getItem('localUid');
+    const localUid = localStorage.getItem('igp_local_uid');
     if (localUid) uids.push(localUid);
     if (uids.length === 0) {
       const newLocal = 'anon_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('localUid', newLocal);
+      localStorage.setItem('igp_local_uid', newLocal);
       uids.push(newLocal);
     }
     return uids;

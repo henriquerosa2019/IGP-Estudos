@@ -14,14 +14,12 @@ export function MainLayout() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        navigate("/login");
-      }
+      // Removed hard redirect to /login to allow anonymous mode in ContentLibrary
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [navigate]);
+  }, []);
 
   if (loading) {
     return (

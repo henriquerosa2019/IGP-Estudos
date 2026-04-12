@@ -25,6 +25,7 @@ import {
   Loader2,
   BookOpen,
   Sparkles,
+  Zap,
   Link as LinkIcon
 } from "lucide-react";
 import { 
@@ -69,16 +70,20 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
 export default function ContentLibrary() {
+  console.log("ContentLibrary rendering...");
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSubject, setFilterSubject] = useState("all");
   const [sortBy, setSortBy] = useState<"date" | "title" | "subject">("date");
   const [user, setUser] = useState<any>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
 
   // Upload Modal State
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [newTitle, setNewTitle] = useState("");
@@ -90,19 +95,41 @@ export default function ContentLibrary() {
   const [isCreatingNewSubject, setIsCreatingNewSubject] = useState(false);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+    console.log("ContentLibrary: Iniciando monitoramento de Auth...");
+    const authTimeout = setTimeout(() => {
+      if (!authReady) {
+        console.warn("Auth demorando demais, forçando inicialização...");
+        setAuthReady(true);
+      }
+    }, 3000); // Reduced to 3s for faster feedback
+
+    try {
+      const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+        console.log("ContentLibrary: Auth status alterado", u ? "Logado" : "Anônimo");
+        clearTimeout(authTimeout);
+        setUser(u);
+        setAuthReady(true);
+      }, (err) => {
+        console.error("Erro no onAuthStateChanged:", err);
+        setAuthReady(true); // Still proceed to try loading
+      });
+      return () => {
+        unsubscribeAuth();
+        clearTimeout(authTimeout);
+      };
+    } catch (e) {
+      console.error("Falha ao iniciar listener de Auth:", e);
       setAuthReady(true);
-    });
-    return () => unsubscribeAuth();
+      return () => clearTimeout(authTimeout);
+    }
   }, []);
 
   const getUid = () => {
     if (user) return user.uid;
-    let localUid = localStorage.getItem('localUid');
+    let localUid = localStorage.getItem('igp_local_uid');
     if (!localUid) {
       localUid = 'anon_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('localUid', localUid);
+      localStorage.setItem('igp_local_uid', localUid);
     }
     return localUid;
   };
@@ -110,41 +137,89 @@ export default function ContentLibrary() {
   useEffect(() => {
     if (!authReady) return;
 
-    const uid = getUid();
-    if (!uid) {
+    let unsubscribe: () => void = () => {};
+    let timeoutId: NodeJS.Timeout;
+
+    try {
+      const uid = getUid();
+      console.log("ContentLibrary: Buscando dados para UID:", uid);
+      
+      if (!db) {
+        setLoadError("Erro: Banco de dados não inicializado corretamente.");
+        setLoading(false);
+        return;
+      }
+
+      const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
+      
+      let q;
+      if (isAdmin) {
+        console.log("ContentLibrary: Admin detectado, buscando todos os itens.");
+        q = query(collection(db, "contentItems"));
+      } else {
+        q = query(
+          collection(db, "contentItems"),
+          where("uid", "==", uid)
+        );
+      }
+
+      timeoutId = setTimeout(() => {
+        if (loading) {
+          console.error("TIMEOUT GLOBAL: O sistema não respondeu em 10 segundos.");
+          setLoading(false);
+          setIsConnected(false);
+          setLoadError("O sistema de arquivos não respondeu. Isso pode ser um bloqueio de rede no AI Studio ou falha na conexão com o servidor.");
+        }
+      }, 10000);
+
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        clearTimeout(timeoutId);
+        console.log("Acervo: Snapshot recebido com", snapshot.size, "itens");
+        const contentItems: ContentItem[] = [];
+        const subjectsSet = new Set<string>();
+        
+        snapshot.forEach((doc) => {
+          const data = doc.data() as ContentItem;
+          contentItems.push({ ...data, id: doc.id });
+          if (data.subject) subjectsSet.add(data.subject);
+        });
+        
+        setItems(contentItems);
+        setExistingSubjects(Array.from(subjectsSet));
+        setLoading(false);
+        setLoadError(null);
+        setIsConnected(true);
+      }, (error) => {
+        clearTimeout(timeoutId);
+        console.error("ERRO CRÍTICO FIRESTORE:", error);
+        setLoading(false);
+        setIsConnected(false);
+        const detailedError = `Erro: ${error.message} (Código: ${error.name})`;
+        setLoadError(detailedError);
+        toast.error("Erro de conexão com o banco.");
+      });
+    } catch (e: any) {
+      console.error("Erro ao configurar busca de dados:", e);
+      setLoadError(`Erro de configuração: ${e.message}`);
       setLoading(false);
-      return;
     }
 
-    const q = query(
-      collection(db, "contentItems"),
-      where("uid", "==", uid)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const contentItems: ContentItem[] = [];
-      const subjectsSet = new Set<string>();
-      
-      snapshot.forEach((doc) => {
-        const data = doc.data() as ContentItem;
-        contentItems.push({ ...data, id: doc.id });
-        if (data.subject) subjectsSet.add(data.subject);
-      });
-      
-      setItems(contentItems);
-      setExistingSubjects(Array.from(subjectsSet));
-      setLoading(false);
-    }, (error) => {
-      setLoading(false);
-      handleFirestoreError(error, OperationType.LIST, "contentItems");
-    });
-
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [authReady, user]);
 
   const handleUpload = async () => {
-    if (!newTitle || !newSubject) {
-      toast.error("Por favor, preencha o título e a disciplina.");
+    console.log("handleUpload triggered. Type:", newType, "File selected:", !!newFile);
+    
+    if (!newTitle) {
+      toast.error("Por favor, dê um título ao seu material.");
+      return;
+    }
+
+    if (!newSubject) {
+      toast.error("Por favor, selecione ou crie uma disciplina.");
       return;
     }
 
@@ -153,62 +228,75 @@ export default function ContentLibrary() {
       return;
     }
 
-    if ((newType === 'video' || newType === 'link') && !newContent) {
-      toast.error("Por favor, insira o link.");
+    if ((newType === 'video' || newType === 'link' || newType === 'text') && !newContent && !newFile) {
+      toast.error("Por favor, insira o conteúdo ou link.");
       return;
     }
 
     setUploadLoading(true);
-    setUploadProgress(0);
+    setUploadProgress(5);
     const uid = getUid();
-    const loadingToast = toast.loading("Iniciando upload...");
+    const loadingToast = toast.loading("Preparando envio...");
 
     try {
       let contentValue = newContent;
 
       if (newType === 'pdf' && newFile) {
+        console.log("Iniciando upload de PDF:", newFile.name, "Tamanho:", newFile.size);
         toast.loading("Enviando arquivo PDF...", { id: loadingToast });
-        // Limit to 25MB for better stability
-        if (newFile.size > 25 * 1024 * 1024) {
-          toast.error("O arquivo excede o limite de 25MB.", { id: loadingToast });
-          setUploadLoading(false);
-          return;
-        }
-
-        const storageRef = ref(storage, `content/${uid}/${Date.now()}_${newFile.name}`);
+        const sanitizedName = newFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const storageRef = ref(storage, `content/${uid}/${Date.now()}_${sanitizedName}`);
+        
         const uploadTask = uploadBytesResumable(storageRef, newFile);
 
-        contentValue = await new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            console.error("Upload Timeout: O servidor de arquivos não respondeu.");
+            uploadTask.cancel();
+            reject(new Error("O upload demorou demais. Verifique se o arquivo não é muito grande ou se há bloqueio de rede."));
+          }, 30000); // 30 seconds timeout
+
           uploadTask.on('state_changed', 
             (snapshot) => {
-              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 90);
+              console.log(`Progresso do Upload: ${progress}% (${snapshot.bytesTransferred}/${snapshot.totalBytes})`);
               setUploadProgress(progress);
             }, 
             (error) => {
-              console.error("Upload error:", error);
-              reject(error);
+              clearTimeout(timeout);
+              console.error("Erro detalhado no Storage:", error);
+              reject(new Error(`Erro no servidor de arquivos: ${error.message} (Código: ${error.code})`));
             }, 
-            () => {
-              getDownloadURL(uploadTask.snapshot.ref)
-                .then(resolve)
-                .catch(reject);
+            async () => {
+              clearTimeout(timeout);
+              try {
+                console.log("Upload concluído, obtendo URL...");
+                contentValue = await getDownloadURL(uploadTask.snapshot.ref);
+                setUploadProgress(100);
+                resolve(true);
+              } catch (e) {
+                console.error("Erro ao obter URL de download:", e);
+                reject(new Error("Erro ao obter link do arquivo após o upload."));
+              }
             }
           );
         });
       }
 
-      toast.loading("Salvando no banco de dados...", { id: loadingToast });
-      console.log("Saving contentItem with contentValue:", contentValue);
-      // IA Analysis (Optional but recommended)
+      toast.loading("Salvando no acervo...", { id: loadingToast });
+      
+      // IA Analysis (Optional & Fast)
       let analysis = { summary: "", topics: [] as string[] };
-      try {
-        // If it's text, we can analyze it directly
-        if (newType === 'text' && newContent) {
-          const result = await analyzeContent(newContent, 'text');
+      if (newType === 'text' && newContent && newContent.length > 50) {
+        try {
+          // Add a timeout to analysis so it doesn't block forever
+          const analysisPromise = analyzeContent(newContent, 'text');
+          const timeoutPromise = new Promise((_, r) => setTimeout(() => r(new Error("Timeout")), 5000));
+          const result = await Promise.race([analysisPromise, timeoutPromise]) as any;
           analysis = { summary: result.summary, topics: result.topics };
+        } catch (e) {
+          console.warn("AI Analysis skipped or failed", e);
         }
-      } catch (e) {
-        console.warn("AI Analysis failed", e);
       }
 
       await addDoc(collection(db, "contentItems"), {
@@ -225,14 +313,9 @@ export default function ContentLibrary() {
       toast.success("Conteúdo adicionado com sucesso!", { id: loadingToast });
       setIsUploadOpen(false);
       resetUploadForm();
-    } catch (error) {
-      console.error("Error uploading content:", error);
-      try {
-        handleFirestoreError(error, OperationType.WRITE, "contentItems");
-      } catch (e) {
-        // handleFirestoreError throws, which is expected for logging
-      }
-      toast.error("Erro ao adicionar conteúdo. Verifique sua conexão.", { id: loadingToast });
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error(`Falha ao salvar: ${error.message || "Verifique sua conexão"}`, { id: loadingToast });
     } finally {
       setUploadLoading(false);
       setUploadProgress(0);
@@ -318,25 +401,103 @@ export default function ContentLibrary() {
       return 0;
     });
 
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] w-full bg-white dark:bg-zinc-950 rounded-3xl p-8 text-center">
+        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-full mb-4">
+          <BrainCircuit className="w-10 h-10 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Ops! Algo deu errado</h2>
+        <p className="text-zinc-500 mb-6 max-w-md">{loadError}</p>
+        <div className="flex flex-col gap-2 items-center">
+          <Button 
+            onClick={() => window.location.reload()}
+            className="bg-[#FF9900] hover:bg-[#e68a00] text-white w-fit"
+          >
+            Tentar Novamente
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-zinc-400 text-xs"
+          >
+            {showDebug ? "Ocultar Detalhes" : "Ver Detalhes Técnicos"}
+          </Button>
+          {showDebug && (
+            <div className="mt-4 p-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-left text-[10px] font-mono overflow-auto max-w-md w-full">
+              <p>UID: {getUid()}</p>
+              <p>Auth Ready: {authReady ? "Sim" : "Não"}</p>
+              <p>User: {user ? user.email : "Anônimo"}</p>
+              <p>Items: {items.length}</p>
+              <p>Config: {db.app.options.projectId}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!authReady || loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] w-full bg-white dark:bg-zinc-950 rounded-3xl">
+        <Loader2 className="w-10 h-10 text-[#FF9900] animate-spin mb-4" />
+        <p className="text-zinc-500 font-medium">
+          {!authReady ? "Iniciando Acervo Inteligente..." : "Carregando seus materiais..."}
+        </p>
+        <div className="mt-8 text-[10px] text-zinc-400 flex flex-col items-center gap-1">
+          <p>Se demorar mais de 10 segundos, verifique sua conexão.</p>
+          <p>UID: {getUid()}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl">
+    <div className="container mx-auto py-8 px-4 max-w-6xl bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-zinc-100 dark:border-zinc-800 min-h-[80vh]">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
-            <BookOpen className="w-8 h-8 text-indigo-600" />
+            <BookOpen className="w-8 h-8 text-[#FF9900]" />
             Acervo Inteligente
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400 mt-1">Organize seus materiais por disciplina e gere flashcards com IA.</p>
         </div>
         
-        <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-          <DialogTrigger className={cn(
-            buttonVariants({ variant: "default" }),
-            "bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-lg shadow-indigo-200 dark:shadow-none"
-          )}>
-            <Plus className="w-4 h-4" /> Adicionar Conteúdo
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+        <div className="flex gap-3">
+          <Button 
+            variant="outline"
+            className="border-[#FF9900] text-[#FF9900] hover:bg-orange-50 font-bold"
+            onClick={async () => {
+              const uid = getUid();
+              const loadingToast = toast.loading("Importando material de Direito Penal...");
+              try {
+                await addDoc(collection(db, "contentItems"), {
+                  uid,
+                  title: "Direito Penal - Dolo e Culpa (KVERNA)",
+                  type: "text",
+                  content: `KVERNA CONCURSOS – AÇÃO E OMISSÃO / DOLO E CULPA\nDIREITO PENAL\n\n1) Prova: CESPE/CEBRASPE - TJ MA - Juiz de Direito Substituto - 2022\nO agente que imagina já ter obtido o resultado pensado por ele, sem tê-lo alcançado, e, por isso, pratica outra conduta que efetivamente alcança o objetivo primário realiza a conduta em dolo geral ou erro sucessivo.\nGabarito: Certo\n\n2) Prova: FGV - PC RJ - Inspetor de Polícia - 2022\nTício, com a intenção de matar Mévio, desferiu-lhe diversos golpes de faca. Acreditando que Mévio já estava morto, Tício o enterrou no quintal de sua casa. Posteriormente, o laudo pericial constatou que a causa da morte de Mévio foi asfixia por soterramento. Diante desse quadro, Tício deverá responder por: homicídio doloso consumado.\nGabarito: A\n\n[CONTEÚDO IMPORTADO DO CHAT]`,
+                  subject: "Direito Penal",
+                  createdAt: new Date().toISOString(),
+                  summary: "Material sobre dolo e culpa no Direito Penal, incluindo questões de concursos como CESPE e FGV.",
+                  topics: ["Dolo", "Culpa", "Direito Penal"]
+                });
+                toast.success("Material importado com sucesso!", { id: loadingToast });
+              } catch (e) {
+                toast.error("Erro ao importar material.", { id: loadingToast });
+              }
+            }}
+          >
+            <Zap className="w-4 h-4 mr-2" /> Importar Chat
+          </Button>
+
+          <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+            <DialogTrigger render={
+              <Button className="bg-[#FF9900] hover:bg-[#e68a00] text-white gap-2">
+                <Plus className="w-4 h-4" /> Adicionar
+              </Button>
+            } />
+            <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Novo Conteúdo</DialogTitle>
             </DialogHeader>
@@ -356,7 +517,7 @@ export default function ContentLibrary() {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="h-7 text-[10px] text-indigo-600 gap-1"
+                    className="h-7 text-[10px] text-[#FF9900] gap-1 hover:text-[#e68a00] hover:bg-orange-50"
                     onClick={async () => {
                       if (!newContent && !newFile) {
                         toast.error("Adicione conteúdo primeiro para a IA analisar.");
@@ -476,7 +637,11 @@ export default function ContentLibrary() {
                   <Input 
                     type="file" 
                     accept=".pdf" 
-                    onChange={(e) => setNewFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      console.log("File selected:", file?.name, "Size:", file?.size);
+                      setNewFile(file);
+                    }}
                   />
                 </div>
               )}
@@ -505,12 +670,20 @@ export default function ContentLibrary() {
             </div>
             <DialogFooter className="flex-col sm:flex-row gap-2">
               {uploadLoading && newType === 'pdf' && (
-                <div className="w-full mb-2">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>Enviando PDF...</span>
-                    <span>{Math.round(uploadProgress)}%</span>
+                <div className="w-full mb-4 px-1">
+                  <div className="flex justify-between text-xs mb-2 font-medium text-zinc-400">
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-3 h-3 animate-spin text-[#FF9900]" />
+                      {uploadProgress === 100 ? "Processando..." : "Enviando arquivo..."}
+                    </span>
+                    <span className="text-[#FF9900]">{uploadProgress > 0 ? `${uploadProgress}%` : "Aguarde..."}</span>
                   </div>
-                  <Progress value={uploadProgress} className="h-1" />
+                  <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden border border-zinc-700">
+                    <div 
+                      className="h-full bg-[#FF9900] transition-all duration-500 ease-out"
+                      style={{ width: `${uploadProgress > 0 ? uploadProgress : 5}%` }}
+                    />
+                  </div>
                 </div>
               )}
               <div className="flex justify-end gap-2 w-full">
@@ -518,7 +691,7 @@ export default function ContentLibrary() {
                 <Button 
                   onClick={handleUpload} 
                   disabled={uploadLoading}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  className="bg-[#FF9900] hover:bg-[#e68a00] text-white border-none"
                 >
                   {uploadLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Salvar Conteúdo
@@ -528,13 +701,14 @@ export default function ContentLibrary() {
           </DialogContent>
         </Dialog>
       </div>
+    </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="md:col-span-2 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF9900]" />
           <Input 
             placeholder="Buscar por título ou disciplina..." 
-            className="pl-10"
+            className="pl-10 focus-visible:ring-[#FF9900]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -543,9 +717,9 @@ export default function ContentLibrary() {
         <div className="flex gap-2">
           <div className="flex-1">
             <Select value={filterSubject} onValueChange={setFilterSubject}>
-              <SelectTrigger>
+              <SelectTrigger className="focus:ring-[#FF9900]">
                 <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-zinc-400" />
+                  <Filter className="w-4 h-4 text-[#FF9900]" />
                   <SelectValue placeholder="Disciplina" />
                 </div>
               </SelectTrigger>
@@ -575,17 +749,17 @@ export default function ContentLibrary() {
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+          <Loader2 className="w-10 h-10 text-[#FF9900] animate-spin mb-4" />
           <p className="text-zinc-500">Carregando seu acervo...</p>
         </div>
       ) : filteredItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => (
             <div key={item.id}>
-              <Card className="group hover:border-indigo-300 transition-all duration-300 shadow-sm hover:shadow-md overflow-hidden flex flex-col h-full">
+              <Card className="group hover:border-orange-300 transition-all duration-300 shadow-sm hover:shadow-md overflow-hidden flex flex-col h-full">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600">
+                    <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-[#FF9900]">
                       {item.type === 'pdf' ? <FileText className="w-5 h-5" /> : 
                        item.type === 'video' ? <Video className="w-5 h-5" /> : 
                        item.type === 'link' ? <LinkIcon className="w-5 h-5" /> :
@@ -593,7 +767,7 @@ export default function ContentLibrary() {
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger className={cn(
-                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
+                        buttonVariants({ variant: "ghost", size: "icon" }),
                         "h-8 w-8 p-0"
                       )}>
                         <MoreVertical className="w-4 h-4" />
@@ -606,10 +780,10 @@ export default function ContentLibrary() {
                     </DropdownMenu>
                   </div>
                   <div className="mt-3">
-                    <Badge variant="secondary" className="mb-2 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border-none">
+                    <Badge variant="secondary" className="mb-2 bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-none">
                       {item.subject}
                     </Badge>
-                    <CardTitle className="text-lg font-bold leading-tight group-hover:text-indigo-600 transition-colors">
+                    <CardTitle className="text-lg font-bold leading-tight group-hover:text-[#FF9900] transition-colors">
                       {item.title}
                     </CardTitle>
                     <CardDescription className="text-xs mt-1">
@@ -677,7 +851,7 @@ export default function ContentLibrary() {
                     )}
                     
                     <Button 
-                      className="flex-1 gap-2 bg-indigo-600 hover:bg-indigo-700 text-white" 
+                      className="flex-1 gap-2 bg-[#FF9900] hover:bg-[#e68a00] text-white" 
                       size="sm"
                       onClick={() => handleGenerateFlashcards(item)}
                     >
@@ -700,7 +874,7 @@ export default function ContentLibrary() {
           </p>
           <Button 
             variant="outline" 
-            className="mt-6 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+            className="mt-6 border-orange-200 text-[#FF9900] hover:bg-orange-50"
             onClick={() => setIsUploadOpen(true)}
           >
             Adicionar Primeiro Conteúdo

@@ -101,10 +101,10 @@ export default function Flashcards() {
 
   const getUid = () => {
     if (user) return user.uid;
-    let localUid = localStorage.getItem('localUid');
+    let localUid = localStorage.getItem('igp_local_uid');
     if (!localUid) {
       localUid = 'anon_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('localUid', localUid);
+      localStorage.setItem('igp_local_uid', localUid);
     }
     return localUid;
   };
@@ -112,11 +112,11 @@ export default function Flashcards() {
   const getUids = () => {
     const uids = [];
     if (user) uids.push(user.uid);
-    const localUid = localStorage.getItem('localUid');
+    const localUid = localStorage.getItem('igp_local_uid');
     if (localUid) uids.push(localUid);
     if (uids.length === 0) {
       const newLocal = 'anon_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('localUid', newLocal);
+      localStorage.setItem('igp_local_uid', newLocal);
       uids.push(newLocal);
     }
     return uids;
