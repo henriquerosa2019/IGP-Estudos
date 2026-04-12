@@ -298,7 +298,7 @@ export const generateFlashcardsFromMultimodal = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-3-flash-preview",
       contents: { parts },
       config: {
         systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido (que pode ser texto, imagens de livros/anotações, PDFs ou referências a vídeos) e gerar exatamente 20 flashcards detalhados e variados.
@@ -308,6 +308,7 @@ export const generateFlashcardsFromMultimodal = async (
         Cada flashcard deve ter uma pergunta instigante e uma resposta clara e completa.
         IMPORTANTE: A resposta deve OBRIGATORIAMENTE concluir com um exemplo prático ou uma aplicação real do conceito.
         DESTAQUE: Nos exemplos citados, coloque em negrito (usando markdown **) o termo ou conceito principal que está sendo estudado.
+        ATENÇÃO: NÃO inclua classificações de dificuldade (como "fácil", "médio", "difícil") nas perguntas, respostas ou matérias. O campo 'subject' deve conter apenas o nome da disciplina (ex: Direito Penal).
         Retorne APENAS o JSON conforme o esquema solicitado.`,
         responseMimeType: "application/json",
         responseSchema: {
@@ -320,7 +321,7 @@ export const generateFlashcardsFromMultimodal = async (
                 properties: {
                   question: { type: Type.STRING },
                   answer: { type: Type.STRING },
-                  subject: { type: Type.STRING }
+                  subject: { type: Type.STRING, description: "A matéria ou disciplina (ex: Direito Penal). Não use fácil/médio/difícil." }
                 },
                 required: ["question", "answer", "subject"]
               }

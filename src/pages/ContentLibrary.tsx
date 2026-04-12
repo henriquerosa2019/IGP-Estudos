@@ -26,7 +26,12 @@ import {
   BookOpen,
   Sparkles,
   Zap,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Folder,
+  FolderOpen,
+  ChevronRight,
+  ArrowLeft,
+  Edit2
 } from "lucide-react";
 import { 
   Dialog, 
@@ -59,14 +64,15 @@ import {
   where, 
   onSnapshot, 
   deleteDoc, 
-  doc
+  doc,
+  updateDoc
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configurar o worker do PDF.js usando um CDN para evitar problemas de carregamento local
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+// Configurar o worker do PDF.js usando um CDN confiável (Unpkg)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 import { ContentItem } from "@/types";
 import { analyzeContent, generateFlashcardsFromMultimodal } from "@/lib/gemini";
 import { toast } from "sonner";
@@ -92,24 +98,56 @@ export default function ContentLibrary() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isExtracting, setIsExtracting] = useState(false);
 
+  // Folder Navigation State
+  type FolderState = null | { subject: string; subCategory?: string };
+  const [currentFolder, setCurrentFolder] = useState<FolderState>(null);
+
+  // Edit and Delete State
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [itemToEdit, setItemToEdit] = useState<ContentItem | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSubject, setEditSubject] = useState("");
+  const [editSubCategory, setEditSubCategory] = useState("");
+
   // Função para extrair texto do PDF localmente (Fallback para erro de CORS)
   const extractTextFromPDF = async (file: File): Promise<string> => {
     try {
+      console.log("Iniciando extração local de texto do PDF...");
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      // Garantir que o worker está configurado
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+      }
+
+      const loadingTask = pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        useWorkerFetch: true,
+        isEvalSupported: false
+      });
+      
+      const pdf = await loadingTask.promise;
       let fullText = "";
+      
+      console.log(`PDF carregado com sucesso. Total de páginas: ${pdf.numPages}`);
       
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: any) => item.str).join(" ");
-        fullText += pageText + "\n\n";
+        const pageText = textContent.items
+          .map((item: any) => 'str' in item ? item.str : '')
+          .join(" ");
+        fullText += pageText + "\n";
       }
       
-      return fullText.trim();
+      const result = fullText.trim();
+      if (!result) {
+        console.warn("O texto extraído está vazio. O PDF pode ser uma imagem (escaneado).");
+      }
+      return result;
     } catch (error) {
-      console.error("Erro ao extrair texto do PDF:", error);
-      throw new Error("Não foi possível ler o texto deste PDF. Tente copiar e colar o texto manualmente.");
+      console.error("Erro técnico na extração PDF.js:", error);
+      throw error;
     }
   };
   const [newTitle, setNewTitle] = useState("");
@@ -117,6 +155,7 @@ export default function ContentLibrary() {
   const [newContent, setNewContent] = useState("");
   const [newFile, setNewFile] = useState<File | null>(null);
   const [newSubject, setNewSubject] = useState("");
+  const [newSubCategory, setNewSubCategory] = useState("");
   const [existingSubjects, setExistingSubjects] = useState<string[]>([]);
   const [isCreatingNewSubject, setIsCreatingNewSubject] = useState(false);
 
@@ -293,14 +332,19 @@ export default function ContentLibrary() {
           
           try {
             const extractedText = await extractTextFromPDF(newFile);
-            if (!extractedText) throw new Error("PDF vazio ou sem texto legível.");
+            if (!extractedText) {
+              throw new Error("O PDF parece ser uma imagem escaneada (sem texto selecionável).");
+            }
             
             contentValue = extractedText;
-            finalType = 'text'; // Converte para texto para salvar no Firestore (que não tem erro de CORS)
-            toast.success("Texto extraído com sucesso!", { id: loadingToast });
+            finalType = 'text'; // Converte para texto para salvar no Firestore
+            toast.success("Texto extraído localmente!", { id: loadingToast });
           } catch (extractError: any) {
             console.error("Erro na extração local:", extractError);
-            throw new Error("Falha total: O upload foi bloqueado e não conseguimos ler o texto do arquivo. Tente copiar e colar o texto na aba 'Texto'.");
+            const isScanned = extractError.message?.includes("imagem escaneada");
+            throw new Error(isScanned 
+              ? "Este PDF é uma imagem escaneada. Como o servidor está bloqueando o arquivo, não conseguimos ler o texto. Por favor, copie e cole o texto na aba 'Texto'."
+              : "Falha total: O servidor bloqueou o arquivo e o navegador não conseguiu ler o texto. Tente usar a aba 'Texto' ou 'Link'.");
           } finally {
             setIsExtracting(false);
           }
@@ -329,6 +373,7 @@ export default function ContentLibrary() {
         type: finalType,
         content: contentValue,
         subject: newSubject,
+        subCategory: newSubCategory,
         createdAt: new Date().toISOString(),
         summary: analysis.summary,
         topics: analysis.topics
@@ -352,17 +397,43 @@ export default function ContentLibrary() {
     setNewContent("");
     setNewFile(null);
     setNewSubject("");
+    setNewSubCategory("");
     setIsCreatingNewSubject(false);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este conteúdo?")) return;
     try {
       await deleteDoc(doc(db, "contentItems", id));
       toast.success("Conteúdo excluído.");
+      setItemToDelete(null);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `contentItems/${id}`);
       toast.error("Erro ao excluir conteúdo.");
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!itemToEdit) return;
+    if (!editTitle.trim()) {
+      toast.error("O título não pode ficar vazio.");
+      return;
+    }
+    if (!editSubject.trim()) {
+      toast.error("A disciplina não pode ficar vazia.");
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, "contentItems", itemToEdit.id), {
+        title: editTitle,
+        subject: editSubject,
+        subCategory: editSubCategory || null
+      });
+      toast.success("Conteúdo atualizado com sucesso!");
+      setItemToEdit(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `contentItems/${itemToEdit.id}`);
+      toast.error("Erro ao atualizar conteúdo.");
     }
   };
 
@@ -394,8 +465,7 @@ export default function ContentLibrary() {
           cards: generatedCards.map((c: any) => ({
             ...c,
             id: `card-${Math.random().toString(36).substring(2, 11)}`,
-            subject: item.subject,
-            difficulty: 'medium'
+            subject: item.subject
           }))
         };
         
@@ -498,10 +568,11 @@ export default function ContentLibrary() {
               try {
                 await addDoc(collection(db, "contentItems"), {
                   uid,
-                  title: "Direito Penal - Dolo e Culpa (KVERNA)",
+                  title: "Dolo e Culpa",
                   type: "text",
                   content: `KVERNA CONCURSOS – AÇÃO E OMISSÃO / DOLO E CULPA\nDIREITO PENAL\n\n1) Prova: CESPE/CEBRASPE - TJ MA - Juiz de Direito Substituto - 2022\nO agente que imagina já ter obtido o resultado pensado por ele, sem tê-lo alcançado, e, por isso, pratica outra conduta que efetivamente alcança o objetivo primário realiza a conduta em dolo geral ou erro sucessivo.\nGabarito: Certo\n\n2) Prova: FGV - PC RJ - Inspetor de Polícia - 2022\nTício, com a intenção de matar Mévio, desferiu-lhe diversos golpes de faca. Acreditando que Mévio já estava morto, Tício o enterrou no quintal de sua casa. Posteriormente, o laudo pericial constatou que a causa da morte de Mévio foi asfixia por soterramento. Diante desse quadro, Tício deverá responder por: homicídio doloso consumado.\nGabarito: A\n\n[CONTEÚDO IMPORTADO DO CHAT]`,
                   subject: "Direito Penal",
+                  subCategory: "Prof Marlon",
                   createdAt: new Date().toISOString(),
                   summary: "Material sobre dolo e culpa no Direito Penal, incluindo questões de concursos como CESPE e FGV.",
                   topics: ["Dolo", "Culpa", "Direito Penal"]
@@ -607,6 +678,15 @@ export default function ContentLibrary() {
                     }}>Voltar</Button>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Subpasta / Professor (Opcional)</Label>
+                <Input 
+                  placeholder="Ex: Prof Marlon, Módulo 1..." 
+                  value={newSubCategory}
+                  onChange={(e) => setNewSubCategory(e.target.value)}
+                />
               </div>
 
               <div className="space-y-2">
@@ -741,7 +821,10 @@ export default function ContentLibrary() {
             placeholder="Buscar por título ou disciplina..." 
             className="pl-10 focus-visible:ring-[#FF9900]"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              if (e.target.value) setCurrentFolder(null); // Reset folder view on search
+            }}
           />
         </div>
         
@@ -784,115 +867,267 @@ export default function ContentLibrary() {
           <p className="text-zinc-500">Carregando seu acervo...</p>
         </div>
       ) : filteredItems.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
-            <div key={item.id}>
-              <Card className="group hover:border-orange-300 transition-all duration-300 shadow-sm hover:shadow-md overflow-hidden flex flex-col h-full">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-[#FF9900]">
-                      {item.type === 'pdf' ? <FileText className="w-5 h-5" /> : 
-                       item.type === 'video' ? <Video className="w-5 h-5" /> : 
-                       item.type === 'link' ? <LinkIcon className="w-5 h-5" /> :
-                       <Type className="w-5 h-5" />}
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className={cn(
-                        buttonVariants({ variant: "ghost", size: "icon" }),
-                        "h-8 w-8 p-0"
-                      )}>
-                        <MoreVertical className="w-4 h-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="w-4 h-4 mr-2" /> Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="mt-3">
-                    <Badge variant="secondary" className="mb-2 bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-none">
-                      {item.subject}
-                    </Badge>
-                    <CardTitle className="text-lg font-bold leading-tight group-hover:text-[#FF9900] transition-colors">
-                      {item.title}
-                    </CardTitle>
-                    <CardDescription className="text-xs mt-1">
-                      Adicionado em {new Date(item.createdAt).toLocaleDateString('pt-BR')}
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                  {item.summary && (
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 mb-4 italic">
-                      "{item.summary}"
-                    </p>
-                  )}
+        <div className="space-y-6">
+          {/* Breadcrumbs */}
+          {!searchTerm && currentFolder && (
+            <div className="flex items-center gap-2 text-sm text-zinc-500 mb-6 bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl w-fit">
+              <button 
+                onClick={() => setCurrentFolder(null)}
+                className="hover:text-[#FF9900] transition-colors flex items-center gap-1 font-medium"
+              >
+                <Folder className="w-4 h-4" /> Acervo
+              </button>
+              <ChevronRight className="w-4 h-4" />
+              <button 
+                onClick={() => setCurrentFolder({ subject: currentFolder.subject })}
+                className={cn(
+                  "hover:text-[#FF9900] transition-colors font-medium",
+                  !currentFolder.subCategory && "text-zinc-900 dark:text-white"
+                )}
+              >
+                {currentFolder.subject}
+              </button>
+              {currentFolder.subCategory && (
+                <>
+                  <ChevronRight className="w-4 h-4" />
+                  <span className="text-zinc-900 dark:text-white font-medium">
+                    {currentFolder.subCategory}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
 
-                  {item.topics && item.topics.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {item.topics.slice(0, 3).map((t, i) => (
-                        <Badge key={i} variant="outline" className="text-[9px] py-0 h-4 border-zinc-200 text-zinc-500">
-                          {t}
+          {/* Folder View Logic */}
+          {(() => {
+            const renderItemCard = (item: ContentItem) => (
+              <div key={item.id}>
+                <Card className="group hover:border-orange-300 transition-all duration-300 shadow-sm hover:shadow-md overflow-hidden flex flex-col h-full">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-[#FF9900]">
+                        {item.type === 'pdf' ? <FileText className="w-5 h-5" /> : 
+                         item.type === 'video' ? <Video className="w-5 h-5" /> : 
+                         item.type === 'link' ? <LinkIcon className="w-5 h-5" /> :
+                         <Type className="w-5 h-5" />}
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className={cn(
+                          buttonVariants({ variant: "ghost", size: "icon" }),
+                          "h-8 w-8 p-0"
+                        )}>
+                          <MoreVertical className="w-4 h-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setEditTitle(item.title);
+                            setEditSubject(item.subject);
+                            setEditSubCategory(item.subCategory || "");
+                            setItemToEdit(item);
+                          }}>
+                            <Edit2 className="w-4 h-4 mr-2" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600" onClick={() => setItemToDelete(item.id)}>
+                            <Trash2 className="w-4 h-4 mr-2" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="mt-3">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <Badge variant="secondary" className="bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-none">
+                          {item.subject}
                         </Badge>
-                      ))}
-                      {item.topics.length > 3 && (
-                        <span className="text-[9px] text-zinc-400">+{item.topics.length - 3}</span>
+                        {item.subCategory && (
+                          <Badge variant="outline" className="border-orange-200 text-orange-600 dark:border-orange-900 dark:text-orange-400">
+                            {item.subCategory}
+                          </Badge>
+                        )}
+                      </div>
+                      <CardTitle className="text-lg font-bold leading-tight group-hover:text-[#FF9900] transition-colors">
+                        {item.title}
+                      </CardTitle>
+                      <CardDescription className="text-xs mt-1">
+                        Adicionado em {new Date(item.createdAt).toLocaleDateString('pt-BR')}
+                      </CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex flex-col">
+                    {item.summary && (
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 mb-4 italic">
+                        "{item.summary}"
+                      </p>
+                    )}
+
+                    {item.topics && item.topics.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {item.topics.slice(0, 3).map((t, i) => (
+                          <Badge key={i} variant="outline" className="text-[9px] py-0 h-4 border-zinc-200 text-zinc-500">
+                            {t}
+                          </Badge>
+                        ))}
+                        {item.topics.length > 3 && (
+                          <span className="text-[9px] text-zinc-400">+{item.topics.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="mt-auto pt-4 flex flex-wrap gap-2">
+                      {item.type === 'pdf' ? (
+                        <a 
+                          href={item.content} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className={cn(
+                            buttonVariants({ variant: "outline", size: "sm" }),
+                            "flex-1 gap-2"
+                          )}
+                        >
+                          <Download className="w-3.5 h-3.5" /> Baixar
+                        </a>
+                      ) : item.type === 'video' || item.type === 'link' ? (
+                        <a 
+                          href={item.content} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className={cn(
+                            buttonVariants({ variant: "outline", size: "sm" }),
+                            "flex-1 gap-2"
+                          )}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" /> Abrir
+                        </a>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 gap-2"
+                          onClick={() => {
+                            toast.info("Conteúdo de texto: " + item.title);
+                          }}
+                        >
+                          <Type className="w-3.5 h-3.5" /> Ver Texto
+                        </Button>
                       )}
+                      
+                      <Button 
+                        className="flex-1 gap-2 bg-[#FF9900] hover:bg-[#e68a00] text-white" 
+                        size="sm"
+                        onClick={() => handleGenerateFlashcards(item)}
+                      >
+                        <BrainCircuit className="w-3.5 h-3.5" /> Flashcards
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+
+            if (searchTerm) {
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredItems.map(renderItemCard)}
+                </div>
+              );
+            }
+
+            if (currentFolder === null) {
+              const subjects = Array.from(new Set(filteredItems.map(i => i.subject)));
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {subjects.map(subject => {
+                    const count = filteredItems.filter(i => i.subject === subject).length;
+                    return (
+                      <Card 
+                        key={subject} 
+                        className="cursor-pointer hover:border-[#FF9900] transition-colors flex items-center p-4 gap-4 shadow-sm"
+                        onClick={() => setCurrentFolder({ subject })}
+                      >
+                        <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl text-[#FF9900]">
+                          <Folder className="w-6 h-6 fill-current opacity-20" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-zinc-900 dark:text-white line-clamp-1">{subject}</h3>
+                          <p className="text-xs text-zinc-500">{count} ite{count === 1 ? 'm' : 'ns'}</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-zinc-300" />
+                      </Card>
+                    );
+                  })}
+                </div>
+              );
+            }
+
+            if (!currentFolder.subCategory) {
+              const subjectItems = filteredItems.filter(i => i.subject === currentFolder.subject);
+              const subCategories = Array.from(new Set(subjectItems.filter(i => i.subCategory).map(i => i.subCategory as string)));
+              const itemsWithoutSub = subjectItems.filter(i => !i.subCategory);
+
+              return (
+                <div className="space-y-8">
+                  {subCategories.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <FolderOpen className="w-4 h-4" /> Subpastas
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {subCategories.map(sub => {
+                          const count = subjectItems.filter(i => i.subCategory === sub).length;
+                          return (
+                            <Card 
+                              key={sub} 
+                              className="cursor-pointer hover:border-[#FF9900] transition-colors flex items-center p-4 gap-4 shadow-sm"
+                              onClick={() => setCurrentFolder({ subject: currentFolder.subject, subCategory: sub })}
+                            >
+                              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl text-[#FF9900]">
+                                <FolderOpen className="w-6 h-6 fill-current opacity-20" />
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="font-bold text-zinc-900 dark:text-white line-clamp-1">{sub}</h3>
+                                <p className="text-xs text-zinc-500">{count} ite{count === 1 ? 'm' : 'ns'}</p>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-zinc-300" />
+                            </Card>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                   
-                  <div className="mt-auto pt-4 flex flex-wrap gap-2">
-                    {item.type === 'pdf' ? (
-                      <a 
-                        href={item.content} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className={cn(
-                          buttonVariants({ variant: "outline", size: "sm" }),
-                          "flex-1 gap-2"
-                        )}
-                      >
-                        <Download className="w-3.5 h-3.5" /> Baixar
-                      </a>
-                    ) : item.type === 'video' || item.type === 'link' ? (
-                      <a 
-                        href={item.content} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className={cn(
-                          buttonVariants({ variant: "outline", size: "sm" }),
-                          "flex-1 gap-2"
-                        )}
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" /> Abrir
-                      </a>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1 gap-2"
-                        onClick={() => {
-                          // Logic to view text content could be added here
-                          toast.info("Conteúdo de texto: " + item.title);
-                        }}
-                      >
-                        <Type className="w-3.5 h-3.5" /> Ver Texto
-                      </Button>
-                    )}
-                    
-                    <Button 
-                      className="flex-1 gap-2 bg-[#FF9900] hover:bg-[#e68a00] text-white" 
-                      size="sm"
-                      onClick={() => handleGenerateFlashcards(item)}
-                    >
-                      <BrainCircuit className="w-3.5 h-3.5" /> Flashcards
-                    </Button>
+                  {itemsWithoutSub.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <FileText className="w-4 h-4" /> Arquivos
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {itemsWithoutSub.map(renderItemCard)}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {subCategories.length === 0 && itemsWithoutSub.length === 0 && (
+                    <p className="text-zinc-500 text-center py-10">Esta pasta está vazia.</p>
+                  )}
+                </div>
+              );
+            }
+
+            const subCategoryItems = filteredItems.filter(i => i.subject === currentFolder.subject && i.subCategory === currentFolder.subCategory);
+            return (
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> Arquivos em {currentFolder.subCategory}
+                </h3>
+                {subCategoryItems.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {subCategoryItems.map(renderItemCard)}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
+                ) : (
+                  <p className="text-zinc-500 text-center py-10">Esta subpasta está vazia.</p>
+                )}
+              </div>
+            );
+          })()}
         </div>
       ) : (
         <div className="text-center py-20 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-800">
@@ -912,6 +1147,68 @@ export default function ContentLibrary() {
           </Button>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Excluir Conteúdo</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-zinc-600 dark:text-zinc-400">
+              Tem certeza que deseja excluir este material? Esta ação não pode ser desfeita.
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setItemToDelete(null)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={() => itemToDelete && handleDelete(itemToDelete)}>
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!itemToEdit} onOpenChange={(open) => !open && setItemToEdit(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Editar Conteúdo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Título</Label>
+              <Input 
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Disciplina</Label>
+              <Input 
+                value={editSubject}
+                onChange={(e) => setEditSubject(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Subpasta / Professor (Opcional)</Label>
+              <Input 
+                value={editSubCategory}
+                onChange={(e) => setEditSubCategory(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setItemToEdit(null)}>
+              Cancelar
+            </Button>
+            <Button className="bg-[#FF9900] hover:bg-[#e68a00] text-white" onClick={handleEditSave}>
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

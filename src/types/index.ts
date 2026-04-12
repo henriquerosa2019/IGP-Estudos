@@ -86,6 +86,7 @@ export interface ContentItem {
   type: 'pdf' | 'text' | 'video' | 'link';
   content: string; // fileUrl for pdf, rich text for text, youtube link for video
   subject: string;
+  subCategory?: string; // e.g., Professor name, sub-topic
   createdAt: string;
   summary?: string;
   topics?: string[];

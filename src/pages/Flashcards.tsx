@@ -296,8 +296,7 @@ export default function Flashcards() {
 
       const newCards = (await generateFlashcardsFromMultimodal(parts, deckName)).map((card: any, index: number) => ({
         ...card,
-        id: `card-${Date.now()}-${index}`,
-        difficulty: 'easy' // Default to easy so they don't show up in review queues initially
+        id: `card-${Date.now()}-${index}`
       }));
       
       if (abortControllerRef.current?.signal.aborted) return;
@@ -707,6 +706,7 @@ export default function Flashcards() {
                     const easyCount = deck.cards.filter(c => c.difficulty === 'easy').length;
                     const mediumCount = deck.cards.filter(c => c.difficulty === 'medium').length;
                     const hardCount = deck.cards.filter(c => c.difficulty === 'hard').length;
+                    const unratedCount = deck.cards.filter(c => !c.difficulty).length;
                     
                     return (
                       <Card key={deck.id} className="hover:border-indigo-200 transition-colors cursor-pointer group" onClick={() => {
@@ -725,16 +725,27 @@ export default function Flashcards() {
                         <CardContent>
                           <div className="flex flex-col gap-2">
                             <p className="text-xs text-zinc-500 font-medium">{deck.cards.length} cards no total</p>
-                            <div className="flex gap-2">
-                              <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-[10px] px-1.5 py-0">
-                                Fácil: {easyCount}
-                              </Badge>
-                              <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50 text-[10px] px-1.5 py-0">
-                                Médio: {mediumCount}
-                              </Badge>
-                              <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 text-[10px] px-1.5 py-0">
-                                Difícil: {hardCount}
-                              </Badge>
+                            <div className="flex flex-wrap gap-2">
+                              {unratedCount > 0 && (
+                                <Badge variant="outline" className="text-slate-600 border-slate-200 bg-slate-50 text-[10px] px-1.5 py-0">
+                                  Novos: {unratedCount}
+                                </Badge>
+                              )}
+                              {easyCount > 0 && (
+                                <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-[10px] px-1.5 py-0">
+                                  Fácil: {easyCount}
+                                </Badge>
+                              )}
+                              {mediumCount > 0 && (
+                                <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50 text-[10px] px-1.5 py-0">
+                                  Médio: {mediumCount}
+                                </Badge>
+                              )}
+                              {hardCount > 0 && (
+                                <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 text-[10px] px-1.5 py-0">
+                                  Difícil: {hardCount}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </CardContent>
