@@ -78,9 +78,11 @@ import { analyzeContent, generateFlashcardsFromMultimodal } from "@/lib/gemini";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export default function ContentLibrary() {
   console.log("ContentLibrary rendering...");
+  const navigate = useNavigate();
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -456,7 +458,7 @@ export default function ContentLibrary() {
         const uid = user?.uid || localStorage.getItem('localUid');
         
         // Save to library (localStorage for now to match existing logic, or Firestore if you prefer)
-        const savedDecksStr = localStorage.getItem('flashcardDecks');
+        const savedDecksStr = localStorage.getItem('aestudamos_flashcards');
         const savedDecks = savedDecksStr ? JSON.parse(savedDecksStr) : [];
         
         const newDeck = {
@@ -469,13 +471,26 @@ export default function ContentLibrary() {
           }))
         };
         
-        localStorage.setItem('flashcardDecks', JSON.stringify([...savedDecks, newDeck]));
+        localStorage.setItem('aestudamos_flashcards', JSON.stringify([...savedDecks, newDeck]));
         
-        return "Flashcards gerados e salvos na biblioteca!";
+        return "Flashcards gerados com sucesso!";
       })(),
       {
         loading: 'IA processando conteúdo e gerando flashcards...',
-        success: (data) => data,
+        success: (data) => {
+          return (
+            <div className="flex flex-col gap-2">
+              <span className="font-medium text-green-600 dark:text-green-400">{data}</span>
+              <Button 
+                size="sm" 
+                onClick={() => navigate('/flashcards')}
+                className="bg-green-600 hover:bg-green-700 text-white w-full mt-1"
+              >
+                Ir para Flashcards
+              </Button>
+            </div>
+          );
+        },
         error: 'Erro ao gerar flashcards.'
       }
     );
