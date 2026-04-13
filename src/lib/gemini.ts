@@ -1,14 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY;
+// Tenta buscar de várias fontes possíveis no Vite/Vercel
+// No Vite, process.env.GEMINI_API_KEY é substituído pelo valor definido no vite.config.ts
+const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
-if (apiKey) {
-  console.log("Gemini: Chave detectada (iniciando com " + apiKey.substring(0, 4) + ")");
+if (apiKey && apiKey !== "undefined" && apiKey !== "null") {
+  console.log("Gemini: Chave detectada com sucesso.");
 } else {
-  console.error("Gemini: ERRO - GEMINI_API_KEY não encontrada. No Vercel, você deve adicionar esta variável em Settings > Environment Variables.");
+  console.error("Gemini: ERRO - Chave não encontrada. No Vercel, adicione VITE_GEMINI_API_KEY e faça um REDEPLOY.");
 }
 
-export const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+export const ai = (apiKey && apiKey !== "undefined" && apiKey !== "null") ? new GoogleGenAI({ apiKey }) : null;
 
 if (!ai) {
   console.warn("GoogleGenAI instance (ai) is null. AI features will not work.");
@@ -43,7 +45,9 @@ export const generateStudyPlanFromNotices = async (
   examDate: string,
   hoursPerDay: number
 ) => {
-  if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
+  if (!ai) {
+    throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
+  }
 
   try {
     const prompt = `Analise EXAUSTIVAMENTE os seguintes editais/cronogramas:
@@ -108,7 +112,9 @@ export const generateStudyPlanFromNotices = async (
 };
 
 export const extractSubjectsFromNotice = async (content: string) => {
-  if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
+  if (!ai) {
+    throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
+  }
 
   try {
     const prompt = `Analise o seguinte conteúdo de um edital de concurso ou cronograma de curso e extraia as matérias principais com seu peso/importância sugerida e a lista de tópicos detalhados de cada matéria.
@@ -143,7 +149,9 @@ export const extractSubjectsFromNotice = async (content: string) => {
 };
 
 export const generateStudyPlan = async (goal: string, subjects: string[], hoursPerDay: number) => {
-  if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
+  if (!ai) {
+    throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
+  }
 
   try {
     const prompt = `Crie um plano de estudos detalhado para o objetivo: "${goal}". 
@@ -205,7 +213,7 @@ export const generateFlashcardsFromMultimodal = async (
 ) => {
   if (!ai) {
     console.error("Gemini: Tentativa de gerar flashcards sem chave configurada.");
-    throw new Error("Chave do Gemini não configurada no Vercel. Adicione GEMINI_API_KEY nas variáveis de ambiente do projeto.");
+    throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
@@ -264,7 +272,9 @@ export const generateFlashcardsFromMultimodal = async (
 };
 
 export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'video' | 'link') => {
-  if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
+  if (!ai) {
+    throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
+  }
 
   try {
     const response = await ai.models.generateContent({

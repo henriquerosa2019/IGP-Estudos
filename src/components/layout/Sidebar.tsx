@@ -153,26 +153,31 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           <span className="font-medium">Configurações</span>
         </Link>
         {user ? (
-          <button 
-            onClick={async () => {
-              if (onClose) onClose();
-              try {
-                await signOut(auth);
-                toast.success("Sessão encerrada.");
-              } catch (error) {
-                toast.error("Erro ao sair.");
-              }
-            }}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-900 hover:text-red-600 transition-colors text-red-600"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Sair</span>
-          </button>
+          <div className="space-y-1">
+            <div className="px-3 py-2 text-[10px] text-zinc-500 font-bold uppercase tracking-widest truncate">
+              Logado como: {user.email}
+            </div>
+            <button 
+              onClick={async () => {
+                if (onClose) onClose();
+                try {
+                  await signOut(auth);
+                  toast.success("Sessão encerrada.");
+                } catch (error) {
+                  toast.error("Erro ao sair.");
+                }
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-900 hover:text-red-600 transition-colors text-red-600"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Sair da Conta</span>
+            </button>
+          </div>
         ) : (
           <Link 
             to="/login"
             onClick={onClose}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-900 hover:text-[#FF9900] transition-colors text-zinc-400"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all shadow-lg shadow-red-900/20"
           >
             <GraduationCap className="w-5 h-5" />
             <span className="font-medium">Entrar / Login</span>
