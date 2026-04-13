@@ -22,7 +22,8 @@ import {
   MessageSquare,
   LogOut,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Plus
 } from "lucide-react";
 import { ai } from "@/lib/gemini";
 import { motion, AnimatePresence } from "motion/react";
@@ -224,7 +225,7 @@ export default function Tutor() {
       console.error(error);
       const message = error instanceof Error ? error.message : "Erro desconhecido";
       setMessages(prev => [...prev, { role: 'assistant', content: `Houve um erro: ${message}. Tente novamente mais tarde.` }]);
-      toast.error(`Erro no KvernAI: ${message}`);
+      toast.error(`Erro no IgpAI: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -238,7 +239,7 @@ export default function Tutor() {
             <BrainCircuit className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>KvernAI</h1>
+            <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IgpAI</h1>
             <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Tire suas dúvidas em tempo real com inteligência artificial.</p>
           </div>
         </div>
@@ -253,13 +254,12 @@ export default function Tutor() {
             Histórico
           </Button>
           <Button 
-            variant="destructive" 
             size="sm" 
-            className="gap-2 bg-red-600 hover:bg-red-700"
+            className="gap-2 bg-black text-[#FF9900] hover:bg-zinc-900 hover:text-[#FF9900]"
             onClick={handleFinishSession}
           >
-            <LogOut className="w-4 h-4" />
-            Finalizar Sessão
+            <Plus className="w-4 h-4" />
+            Novo Chat
           </Button>
         </div>
       </div>

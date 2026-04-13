@@ -80,10 +80,10 @@ export default function StartHere() {
           </div>
           <Card className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] hover:border-[#FF9900]/50 transition-colors bg-white dark:bg-white shadow-lg">
             <CardHeader>
-              <CardTitle className="text-xl text-[#FF9900] font-bold">5. Tire Dúvidas com o KvernAI</CardTitle>
+              <CardTitle className="text-xl text-[#FF9900] font-bold">5. Tire Dúvidas com o IgpAI</CardTitle>
             </CardHeader>
             <CardContent className="text-black font-bold">
-              <p>Surgiu alguma dúvida durante o estudo? O <strong>KvernAI</strong> é o seu tutor particular. Ele está pronto para explicar conceitos complexos e ajudar na resolução de questões.</p>
+              <p>Surgiu alguma dúvida durante o estudo? O <strong>IgpAI</strong> é o seu tutor particular. Ele está pronto para explicar conceitos complexos e ajudar na resolução de questões.</p>
             </CardContent>
           </Card>
         </div>

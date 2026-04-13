@@ -28,7 +28,7 @@ const menuItems = [
   { icon: Calendar, label: "Plano de Estudos", path: "/plano" },
   { icon: BookOpen, label: "Acervo Inteligente", path: "/acervo" },
   { icon: Layers, label: "Flashcards", path: "/flashcards" },
-  { icon: MessageSquare, label: "KvernAI", path: "/tutor" },
+  { icon: MessageSquare, label: "IgpAI", path: "/tutor" },
 ];
 
 export function Sidebar({ onClose }: { onClose?: () => void }) {
