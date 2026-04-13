@@ -48,21 +48,16 @@ service cloud.firestore {
         (request.auth.token.email == "henrique.rosa@poli.ufrj.br" || request.auth.token.email == "brunool.rj@gmail.com");
     }
 
-    // Support for the app's custom anonymous UID (localUid)
-    function isAnonDoc(data) {
-      return data.uid.startsWith('anon_');
-    }
-
     function canReadDoc(data) {
-      return (request.auth != null && request.auth.uid == data.uid) || 
-             (data.uid != null && data.uid.startsWith('anon_')) || 
-             isAdmin();
+      return isAdmin() || 
+             (isAuthenticated() && request.auth.uid == data.uid) || 
+             (data.uid != null && data.uid.startsWith('anon_'));
     }
 
     function canWriteDoc(data) {
-      return (request.auth != null && request.auth.uid == data.uid) || 
-             (data.uid != null && data.uid.startsWith('anon_')) || 
-             isAdmin();
+      return isAdmin() || 
+             (isAuthenticated() && request.auth.uid == data.uid) || 
+             (data.uid != null && data.uid.startsWith('anon_'));
     }
 
     // ===============================================================
