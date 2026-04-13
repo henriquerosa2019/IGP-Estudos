@@ -8,12 +8,21 @@ export default defineConfig(({mode}) => {
   // No Vercel, as variáveis podem estar no process.env diretamente ou no env carregado
   const geminiKey = env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   
+  if (geminiKey) {
+    console.log(`[Build] Gemini API Key encontrada (${geminiKey.substring(0, 4)}...)`);
+  } else {
+    console.warn("[Build] AVISO: VITE_GEMINI_API_KEY não encontrada no ambiente de build.");
+  }
+
+  const define: Record<string, any> = {};
+  if (geminiKey) {
+    define['process.env.GEMINI_API_KEY'] = JSON.stringify(geminiKey);
+    define['import.meta.env.VITE_GEMINI_API_KEY'] = JSON.stringify(geminiKey);
+  }
+
   return {
     plugins: [react(), tailwindcss()],
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(geminiKey || ""),
-      'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(geminiKey || ""),
-    },
+    define,
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

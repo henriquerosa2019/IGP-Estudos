@@ -1,15 +1,33 @@
 import { GoogleGenAI } from "@google/genai";
 
-// Tenta buscar de várias fontes possíveis no Vite/Vercel
-const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+// Função robusta para capturar a chave da API em diferentes ambientes (Vite, Vercel, Local)
+const getApiKey = () => {
+  // 1. Tenta do process.env (Injetado pelo vite.config.ts ou ambiente Node)
+  // O SDK do AI Studio prefere process.env.GEMINI_API_KEY
+  const processKey = typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined;
+  if (processKey && processKey.length > 10 && processKey !== "undefined" && processKey !== "null") {
+    return processKey;
+  }
 
-if (apiKey && apiKey.length > 5 && apiKey !== "undefined" && apiKey !== "null") {
-  console.log("Gemini: Chave detectada (Inicia com: " + apiKey.substring(0, 4) + "...)");
+  // 2. Tenta do import.meta.env (Padrão do Vite para variáveis com prefixo VITE_)
+  const viteKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
+  if (viteKey && viteKey.length > 10 && viteKey !== "undefined" && viteKey !== "null") {
+    return viteKey;
+  }
+
+  return null;
+};
+
+const apiKey = getApiKey();
+
+if (apiKey) {
+  console.log("Gemini: Chave detectada com sucesso (Inicia com: " + apiKey.substring(0, 4) + "...)");
 } else {
-  console.error("Gemini: ERRO - Chave não encontrada. No Vercel, verifique se adicionou VITE_GEMINI_API_KEY no projeto CORRETO e faça um REDEPLOY.");
+  console.error("Gemini: ERRO - Chave não encontrada. No Vercel, adicione VITE_GEMINI_API_KEY nas Environment Variables e faça um REDEPLOY.");
 }
 
-export const ai = (apiKey && apiKey.length > 5 && apiKey !== "undefined" && apiKey !== "null") ? new GoogleGenAI({ apiKey }) : null;
+// Inicializa o SDK conforme as diretrizes do AI Studio
+export const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 if (!ai) {
   console.warn("GoogleGenAI instance (ai) is null. AI features will not work.");
@@ -67,7 +85,7 @@ export const generateStudyPlanFromNotices = async (
     7. Se o conteúdo for muito grande, gere quantos dias forem necessários (60, 90, 120 dias...).`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Se houver links de vídeo no conteúdo, preserve-os no campo videoUrl. Use 'type': 'study' e 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
@@ -131,7 +149,7 @@ export const extractSubjectsFromNotice = async (content: string) => {
       7. Atribua um peso de 1 a 5 baseado na relevância comum para concursos.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: "Você é um especialista em editais e cronogramas de cursos. Sua tarefa é decompor o conteúdo em matérias e tópicos detalhados, PRESERVANDO INTEGRALMENTE a nomenclatura original das aulas e INCLUINDO os tempos de duração se disponíveis. Retorne APENAS o JSON. Seja exaustivo.",
@@ -165,7 +183,7 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
       5. OBRIGATÓRIO: O primeiro item de estudo de cada dia (a partir do Dia 2) DEVE SER uma "Revisão" (type: "revision") das 2 matérias estudadas no dia anterior.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) das matérias. Gere um plano extenso e detalhado. Nunca resuma. Retorne APENAS o JSON. Use 'type': 'study' e 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
@@ -217,7 +235,7 @@ export const generateFlashcardsFromMultimodal = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       contents: [{ role: 'user', parts }],
       config: {
         systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido e gerar exatamente 20 flashcards detalhados e variados.
@@ -277,7 +295,7 @@ export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'vi
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       contents: [{ role: 'user', parts: [{ text: content.substring(0, 30000) }] }],
       config: {
         systemInstruction: "Você é um assistente de estudos. Sua tarefa é resumir conteúdos e extrair tópicos principais para facilitar o aprendizado. Retorne APENAS o JSON.",
