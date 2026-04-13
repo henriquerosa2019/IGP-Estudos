@@ -71,13 +71,18 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Test Connection (Simplified)
+// Test Connection
 async function testConnection() {
   try {
-    console.log("Firebase: Testando conexão...");
-    // Just a simple log, no blocking call
+    console.log("Firebase: Testando conexão com Firestore...");
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    console.log("Firebase: Conexão OK.");
   } catch (error: any) {
-    console.error("Firebase: Erro de inicialização", error);
+    if (error.message?.includes('offline')) {
+      console.error("Firebase: O cliente está offline. Verifique se o domínio do Vercel está autorizado no console do Firebase.");
+    } else {
+      console.error("Firebase: Erro de conexão", error.message);
+    }
   }
 }
 

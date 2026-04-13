@@ -218,16 +218,21 @@ export default function ContentLibrary() {
         return;
       }
 
-      const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
+      const isAdmin = user && (
+        user.email === "henrique.rosa@poli.ufrj.br" || 
+        user.email === "brunool.rj@gmail.com"
+      );
       
       let q;
       if (isAdmin) {
-        console.log("ContentLibrary: Admin detectado, buscando todos os itens.");
-        q = query(collection(db, "contentItems"));
+        console.log("ContentLibrary: Admin detectado (" + user.email + "), buscando todos os itens do banco.");
+        // Busca tudo sem filtro de UID para o admin
+        q = query(collection(db, "contentItems"), orderBy("createdAt", "desc"));
       } else {
         q = query(
           collection(db, "contentItems"),
-          where("uid", "==", uid)
+          where("uid", "==", uid),
+          orderBy("createdAt", "desc")
         );
       }
 

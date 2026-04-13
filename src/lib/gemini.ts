@@ -3,9 +3,9 @@ import { GoogleGenAI } from "@google/genai";
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (apiKey) {
-  console.log("Gemini API Key detected:", apiKey.substring(0, 5) + "..." + apiKey.substring(apiKey.length - 5));
+  console.log("Gemini: Chave detectada (iniciando com " + apiKey.substring(0, 4) + ")");
 } else {
-  console.warn("GEMINI_API_KEY is not defined in process.env");
+  console.error("Gemini: ERRO - GEMINI_API_KEY não encontrada. No Vercel, você deve adicionar esta variável em Settings > Environment Variables.");
 }
 
 export const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
@@ -203,7 +203,10 @@ export const generateFlashcardsFromMultimodal = async (
   parts: any[],
   contentName: string
 ) => {
-  if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
+  if (!ai) {
+    console.error("Gemini: Tentativa de gerar flashcards sem chave configurada.");
+    throw new Error("Chave do Gemini não configurada no Vercel. Adicione GEMINI_API_KEY nas variáveis de ambiente do projeto.");
+  }
 
   try {
     const response = await ai.models.generateContent({
