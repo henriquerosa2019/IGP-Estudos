@@ -567,15 +567,16 @@ export default function ContentLibrary() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-zinc-100 dark:border-zinc-800 min-h-[80vh]">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
-            <BookOpen className="w-8 h-8 text-[#FF9900]" />
-            Acervo Inteligente
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Organize seus materiais por disciplina e gere flashcards com IA.</p>
-        </div>
+    <div className="min-h-screen bg-[#121212] py-8 px-4">
+      <div className="container mx-auto max-w-6xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <BookOpen className="w-8 h-8 text-[#FF9900]" />
+              Acervo Inteligente
+            </h1>
+            <p className="text-zinc-400 mt-1">Organize seus materiais por disciplina e gere flashcards com IA.</p>
+          </div>
         
         <div className="flex gap-3">
           <Button 
@@ -889,27 +890,27 @@ export default function ContentLibrary() {
         <div className="space-y-6">
           {/* Breadcrumbs */}
           {!searchTerm && currentFolder && (
-            <div className="flex items-center gap-2 text-sm text-zinc-500 mb-6 bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl w-fit">
+            <div className="flex items-center gap-2 text-sm text-zinc-400 mb-6 bg-[#1a1a1a] p-2 px-4 rounded-full w-fit border border-zinc-800">
               <button 
                 onClick={() => setCurrentFolder(null)}
                 className="hover:text-[#FF9900] transition-colors flex items-center gap-1 font-medium"
               >
                 <Folder className="w-4 h-4" /> Acervo
               </button>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3 h-3 opacity-50" />
               <button 
                 onClick={() => setCurrentFolder({ subject: currentFolder.subject })}
                 className={cn(
                   "hover:text-[#FF9900] transition-colors font-medium",
-                  !currentFolder.subCategory && "text-zinc-900 dark:text-white"
+                  !currentFolder.subCategory && "text-white"
                 )}
               >
                 {currentFolder.subject}
               </button>
               {currentFolder.subCategory && (
                 <>
-                  <ChevronRight className="w-4 h-4" />
-                  <span className="text-zinc-900 dark:text-white font-medium">
+                  <ChevronRight className="w-3 h-3 opacity-50" />
+                  <span className="text-white font-medium">
                     {currentFolder.subCategory}
                   </span>
                 </>
@@ -917,25 +918,25 @@ export default function ContentLibrary() {
             </div>
           )}
 
-          {/* Folder View Logic */}
+              {/* Folder View Logic */}
           {(() => {
             const renderItemCard = (item: ContentItem) => (
               <div key={item.id}>
-                <Card className="group hover:border-orange-300 transition-all duration-300 shadow-sm hover:shadow-md overflow-hidden flex flex-col h-full">
+                <Card className="group bg-white border-none transition-all duration-300 shadow-lg hover:shadow-xl overflow-hidden flex flex-col h-full rounded-[2rem]">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
-                      <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-[#FF9900]">
-                        {item.type === 'pdf' ? <FileText className="w-5 h-5" /> : 
-                         item.type === 'video' ? <Video className="w-5 h-5" /> : 
-                         item.type === 'link' ? <LinkIcon className="w-5 h-5" /> :
-                         <Type className="w-5 h-5" />}
+                      <div className="p-3 bg-orange-100 rounded-2xl text-[#FF9900]">
+                        {item.type === 'pdf' ? <FileText className="w-6 h-6" /> : 
+                         item.type === 'video' ? <Video className="w-6 h-6" /> : 
+                         item.type === 'link' ? <LinkIcon className="w-6 h-6" /> :
+                         <Type className="w-6 h-6" />}
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger className={cn(
                           buttonVariants({ variant: "ghost", size: "icon" }),
-                          "h-8 w-8 p-0"
+                          "h-8 w-8 p-0 text-zinc-400 hover:text-zinc-900"
                         )}>
-                          <MoreVertical className="w-4 h-4" />
+                          <MoreVertical className="w-5 h-5" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => {
@@ -952,43 +953,30 @@ export default function ContentLibrary() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <div className="mt-3">
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        <Badge variant="secondary" className="bg-black text-[#FF9900] dark:bg-black dark:text-[#FF9900] border border-zinc-800 px-2 py-1 text-[11px] font-black uppercase tracking-widest shadow-sm">
+                    <div className="mt-4">
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <Badge className="bg-black text-[#FF9900] hover:bg-black border-none px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-full">
                           {item.subject}
                         </Badge>
                         {item.subCategory && (
-                          <Badge variant="outline" className="border-zinc-300 text-zinc-800 dark:border-zinc-700 dark:text-zinc-200 px-2 py-1 text-[11px] font-bold bg-white/50 dark:bg-black/50">
+                          <Badge className="bg-zinc-500 text-white hover:bg-zinc-500 border-none px-3 py-1 text-[10px] font-bold rounded-full">
                             {item.subCategory}
                           </Badge>
                         )}
                       </div>
-                      <CardTitle className="text-lg font-bold leading-tight group-hover:text-[#FF9900] transition-colors">
+                      <CardTitle className="text-xl font-bold text-zinc-900 leading-tight">
                         {item.title}
                       </CardTitle>
-                      <CardDescription className="text-xs mt-1">
+                      <CardDescription className="text-zinc-400 text-xs mt-1 font-medium">
                         Adicionado em {new Date(item.createdAt).toLocaleDateString('pt-BR')}
                       </CardDescription>
                     </div>
                   </CardHeader>
-                  <CardContent className="flex-1 flex flex-col">
+                  <CardContent className="flex-1 flex flex-col pt-0">
                     {item.summary && (
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 mb-4 italic">
-                        "{item.summary}"
+                      <p className="text-sm text-zinc-500 line-clamp-2 mb-4">
+                        {item.summary}
                       </p>
-                    )}
-
-                    {item.topics && item.topics.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-4">
-                        {item.topics.slice(0, 3).map((t, i) => (
-                          <Badge key={i} variant="outline" className="text-[9px] py-0 h-4 border-zinc-200 text-zinc-500">
-                            {t}
-                          </Badge>
-                        ))}
-                        {item.topics.length > 3 && (
-                          <span className="text-[9px] text-zinc-400">+{item.topics.length - 3}</span>
-                        )}
-                      </div>
                     )}
                     
                     <div className="mt-auto pt-4 flex flex-wrap gap-2">
@@ -999,10 +987,10 @@ export default function ContentLibrary() {
                           rel="noopener noreferrer"
                           className={cn(
                             buttonVariants({ variant: "outline", size: "sm" }),
-                            "flex-1 gap-2"
+                            "flex-1 gap-2 rounded-xl border-zinc-200 text-zinc-400 hover:bg-zinc-50"
                           )}
                         >
-                          <Download className="w-3.5 h-3.5" /> Baixar
+                          <Download className="w-4 h-4" /> Baixar
                         </a>
                       ) : item.type === 'video' || item.type === 'link' ? (
                         <a 
@@ -1011,34 +999,34 @@ export default function ContentLibrary() {
                           rel="noopener noreferrer"
                           className={cn(
                             buttonVariants({ variant: "outline", size: "sm" }),
-                            "flex-1 gap-2"
+                            "flex-1 gap-2 rounded-xl border-zinc-200 text-zinc-400 hover:bg-zinc-50"
                           )}
                         >
-                          <ExternalLink className="w-3.5 h-3.5" /> Abrir
+                          <ExternalLink className="w-4 h-4" /> Abrir
                         </a>
                       ) : (
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="flex-1 gap-2 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 font-bold"
+                          className="flex-1 gap-2 rounded-xl border-zinc-300 text-zinc-400 hover:bg-zinc-50 font-bold"
                           onClick={() => {
                             toast.info("Conteúdo de texto: " + item.title);
                           }}
                         >
-                          <Type className="w-3.5 h-3.5" /> Ver Texto
+                          <Type className="w-4 h-4" /> Ver Texto
                         </Button>
                       )}
                       
                       <Button 
-                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-[#FF9900] font-bold border border-zinc-800" 
+                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-[#FF9900] font-bold rounded-xl border-none" 
                         size="sm"
                         onClick={() => handleGenerateFlashcards(item)}
                       >
-                        <BrainCircuit className="w-3.5 h-3.5" /> Flashcards
+                        <BrainCircuit className="w-4 h-4" /> Flashcards
                       </Button>
                       
                       <Button 
-                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-[#FF9900] font-bold border border-zinc-800" 
+                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-[#FF9900] font-bold rounded-xl border-none" 
                         size="sm"
                         onClick={() => {
                           localStorage.setItem('tutor_initial_context', JSON.stringify({
@@ -1049,12 +1037,28 @@ export default function ContentLibrary() {
                           window.location.href = '/tutor';
                         }}
                       >
-                        <MessageSquare className="w-3.5 h-3.5" /> Tutor
+                        <MessageSquare className="w-4 h-4" /> Tutor
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
+            );
+
+            const renderFolderCard = (title: string, count: number, onClick: () => void) => (
+              <Card 
+                className="cursor-pointer bg-[#1a1a1a] border-zinc-800 hover:border-[#FF9900] transition-all flex items-center p-5 gap-4 shadow-xl rounded-2xl group"
+                onClick={onClick}
+              >
+                <div className="p-3 bg-zinc-800 rounded-xl text-[#FF9900] group-hover:bg-[#FF9900] group-hover:text-black transition-colors">
+                  <Folder className="w-6 h-6 fill-current opacity-40" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-white line-clamp-1 text-lg tracking-tight">{title}</h3>
+                  <p className="text-sm text-zinc-500 font-medium">{count} ite{count === 1 ? 'm' : 'ns'}</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-zinc-700 group-hover:text-[#FF9900] transition-colors" />
+              </Card>
             );
 
             if (searchTerm) {
@@ -1071,22 +1075,7 @@ export default function ContentLibrary() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {subjects.map(subject => {
                     const count = filteredItems.filter(i => i.subject === subject).length;
-                    return (
-                      <Card 
-                        key={subject} 
-                        className="cursor-pointer hover:border-[#FF9900] transition-colors flex items-center p-4 gap-4 shadow-sm"
-                        onClick={() => setCurrentFolder({ subject })}
-                      >
-                        <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl text-[#FF9900]">
-                          <Folder className="w-6 h-6 fill-current opacity-20" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-black text-zinc-900 dark:text-white line-clamp-1 text-lg tracking-tight">{subject}</h3>
-                          <p className="text-sm text-zinc-700 dark:text-zinc-300 font-bold">{count} ite{count === 1 ? 'm' : 'ns'}</p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-zinc-300" />
-                      </Card>
-                    );
+                    return renderFolderCard(subject, count, () => setCurrentFolder({ subject }));
                   })}
                 </div>
               );
@@ -1101,28 +1090,13 @@ export default function ContentLibrary() {
                 <div className="space-y-8">
                   {subCategories.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <h3 className="text-xs font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                         <FolderOpen className="w-4 h-4" /> Subpastas
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {subCategories.map(sub => {
                           const count = subjectItems.filter(i => i.subCategory === sub).length;
-                          return (
-                            <Card 
-                              key={sub} 
-                              className="cursor-pointer hover:border-[#FF9900] transition-colors flex items-center p-4 gap-4 shadow-sm"
-                              onClick={() => setCurrentFolder({ subject: currentFolder.subject, subCategory: sub })}
-                            >
-                              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl text-[#FF9900]">
-                                <FolderOpen className="w-6 h-6 fill-current opacity-20" />
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="font-black text-zinc-900 dark:text-white line-clamp-1 text-lg tracking-tight">{sub}</h3>
-                                <p className="text-sm text-zinc-700 dark:text-zinc-300 font-bold">{count} ite{count === 1 ? 'm' : 'ns'}</p>
-                              </div>
-                              <ChevronRight className="w-4 h-4 text-zinc-300" />
-                            </Card>
-                          );
+                          return renderFolderCard(sub, count, () => setCurrentFolder({ subject: currentFolder.subject, subCategory: sub }));
                         })}
                       </div>
                     </div>
@@ -1130,17 +1104,13 @@ export default function ContentLibrary() {
                   
                   {itemsWithoutSub.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <FileText className="w-4 h-4" /> Arquivos
+                      <h3 className="text-xs font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <FileText className="w-4 h-4" /> Arquivos em {currentFolder.subject}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {itemsWithoutSub.map(renderItemCard)}
                       </div>
                     </div>
-                  )}
-                  
-                  {subCategories.length === 0 && itemsWithoutSub.length === 0 && (
-                    <p className="text-zinc-500 text-center py-10">Esta pasta está vazia.</p>
                   )}
                 </div>
               );
@@ -1149,7 +1119,7 @@ export default function ContentLibrary() {
             const subCategoryItems = filteredItems.filter(i => i.subject === currentFolder.subject && i.subCategory === currentFolder.subCategory);
             return (
               <div>
-                <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <h3 className="text-xs font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                   <FileText className="w-4 h-4" /> Arquivos em {currentFolder.subCategory}
                 </h3>
                 {subCategoryItems.length > 0 ? (
@@ -1244,5 +1214,6 @@ export default function ContentLibrary() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  </div>
+);
 }
