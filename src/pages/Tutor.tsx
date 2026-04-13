@@ -29,8 +29,9 @@ import { ai } from "@/lib/gemini";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
-import { collection, query, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { collection, query, getDocs, where } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { StudyPlan } from "@/types";
 
 interface Message {
@@ -56,7 +57,17 @@ export default function Tutor() {
   const [dailyCount, setDailyCount] = useState(0);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [userContext, setUserContext] = useState<string>("");
+  const [user, setUser] = useState<any>(null);
+  const [authReady, setAuthReady] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthReady(true);
+    });
+    return () => unsubscribeAuth();
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem("aestudamos_tutor_chats");
@@ -81,6 +92,8 @@ export default function Tutor() {
 
     // Fetch user context
     const fetchContext = async () => {
+      if (!authReady) return;
+      
       try {
         // Check for initial context from ContentLibrary
         const initialContext = localStorage.getItem('tutor_initial_context');
@@ -97,7 +110,30 @@ export default function Tutor() {
           }]);
         }
 
-        const q = query(collection(db, "plans"));
+        const getUids = () => {
+          const uids = [];
+          if (user) uids.push(user.uid);
+          const localUid = localStorage.getItem('igp_local_uid');
+          if (localUid) uids.push(localUid);
+          return Array.from(new Set(uids));
+        };
+
+        const uids = getUids();
+        const allowedUids = uids.filter(id => id.startsWith('anon_') || (user && id === user.uid));
+        
+        if (allowedUids.length === 0) return;
+
+        const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
+
+        let q;
+        if (isAdmin) {
+          q = query(collection(db, "plans"));
+        } else {
+          q = allowedUids.length === 1
+            ? query(collection(db, "plans"), where("uid", "==", allowedUids[0]))
+            : query(collection(db, "plans"), where("uid", "in", allowedUids));
+        }
+        
         const snapshot = await getDocs(q);
         const plans = snapshot.docs.map(doc => doc.data() as StudyPlan);
         
@@ -131,7 +167,7 @@ export default function Tutor() {
     };
     
     fetchContext();
-  }, []);
+  }, [authReady, user]);
 
   const updateDailyCount = (newCount: number) => {
     setDailyCount(newCount);

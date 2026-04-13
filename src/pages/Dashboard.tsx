@@ -77,22 +77,27 @@ export default function Dashboard() {
     const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
     const uids = getUids();
     
+    // Filter UIDs to only include those the current user has permission to read
+    const allowedUids = uids.filter(id => id.startsWith('anon_') || (user && id === user.uid));
+    
+    if (allowedUids.length === 0) return;
+
     let qPlans;
     if (isAdmin) {
       qPlans = query(collection(db, "plans"));
     } else {
-      qPlans = uids.length === 1 
-        ? query(collection(db, "plans"), where("uid", "==", uids[0]))
-        : query(collection(db, "plans"), where("uid", "in", uids));
+      qPlans = allowedUids.length === 1 
+        ? query(collection(db, "plans"), where("uid", "==", allowedUids[0]))
+        : query(collection(db, "plans"), where("uid", "in", allowedUids));
     }
       
     let qFlashcards;
     if (isAdmin) {
       qFlashcards = query(collection(db, "flashcardReviews"));
     } else {
-      qFlashcards = uids.length === 1
-        ? query(collection(db, "flashcardReviews"), where("uid", "==", uids[0]))
-        : query(collection(db, "flashcardReviews"), where("uid", "in", uids));
+      qFlashcards = allowedUids.length === 1
+        ? query(collection(db, "flashcardReviews"), where("uid", "==", allowedUids[0]))
+        : query(collection(db, "flashcardReviews"), where("uid", "in", allowedUids));
     }
 
     let flashcardsData: any[] = [];

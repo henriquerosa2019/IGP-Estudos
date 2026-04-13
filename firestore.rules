@@ -45,19 +45,24 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && 
-        (request.auth.token.email == "henrique.rosa@poli.ufrj.br" || request.auth.token.email == "brunool.rj@gmail.com");
+        ((request.auth.token.email == "henrique.rosa@poli.ufrj.br" && request.auth.token.email_verified == true) || 
+         (request.auth.token.email == "brunool.rj@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isDocOwner(data) {
+      return isAuthenticated() && request.auth.uid == data.uid;
+    }
+
+    function isAnonymousDoc(data) {
+      return data.uid != null && data.uid is string && data.uid.matches("^anon_.*");
     }
 
     function canReadDoc(data) {
-      return isAdmin() || 
-             (isAuthenticated() && request.auth.uid == data.uid) || 
-             (data.uid != null && data.uid.startsWith('anon_'));
+      return isAdmin() || isDocOwner(data) || isAnonymousDoc(data);
     }
 
     function canWriteDoc(data) {
-      return isAdmin() || 
-             (isAuthenticated() && request.auth.uid == data.uid) || 
-             (data.uid != null && data.uid.startsWith('anon_'));
+      return isAdmin() || isDocOwner(data) || isAnonymousDoc(data);
     }
 
     // ===============================================================
@@ -69,7 +74,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || userId.startsWith('anon_') || isAdmin();
+      allow read, write: if isOwner(userId) || userId.matches("^anon_.*") || isAdmin();
     }
 
     match /unauthorized_attempts/{attemptId} {
@@ -96,8 +101,9 @@ service cloud.firestore {
     }
 
     match /contentItems/{itemId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if canReadDoc(resource.data);
+      allow create: if canWriteDoc(request.resource.data);
+      allow update, delete: if canWriteDoc(resource.data);
     }
   }
 }

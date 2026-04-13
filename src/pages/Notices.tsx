@@ -158,14 +158,14 @@ export default function Notices() {
   const getUids = () => {
     const uids = [];
     if (user) uids.push(user.uid);
-    const localUid = localStorage.getItem('localUid');
+    const localUid = localStorage.getItem('igp_local_uid');
     if (localUid) uids.push(localUid);
     if (uids.length === 0) {
       const newLocal = 'anon_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('localUid', newLocal);
+      localStorage.setItem('igp_local_uid', newLocal);
       uids.push(newLocal);
     }
-    return uids;
+    return Array.from(new Set(uids));
   };
 
   useEffect(() => {
@@ -177,6 +177,11 @@ export default function Notices() {
     const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
     const uids = getUids();
     
+    // Filter UIDs to only include those the current user has permission to read
+    const allowedUids = uids.filter(id => id.startsWith('anon_') || (user && id === user.uid));
+    
+    if (allowedUids.length === 0) return;
+
     let q;
     if (isAdmin) {
       q = query(
@@ -184,16 +189,16 @@ export default function Notices() {
         where("notices", "array-contains", selectedNotice.id)
       );
     } else {
-      q = uids.length === 1
+      q = allowedUids.length === 1
         ? query(
             collection(db, "plans"), 
             where("notices", "array-contains", selectedNotice.id),
-            where("uid", "==", uids[0])
+            where("uid", "==", allowedUids[0])
           )
         : query(
             collection(db, "plans"), 
             where("notices", "array-contains", selectedNotice.id),
-            where("uid", "in", uids)
+            where("uid", "in", allowedUids)
           );
     }
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -223,13 +228,18 @@ export default function Notices() {
     const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
     const uids = getUids();
     
+    // Filter UIDs to only include those the current user has permission to read
+    const allowedUids = uids.filter(id => id.startsWith('anon_') || (user && id === user.uid));
+    
+    if (allowedUids.length === 0) return;
+
     let q;
     if (isAdmin) {
       q = query(collection(db, "notices"));
     } else {
-      q = uids.length === 1
-        ? query(collection(db, "notices"), where("uid", "==", uids[0]))
-        : query(collection(db, "notices"), where("uid", "in", uids));
+      q = allowedUids.length === 1
+        ? query(collection(db, "notices"), where("uid", "==", allowedUids[0]))
+        : query(collection(db, "notices"), where("uid", "in", allowedUids));
     }
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));
