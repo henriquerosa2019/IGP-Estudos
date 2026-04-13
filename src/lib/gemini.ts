@@ -1,16 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Tenta buscar de várias fontes possíveis no Vite/Vercel
-// No Vite, process.env.GEMINI_API_KEY é substituído pelo valor definido no vite.config.ts
 const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
-if (apiKey && apiKey !== "undefined" && apiKey !== "null") {
-  console.log("Gemini: Chave detectada com sucesso.");
+if (apiKey && apiKey.length > 5 && apiKey !== "undefined" && apiKey !== "null") {
+  console.log("Gemini: Chave detectada (Inicia com: " + apiKey.substring(0, 4) + "...)");
 } else {
-  console.error("Gemini: ERRO - Chave não encontrada. No Vercel, adicione VITE_GEMINI_API_KEY e faça um REDEPLOY.");
+  console.error("Gemini: ERRO - Chave não encontrada. No Vercel, verifique se adicionou VITE_GEMINI_API_KEY no projeto CORRETO e faça um REDEPLOY.");
 }
 
-export const ai = (apiKey && apiKey !== "undefined" && apiKey !== "null") ? new GoogleGenAI({ apiKey }) : null;
+export const ai = (apiKey && apiKey.length > 5 && apiKey !== "undefined" && apiKey !== "null") ? new GoogleGenAI({ apiKey }) : null;
 
 if (!ai) {
   console.warn("GoogleGenAI instance (ai) is null. AI features will not work.");
