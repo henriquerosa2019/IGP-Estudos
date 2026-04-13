@@ -82,6 +82,21 @@ export default function Tutor() {
     // Fetch user context
     const fetchContext = async () => {
       try {
+        // Check for initial context from ContentLibrary
+        const initialContext = localStorage.getItem('tutor_initial_context');
+        let extraContext = "";
+        if (initialContext) {
+          const ctx = JSON.parse(initialContext);
+          extraContext = `\nO aluno quer tirar dúvidas sobre o conteúdo: "${ctx.title}" (${ctx.subject}).\nResumo: ${ctx.summary || 'Não disponível'}.`;
+          localStorage.removeItem('tutor_initial_context');
+          
+          // Add a welcoming message from the tutor
+          setMessages([{
+            role: 'assistant',
+            content: `Olá! Vi que você quer estudar sobre **${ctx.title}**. Como posso te ajudar com este conteúdo hoje?`
+          }]);
+        }
+
         const q = query(collection(db, "plans"));
         const snapshot = await getDocs(q);
         const plans = snapshot.docs.map(doc => doc.data() as StudyPlan);
@@ -105,6 +120,7 @@ export default function Tutor() {
         Contexto do Aluno:
         - Tópicos já estudados recentemente: ${completedTopics.slice(-5).join(", ") || "Nenhum ainda"}
         - Tópicos pendentes no plano: ${currentTopics.slice(0, 5).join(", ") || "Nenhum plano ativo"}
+        ${extraContext}
         
         Use esse contexto para personalizar suas respostas, dar exemplos relevantes às matérias que ele está estudando e motivá-lo com base no seu progresso.
         `;

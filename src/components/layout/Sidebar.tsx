@@ -116,7 +116,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             "w-full py-1 rounded text-[10px] font-bold transition-all uppercase tracking-widest",
             isActive 
               ? "bg-zinc-900 text-[#FF9900] border border-red-900/50 hover:bg-zinc-800" 
-              : "bg-red-700 text-white hover:bg-red-600 shadow-md shadow-red-900/20"
+              : "bg-black text-[#FF9900] hover:bg-zinc-900 shadow-md shadow-black/20 border border-zinc-800"
           )}
         >
           {isActive ? "Pausar" : "Focar"}

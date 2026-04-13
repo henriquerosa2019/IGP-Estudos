@@ -1,11 +1,17 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 const apiKey = process.env.GEMINI_API_KEY;
+
+if (apiKey) {
+  console.log("Gemini API Key detected:", apiKey.substring(0, 5) + "..." + apiKey.substring(apiKey.length - 5));
+} else {
+  console.warn("GEMINI_API_KEY is not defined in process.env");
+}
 
 export const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 if (!ai) {
-  console.warn("GEMINI_API_KEY is not defined. AI features will not work.");
+  console.warn("GoogleGenAI instance (ai) is null. AI features will not work.");
 }
 
 const cleanJson = (text: string) => {
@@ -17,10 +23,7 @@ const enforceRevisions = (schedule: any[]) => {
   if (!schedule || !Array.isArray(schedule)) return schedule;
   
   for (let i = 1; i < schedule.length; i++) {
-    // Pegar apenas os tópicos de estudo do dia anterior (limitado a 2)
     const previousDayTopics = schedule[i - 1].topics?.filter((t: any) => t.type === 'study') || [];
-    
-    // Pegar apenas os tópicos de estudo do dia atual (remover revisões geradas pela IA para forçar a ordem)
     const currentDayStudies = schedule[i].topics?.filter((t: any) => t.type === 'study') || [];
 
     const revisionsToAdd = previousDayTopics.slice(0, 2).map((prevTopic: any) => ({
@@ -30,7 +33,6 @@ const enforceRevisions = (schedule: any[]) => {
       type: 'revision'
     }));
 
-    // Forçar a estrutura exata: 2 revisões primeiro, depois os 2 estudos do dia
     schedule[i].topics = [...revisionsToAdd, ...currentDayStudies.slice(0, 2)];
   }
   return schedule;
@@ -62,57 +64,23 @@ export const generateStudyPlanFromNotices = async (
     7. Se o conteúdo for muito grande, gere quantos dias forem necessários (60, 90, 120 dias...).`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
-      contents: prompt,
+      model: "gemini-3-flash-preview",
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Se houver links de vídeo no conteúdo, preserve-os no campo videoUrl. Use 'type': 'study' e 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING, description: "Título do plano (ex: Unificado PM RJ + PRF)" },
-            schedule: {
-              type: Type.ARRAY,
-              description: "Lista sequencial de dias de estudo (Dia 1, Dia 2, ..., Dia N) cobrindo todo o edital.",
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  day: { type: Type.STRING, description: "Identificador do dia (ex: 'Dia 1', 'Dia 2')" },
-                  topics: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        title: { type: Type.STRING },
-                        subject: { type: Type.STRING },
-                        duration: { type: Type.NUMBER },
-                        type: { type: Type.STRING, enum: ["study", "revision"] },
-                        videoUrl: { type: Type.STRING }
-                      },
-                      required: ["title", "subject", "duration", "type"]
-                    }
-                  }
-                },
-                required: ["day", "topics"]
-              }
-            }
-          },
-          required: ["title", "schedule"]
-        }
       }
     });
 
     if (!response.text) throw new Error("A IA não retornou conteúdo.");
-    const result = JSON.parse(cleanJson(response.text));
+    const resultJson = JSON.parse(cleanJson(response.text));
     
-    if (result.schedule) {
-      result.schedule = enforceRevisions(result.schedule);
-      // Ensure each topic has an ID and completed status
-      result.schedule.forEach((day: any) => {
+    if (resultJson.schedule) {
+      resultJson.schedule = enforceRevisions(resultJson.schedule);
+      resultJson.schedule.forEach((day: any) => {
         day.topics.forEach((topic: any) => {
           topic.id = Math.random().toString(36).substring(2, 11);
           topic.completed = false;
-          // Fix relative Hotmart links
           if (topic.videoUrl && topic.videoUrl.startsWith('/')) {
             topic.videoUrl = `https://hotmart.com${topic.videoUrl}`;
           }
@@ -121,12 +89,12 @@ export const generateStudyPlanFromNotices = async (
     }
 
     const startDate = new Date();
-    const totalDays = result.schedule?.length || 30;
+    const totalDays = resultJson.schedule?.length || 30;
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + totalDays);
 
     return {
-      ...result,
+      ...resultJson,
       id: Date.now().toString(),
       goal: notices.map(n => n.name).join(" + "),
       examDate: examDate,
@@ -143,9 +111,7 @@ export const extractSubjectsFromNotice = async (content: string) => {
   if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
-      contents: `Analise o seguinte conteúdo de um edital de concurso ou cronograma de curso e extraia as matérias principais com seu peso/importância sugerida e a lista de tópicos detalhados de cada matéria.
+    const prompt = `Analise o seguinte conteúdo de um edital de concurso ou cronograma de curso e extraia as matérias principais com seu peso/importância sugerida e a lista de tópicos detalhados de cada matéria.
       
       CONTEÚDO:
       ${content}
@@ -157,33 +123,14 @@ export const extractSubjectsFromNotice = async (content: string) => {
       4. TEMPOS DE AULA: Se houver tempos de duração (ex: 33:57, 40:06), você DEVE incluí-los no final do título do tópico entre parênteses. Exemplo: "Aula 01 - Parte 01 - Lei de drogas (33:57)".
       5. Capture a hierarquia: Se houver um nome de matéria seguido por várias aulas, agrupe essas aulas dentro dessa matéria.
       6. Não pule nenhum item.
-      7. Atribua um peso de 1 a 5 baseado na relevância comum para concursos.`,
+      7. Atribua um peso de 1 a 5 baseado na relevância comum para concursos.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: "Você é um especialista em editais e cronogramas de cursos. Sua tarefa é decompor o conteúdo em matérias e tópicos detalhados, PRESERVANDO INTEGRALMENTE a nomenclatura original das aulas e INCLUINDO os tempos de duração se disponíveis. Retorne APENAS o JSON. Seja exaustivo.",
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            subjects: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  weight: { type: Type.NUMBER, description: "Peso de 1 a 5" },
-                  importance: { type: Type.STRING, enum: ["low", "medium", "high"] },
-                  topics: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING },
-                    description: "Lista exaustiva de tópicos desta matéria"
-                  }
-                },
-                required: ["name", "weight", "importance", "topics"]
-              }
-            }
-          },
-          required: ["subjects"]
-        }
       }
     });
 
@@ -194,13 +141,12 @@ export const extractSubjectsFromNotice = async (content: string) => {
     throw error;
   }
 };
+
 export const generateStudyPlan = async (goal: string, subjects: string[], hoursPerDay: number) => {
   if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
-      contents: `Crie um plano de estudos detalhado para o objetivo: "${goal}". 
+    const prompt = `Crie um plano de estudos detalhado para o objetivo: "${goal}". 
       Matérias de foco: ${subjects.join(", ")}. 
       Tempo disponível: ${hoursPerDay} horas por dia. 
       Data de início (hoje): ${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}.
@@ -209,73 +155,39 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
       2. O plano deve ser organizado por dias sequenciais e incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04), Dia 2 (Terça, 07/04), etc.).
       3. O plano deve ser EXAUSTIVO o suficiente para cobrir TODO o conteúdo. NÃO se limite a uma semana ou um mês. Gere 30, 60 ou 90 dias se necessário.
       4. OBRIGATÓRIO: Cada dia de estudo deve conter EXATAMENTE 2 tópicos novos (type: 'study'). Divida o conteúdo para caber em 2 tópicos por dia.
-      5. OBRIGATÓRIO: O primeiro item de estudo de cada dia (a partir do Dia 2) DEVE SER uma "Revisão" (type: "revision") das 2 matérias estudadas no dia anterior.`,
+      5. OBRIGATÓRIO: O primeiro item de estudo de cada dia (a partir do Dia 2) DEVE SER uma "Revisão" (type: "revision") das 2 matérias estudadas no dia anterior.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) das matérias. Gere um plano extenso e detalhado. Nunca resuma. Retorne APENAS o JSON. Use 'type': 'study' e 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING, description: "Título do plano de estudos" },
-            schedule: {
-              type: Type.ARRAY,
-              description: "Lista sequencial de dias de estudo (Dia 1, Dia 2, ..., Dia N) cobrindo todo o conteúdo.",
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  day: { type: Type.STRING, description: "Identificador do dia (ex: 'Dia 1', 'Dia 2')" },
-                  topics: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        title: { type: Type.STRING, description: "Título do tópico de estudo" },
-                        subject: { type: Type.STRING, description: "Matéria relacionada" },
-                        duration: { type: Type.NUMBER, description: "Duração em minutos" },
-                        type: { type: Type.STRING, enum: ["study", "revision"] }
-                      },
-                      required: ["title", "subject", "duration", "type"]
-                    }
-                  }
-                },
-                required: ["day", "topics"]
-              }
-            }
-          },
-          required: ["title", "schedule"]
-        }
       }
     });
 
-    if (!response.text) {
-      throw new Error("A IA não retornou nenhum conteúdo.");
-    }
+    if (!response.text) throw new Error("A IA não retornou nenhum conteúdo.");
 
     const cleanedText = cleanJson(response.text);
-    const result = JSON.parse(cleanedText);
+    const resultJson = JSON.parse(cleanedText);
     
-    if (result.schedule) {
-      result.schedule = enforceRevisions(result.schedule);
-      // Ensure each topic has an ID and completed status
-      result.schedule.forEach((day: any) => {
+    if (resultJson.schedule) {
+      resultJson.schedule = enforceRevisions(resultJson.schedule);
+      resultJson.schedule.forEach((day: any) => {
         day.topics.forEach((topic: any) => {
           topic.id = Math.random().toString(36).substring(2, 11);
           topic.completed = false;
-          // Fix relative Hotmart links
-          if (topic.videoUrl && topic.videoUrl.startsWith('/')) {
-            topic.videoUrl = `https://hotmart.com${topic.videoUrl}`;
-          }
         });
       });
     }
 
     const startDate = new Date();
-    const totalDays = result.schedule?.length || 30;
+    const totalDays = resultJson.schedule?.length || 30;
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + totalDays);
 
     return {
-      ...result,
+      ...resultJson,
       id: Date.now().toString(),
       goal: goal,
       startDate: startDate.toISOString(),
@@ -283,10 +195,7 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
     };
   } catch (error) {
     console.error("Erro ao gerar plano de estudos:", error);
-    if (error instanceof Error) {
-      throw new Error(`Falha ao gerar plano: ${error.message}`);
-    }
-    throw new Error("Ocorreu um erro inesperado ao gerar o plano de estudos.");
+    throw error;
   }
 };
 
@@ -299,49 +208,50 @@ export const generateFlashcardsFromMultimodal = async (
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: { parts },
+      contents: [{ role: 'user', parts }],
       config: {
-        systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido (que pode ser texto, imagens de livros/anotações, PDFs ou referências a vídeos) e gerar exatamente 20 flashcards detalhados e variados.
+        systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido e gerar exatamente 20 flashcards detalhados e variados.
         
         O nome do conteúdo é: "${contentName}".
         
         Cada flashcard deve ter uma pergunta instigante e uma resposta clara e completa.
         IMPORTANTE: A resposta deve OBRIGATORIAMENTE concluir com um exemplo prático ou uma aplicação real do conceito.
         DESTAQUE: Nos exemplos citados, coloque em negrito (usando markdown **) o termo ou conceito principal que está sendo estudado.
-        ATENÇÃO: NÃO inclua classificações de dificuldade (como "fácil", "médio", "difícil") nas perguntas, respostas ou matérias. O campo 'subject' deve conter apenas o nome da disciplina (ex: Direito Penal).
-        Retorne APENAS o JSON conforme o esquema solicitado.`,
+        ATENÇÃO: NÃO inclua classificações de dificuldade (como "fácil", "médio", "difícil"). O campo 'subject' deve conter apenas o nome da disciplina (ex: Direito Penal).
+        
+        Retorne os dados estritamente no formato JSON:
+        {
+          "flashcards": [
+            { "question": "...", "answer": "...", "subject": "..." }
+          ]
+        }`,
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            flashcards: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  question: { type: Type.STRING },
-                  answer: { type: Type.STRING },
-                  subject: { type: Type.STRING, description: "A matéria ou disciplina (ex: Direito Penal). Não use fácil/médio/difícil." }
-                },
-                required: ["question", "answer", "subject"]
-              }
-            }
-          },
-          required: ["flashcards"]
-        }
       }
     });
 
     if (!response.text) throw new Error("A IA não retornou conteúdo.");
-    const cleanedJson = cleanJson(response.text);
+    
+    let cleanedText = cleanJson(response.text);
+    
     try {
-      const parsed = JSON.parse(cleanedJson);
-      if (!parsed.flashcards || !Array.isArray(parsed.flashcards)) {
-        throw new Error("O formato retornado pela IA é inválido.");
+      const parsed = JSON.parse(cleanedText);
+      if (parsed.flashcards && Array.isArray(parsed.flashcards)) {
+        return parsed.flashcards;
       }
-      return parsed.flashcards;
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      throw new Error("Formato de resposta inesperado.");
     } catch (parseError) {
-      console.error("Erro ao fazer parse do JSON:", cleanedJson);
+      console.warn("Falha no parse inicial, tentando extração manual...", cleanedText);
+      const flashcardsMatch = cleanedText.match(/"flashcards"\s*:\s*(\[[\s\S]*?\])/);
+      if (flashcardsMatch) {
+        try {
+          return JSON.parse(flashcardsMatch[1]);
+        } catch (e) {
+          throw new Error("Não foi possível extrair os flashcards da resposta.");
+        }
+      }
       throw new Error("Erro ao processar a resposta da IA.");
     }
   } catch (error: any) {
@@ -355,29 +265,11 @@ export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'vi
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
-      contents: `Analise o seguinte conteúdo (${type}) e gere um resumo executivo e uma lista dos tópicos principais abordados.
-      
-      CONTEÚDO:
-      ${content.substring(0, 30000)} // Limit content size
-      
-      Retorne APENAS o JSON.`,
+      model: "gemini-3-flash-preview",
+      contents: [{ role: 'user', parts: [{ text: content.substring(0, 30000) }] }],
       config: {
         systemInstruction: "Você é um assistente de estudos. Sua tarefa é resumir conteúdos e extrair tópicos principais para facilitar o aprendizado. Retorne APENAS o JSON.",
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            summary: { type: Type.STRING, description: "Resumo do conteúdo" },
-            topics: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: "Lista de tópicos principais"
-            },
-            suggestedSubject: { type: Type.STRING, description: "Sugestão de disciplina (ex: Direito Penal, Português)" }
-          },
-          required: ["summary", "topics", "suggestedSubject"]
-        }
       }
     });
 

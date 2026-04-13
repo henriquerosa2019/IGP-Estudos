@@ -587,7 +587,7 @@ export default function Flashcards() {
                 <div className="flex gap-3 pt-4 border-t dark:border-zinc-800">
                   <Button 
                     onClick={handleGenerate} 
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-red-600 dark:hover:bg-red-700 text-white"
+                    className="flex-1 bg-black hover:bg-zinc-900 text-[#FF9900] font-bold border border-zinc-800"
                     disabled={loading || sources.length === 0 || !deckName.trim()}
                   >
                     {loading ? (

@@ -31,7 +31,8 @@ import {
   FolderOpen,
   ChevronRight,
   ArrowLeft,
-  Edit2
+  Edit2,
+  MessageSquare
 } from "lucide-react";
 import { 
   Dialog, 
@@ -491,7 +492,10 @@ export default function ContentLibrary() {
             </div>
           );
         },
-        error: 'Erro ao gerar flashcards.'
+        error: (err: any) => {
+          console.error("Erro detalhado na geração de flashcards:", err);
+          return err.message || 'Erro ao gerar flashcards.';
+        }
       }
     );
   };
@@ -950,11 +954,11 @@ export default function ContentLibrary() {
                     </div>
                     <div className="mt-3">
                       <div className="flex flex-wrap gap-2 mb-2">
-                        <Badge variant="secondary" className="bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-none">
+                        <Badge variant="secondary" className="bg-black text-[#FF9900] dark:bg-black dark:text-[#FF9900] border border-zinc-800 px-2 py-1 text-[11px] font-black uppercase tracking-widest shadow-sm">
                           {item.subject}
                         </Badge>
                         {item.subCategory && (
-                          <Badge variant="outline" className="border-orange-200 text-orange-600 dark:border-orange-900 dark:text-orange-400">
+                          <Badge variant="outline" className="border-zinc-300 text-zinc-800 dark:border-zinc-700 dark:text-zinc-200 px-2 py-1 text-[11px] font-bold bg-white/50 dark:bg-black/50">
                             {item.subCategory}
                           </Badge>
                         )}
@@ -1016,7 +1020,7 @@ export default function ContentLibrary() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="flex-1 gap-2"
+                          className="flex-1 gap-2 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 font-bold"
                           onClick={() => {
                             toast.info("Conteúdo de texto: " + item.title);
                           }}
@@ -1026,11 +1030,26 @@ export default function ContentLibrary() {
                       )}
                       
                       <Button 
-                        className="flex-1 gap-2 bg-[#FF9900] hover:bg-[#e68a00] text-white" 
+                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-[#FF9900] font-bold border border-zinc-800" 
                         size="sm"
                         onClick={() => handleGenerateFlashcards(item)}
                       >
                         <BrainCircuit className="w-3.5 h-3.5" /> Flashcards
+                      </Button>
+                      
+                      <Button 
+                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-[#FF9900] font-bold border border-zinc-800" 
+                        size="sm"
+                        onClick={() => {
+                          localStorage.setItem('tutor_initial_context', JSON.stringify({
+                            title: item.title,
+                            subject: item.subject,
+                            summary: item.summary
+                          }));
+                          window.location.href = '/tutor';
+                        }}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" /> Tutor
                       </Button>
                     </div>
                   </CardContent>
@@ -1062,8 +1081,8 @@ export default function ContentLibrary() {
                           <Folder className="w-6 h-6 fill-current opacity-20" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-bold text-zinc-900 dark:text-white line-clamp-1">{subject}</h3>
-                          <p className="text-xs text-zinc-500">{count} ite{count === 1 ? 'm' : 'ns'}</p>
+                          <h3 className="font-black text-zinc-900 dark:text-white line-clamp-1 text-lg tracking-tight">{subject}</h3>
+                          <p className="text-sm text-zinc-700 dark:text-zinc-300 font-bold">{count} ite{count === 1 ? 'm' : 'ns'}</p>
                         </div>
                         <ChevronRight className="w-4 h-4 text-zinc-300" />
                       </Card>
@@ -1098,8 +1117,8 @@ export default function ContentLibrary() {
                                 <FolderOpen className="w-6 h-6 fill-current opacity-20" />
                               </div>
                               <div className="flex-1">
-                                <h3 className="font-bold text-zinc-900 dark:text-white line-clamp-1">{sub}</h3>
-                                <p className="text-xs text-zinc-500">{count} ite{count === 1 ? 'm' : 'ns'}</p>
+                                <h3 className="font-black text-zinc-900 dark:text-white line-clamp-1 text-lg tracking-tight">{sub}</h3>
+                                <p className="text-sm text-zinc-700 dark:text-zinc-300 font-bold">{count} ite{count === 1 ? 'm' : 'ns'}</p>
                               </div>
                               <ChevronRight className="w-4 h-4 text-zinc-300" />
                             </Card>
