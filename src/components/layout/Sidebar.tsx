@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
 import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged, User } from "firebase/auth";
 import { toast } from "sonner";
 
 const menuItems = [
@@ -36,8 +36,13 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
+
     setIsDark(document.documentElement.classList.contains('dark'));
     
     let interval: any;
@@ -48,7 +53,10 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     } else if (timeLeft === 0) {
       setIsActive(false);
     }
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
   }, [isActive, timeLeft]);
 
   const toggleTheme = () => {
@@ -144,21 +152,32 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           <Settings className="w-5 h-5" />
           <span className="font-medium">Configurações</span>
         </Link>
-        <button 
-          onClick={async () => {
-            if (onClose) onClose();
-            try {
-              await signOut(auth);
-              toast.success("Sessão encerrada.");
-            } catch (error) {
-              toast.error("Erro ao sair.");
-            }
-          }}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-900 hover:text-red-600 transition-colors text-red-600"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="font-medium">Sair</span>
-        </button>
+        {user ? (
+          <button 
+            onClick={async () => {
+              if (onClose) onClose();
+              try {
+                await signOut(auth);
+                toast.success("Sessão encerrada.");
+              } catch (error) {
+                toast.error("Erro ao sair.");
+              }
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-900 hover:text-red-600 transition-colors text-red-600"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="font-medium">Sair</span>
+          </button>
+        ) : (
+          <Link 
+            to="/login"
+            onClick={onClose}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-900 hover:text-[#FF9900] transition-colors text-zinc-400"
+          >
+            <GraduationCap className="w-5 h-5" />
+            <span className="font-medium">Entrar / Login</span>
+          </Link>
+        )}
       </div>
     </div>
   );
