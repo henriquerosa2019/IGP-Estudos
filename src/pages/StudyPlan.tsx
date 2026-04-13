@@ -76,10 +76,10 @@ export default function StudyPlan() {
 
   const getUid = () => {
     if (user) return user.uid;
-    let localUid = localStorage.getItem('localUid');
+    let localUid = localStorage.getItem('igp_local_uid');
     if (!localUid) {
       localUid = 'anon_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('localUid', localUid);
+      localStorage.setItem('igp_local_uid', localUid);
     }
     return localUid;
   };
@@ -87,14 +87,14 @@ export default function StudyPlan() {
   const getUids = () => {
     const uids = [];
     if (user) uids.push(user.uid);
-    const localUid = localStorage.getItem('localUid');
+    const localUid = localStorage.getItem('igp_local_uid');
     if (localUid) uids.push(localUid);
     if (uids.length === 0) {
       const newLocal = 'anon_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('localUid', newLocal);
+      localStorage.setItem('igp_local_uid', newLocal);
       uids.push(newLocal);
     }
-    return uids;
+    return Array.from(new Set(uids));
   };
 
   useEffect(() => {
@@ -143,13 +143,19 @@ export default function StudyPlan() {
     const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
     const uids = getUids();
     
+    // Filter UIDs to only include those the current user has permission to read
+    // This prevents "Missing or insufficient permissions" errors on list operations
+    const allowedUids = uids.filter(id => id.startsWith('anon_') || (user && id === user.uid));
+    
+    if (allowedUids.length === 0) return;
+
     let qPlans;
     if (isAdmin) {
       qPlans = query(collection(db, "plans"));
     } else {
-      qPlans = uids.length === 1
-        ? query(collection(db, "plans"), where("uid", "==", uids[0]))
-        : query(collection(db, "plans"), where("uid", "in", uids));
+      qPlans = allowedUids.length === 1
+        ? query(collection(db, "plans"), where("uid", "==", allowedUids[0]))
+        : query(collection(db, "plans"), where("uid", "in", allowedUids));
     }
       
     const unsubscribePlans = onSnapshot(qPlans, (snapshot) => {
@@ -163,9 +169,9 @@ export default function StudyPlan() {
     if (isAdmin) {
       qNotices = query(collection(db, "notices"));
     } else {
-      qNotices = uids.length === 1
-        ? query(collection(db, "notices"), where("uid", "==", uids[0]))
-        : query(collection(db, "notices"), where("uid", "in", uids));
+      qNotices = allowedUids.length === 1
+        ? query(collection(db, "notices"), where("uid", "==", allowedUids[0]))
+        : query(collection(db, "notices"), where("uid", "in", allowedUids));
     }
     const unsubscribeNotices = onSnapshot(qNotices, (snapshot) => {
       const parsedNotices = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamNotice));

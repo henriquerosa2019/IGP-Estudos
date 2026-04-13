@@ -159,13 +159,19 @@ export default function Flashcards() {
     const isAdmin = user && (user.email === "henrique.rosa@poli.ufrj.br" || user.email === "brunool.rj@gmail.com");
     const uids = getUids();
 
+    // Filter UIDs to only include those the current user has permission to read
+    // This prevents "Missing or insufficient permissions" errors on list operations
+    const allowedUids = uids.filter(id => id.startsWith('anon_') || (user && id === user.uid));
+    
+    if (allowedUids.length === 0) return;
+
     let q;
     if (isAdmin) {
       q = query(collection(db, "flashcardReviews"));
     } else {
-      q = uids.length === 1
-        ? query(collection(db, "flashcardReviews"), where("uid", "==", uids[0]))
-        : query(collection(db, "flashcardReviews"), where("uid", "in", uids));
+      q = allowedUids.length === 1
+        ? query(collection(db, "flashcardReviews"), where("uid", "==", allowedUids[0]))
+        : query(collection(db, "flashcardReviews"), where("uid", "in", allowedUids));
     }
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const reviews: FlashcardReview[] = [];
