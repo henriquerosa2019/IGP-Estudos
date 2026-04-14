@@ -1053,6 +1053,7 @@ export default function ContentLibrary() {
 
             const renderFolderCard = (title: string, count: number, onClick: () => void) => (
               <Card 
+                key={title}
                 className="cursor-pointer bg-[#1a1a1a] border-zinc-800 hover:border-[#FF9900] transition-all flex items-center p-5 gap-4 shadow-xl rounded-2xl group"
                 onClick={onClick}
               >
