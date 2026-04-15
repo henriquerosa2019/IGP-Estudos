@@ -1,5 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+// VERSION: 1.0.2 - Fixed model name to gemini-1.5-flash
+
 // Função robusta para capturar a chave da API em diferentes ambientes (Vite, Vercel, Local)
 const getApiKey = () => {
   // 1. Tenta do process.env (Injetado pelo vite.config.ts ou ambiente Node)
