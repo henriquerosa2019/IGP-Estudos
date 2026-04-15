@@ -238,6 +238,7 @@ export const generateFlashcardsFromMultimodal = async (
   }
 
   try {
+    console.log(`Gemini: Iniciando geração de flashcards para "${contentName}" com o modelo ${GEMINI_MODEL}`);
     const model = ai.getGenerativeModel({ 
       model: GEMINI_MODEL,
       systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido e gerar exatamente 20 flashcards detalhados e variados.
