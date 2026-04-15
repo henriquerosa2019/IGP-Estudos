@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// VERSION: 1.0.2 - Fixed model name to gemini-1.5-flash
+// VERSION: 1.0.3 - Changed to gemini-1.5-flash-8b for stability
 
 // Função robusta para capturar a chave da API em diferentes ambientes (Vite, Vercel, Local)
 const getApiKey = () => {
@@ -29,7 +29,7 @@ if (apiKey) {
 
 // Inicializa o SDK padrão do Google Generative AI
 export const ai = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-export const GEMINI_MODEL = "gemini-1.5-flash";
+export const GEMINI_MODEL = "gemini-1.5-flash-8b";
 
 if (ai) {
   console.log(`Gemini: SDK inicializado com o modelo ${GEMINI_MODEL}`);
