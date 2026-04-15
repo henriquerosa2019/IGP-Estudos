@@ -104,6 +104,11 @@ export function FlashcardMetrics({ reviews }: FlashcardMetricsProps) {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-8">
+        <h2 className="text-4xl tracking-wide text-[#FF9900]" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Métricas de Desempenho</h2>
+        <p className="text-zinc-400 font-medium mt-1">Acompanhe sua evolução e retenção de conteúdo.</p>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-none shadow-md bg-white dark:bg-zinc-900">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">

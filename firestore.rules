@@ -1,46 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Document ID: {userId}
-    // Fields:
-    //   - id: string (required) - User ID
-    //   - name: string (required) - Display name
-    //   - email: string (required, email) - User email
-    //   - role: string (optional, enum: ['user', 'admin']) - User role
-    //
-    // Collection: notices
-    // Document ID: {noticeId}
-    // Fields:
-    //   - id: string (required) - Notice ID
-    //   - uid: string (required) - Owner UID
-    //   - name: string (required) - Notice name
-    //   - content: string (required) - Full notice content
-    //   - subjects: list (required) - List of Subject objects
-    //
-    // Collection: plans
-    // Document ID: {planId}
-    // Fields:
-    //   - uid: string (required) - Owner UID
-    //   - title: string (required)
-    //   - notices: list (required) - List of notice IDs
-    //
-    // ===============================================================
-
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
     
     function isAuthenticated() {
       return request.auth != null;
-    }
-    
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
     }
     
     function isAdmin() {
@@ -49,61 +12,8 @@ service cloud.firestore {
          (request.auth.token.email == "brunool.rj@gmail.com" && request.auth.token.email_verified == true));
     }
 
-    function isDocOwner(data) {
-      return isAuthenticated() && request.auth.uid == data.uid;
-    }
-
-    function isAnonymousDoc(data) {
-      return data.uid != null && data.uid is string && data.uid.matches("^anon_.*");
-    }
-
-    function canReadDoc(data) {
-      return isAdmin() || isDocOwner(data) || isAnonymousDoc(data);
-    }
-
-    function canWriteDoc(data) {
-      return isAdmin() || isDocOwner(data) || isAnonymousDoc(data);
-    }
-
-    // ===============================================================
-    // Rules
-    // ===============================================================
-
-    match /test/{docId} {
-      allow read: if true;
-    }
-
-    match /users/{userId} {
-      allow read, write: if isOwner(userId) || userId.matches("^anon_.*") || isAdmin();
-    }
-
-    match /unauthorized_attempts/{attemptId} {
-      allow create: if true;
-      allow read: if isAdmin();
-    }
-
-    match /notices/{noticeId} {
-      allow read: if canReadDoc(resource.data);
-      allow create: if canWriteDoc(request.resource.data);
-      allow update, delete: if canWriteDoc(resource.data);
-    }
-
-    match /plans/{planId} {
-      allow read: if canReadDoc(resource.data);
-      allow create: if canWriteDoc(request.resource.data);
-      allow update, delete: if canWriteDoc(resource.data);
-    }
-
-    match /flashcardReviews/{reviewId} {
-      allow read: if canReadDoc(resource.data);
-      allow create: if canWriteDoc(request.resource.data);
-      allow update, delete: if canWriteDoc(resource.data);
-    }
-
-    match /contentItems/{itemId} {
-      allow read: if canReadDoc(resource.data);
-      allow create: if canWriteDoc(request.resource.data);
-      allow update, delete: if canWriteDoc(resource.data);
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }

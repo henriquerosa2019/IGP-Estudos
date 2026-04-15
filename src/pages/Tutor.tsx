@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Send, 
   Sparkles, 
@@ -23,13 +24,28 @@ import {
   LogOut,
   CheckCircle2,
   XCircle,
-  Plus
+  Plus,
+  BookOpen,
+  FileText,
+  Video,
+  Link as LinkIcon,
+  Type,
+  ArrowDown
 } from "lucide-react";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { ai } from "@/lib/gemini";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
-import { collection, query, getDocs, where } from "firebase/firestore";
+import { collection, query, getDocs, where, onSnapshot } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { StudyPlan } from "@/types";
@@ -60,6 +76,13 @@ export default function Tutor() {
   const [user, setUser] = useState<any>(null);
   const [authReady, setAuthReady] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [selectedContent, setSelectedContent] = useState<{ title: string; content: string; type: string } | null>(null);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [libraryItems, setLibraryItems] = useState<any[]>([]);
+  const [isPasteOpen, setIsPasteOpen] = useState(false);
+  const [pastedText, setPastedText] = useState("");
+  const [pastedTitle, setPastedTitle] = useState("");
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
@@ -68,6 +91,20 @@ export default function Tutor() {
     });
     return () => unsubscribeAuth();
   }, []);
+
+  // Fetch library items for the "Import" dialog
+  useEffect(() => {
+    if (!authReady) return;
+    const uid = user?.uid || localStorage.getItem('igp_local_uid');
+    if (!uid) return;
+
+    const q = query(collection(db, "contentItems"), where("uid", "==", uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLibraryItems(items);
+    });
+    return () => unsubscribe();
+  }, [authReady, user]);
 
   useEffect(() => {
     const saved = localStorage.getItem("aestudamos_tutor_chats");
@@ -100,13 +137,16 @@ export default function Tutor() {
         let extraContext = "";
         if (initialContext) {
           const ctx = JSON.parse(initialContext);
-          extraContext = `\nO aluno quer tirar dúvidas sobre o conteúdo: "${ctx.title}" (${ctx.subject}).\nResumo: ${ctx.summary || 'Não disponível'}.`;
+          extraContext = `\nO aluno quer estudar o conteúdo: "${ctx.title}" (${ctx.subject}).\nResumo: ${ctx.summary || 'Não disponível'}.\nConteúdo Completo: ${ctx.content || 'Não disponível'}.`;
+          setSelectedContent({ title: ctx.title, content: ctx.content, type: ctx.type });
           localStorage.removeItem('tutor_initial_context');
           
           // Add a welcoming message from the tutor
           setMessages([{
             role: 'assistant',
-            content: `Olá! Vi que você quer estudar sobre **${ctx.title}**. Como posso te ajudar com este conteúdo hoje?`
+            content: `Olá! Vi que você quer estudar sobre **${ctx.title}**. Eu já li o material e estou pronto para te ajudar! 
+            
+Posso te explicar de forma simples (para leigos), gerar exercícios práticos ou dar exemplos do dia a dia sobre este conteúdo. O que prefere começar?`
           }]);
         }
 
@@ -175,10 +215,42 @@ export default function Tutor() {
     localStorage.setItem("aestudamos_tutor_daily", JSON.stringify({ count: newCount, date: today }));
   };
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  const handlePasteSubmit = () => {
+    if (!pastedText.trim()) {
+      toast.error("Cole algum texto primeiro.");
+      return;
     }
+    const title = pastedTitle || `Texto Colado ${new Date().toLocaleTimeString()}`;
+    setSelectedContent({ title, content: pastedText, type: 'text' });
+    setMessages([{
+      role: 'assistant',
+      content: `Recebi seu texto sobre **${title}**. 
+      
+Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, dar exemplos ou gerar exercícios sobre este tema.`
+    }]);
+    setIsPasteOpen(false);
+    setPastedText("");
+    setPastedTitle("");
+    toast.success("Texto importado para o Tutor!");
+  };
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const isAtBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 100;
+    setShowScrollButton(!isAtBottom);
+  };
+
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
 
   const handleSaveConversation = () => {
@@ -263,9 +335,22 @@ export default function Tutor() {
         model: "gemini-3-flash-preview",
         contents: history,
         config: {
-          systemInstruction: `Você é um tutor de estudos objetivo e estruturado. Responda de forma clara, organizada (usando tópicos se necessário) e em linguagem simples para leigos. Evite rodeios e explicações excessivamente longas.
+          systemInstruction: `Você é um tutor de estudos objetivo e estruturado chamado IgpAI. 
+          Sua missão é ajudar o aluno a entender profundamente o conteúdo fornecido.
           
-          ${userContext}`,
+          DIRETRIZES DE RESPOSTA:
+          1. Se houver um material de estudo selecionado, use-o como base principal.
+          2. Explique conceitos complexos de forma simples, como se estivesse explicando para um leigo (ELI5).
+          3. Sempre que possível, forneça exemplos práticos do dia a dia.
+          4. Ao final de explicações importantes, sugira um pequeno exercício ou pergunta de reflexão para testar o conhecimento do aluno.
+          5. Mantenha um tom motivador e encorajador.
+          6. Use Markdown para formatar suas respostas (negrito, listas, tabelas).
+          
+          ${userContext}
+          ${selectedContent ? `CONTEÚDO ATUAL EM ESTUDO:
+          Título: ${selectedContent.title}
+          Tipo: ${selectedContent.type}
+          Conteúdo: ${selectedContent.content}` : ''}`,
         }
       });
 
@@ -296,6 +381,106 @@ export default function Tutor() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Dialog open={isPasteOpen} onOpenChange={setIsPasteOpen}>
+            <DialogTrigger render={
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+              >
+                <Type className="w-4 h-4" />
+                Colar Texto
+              </Button>
+            } />
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Colar Texto para Estudo</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Título (Opcional)</Label>
+                  <Input 
+                    placeholder="Dê um nome para este texto..." 
+                    value={pastedTitle}
+                    onChange={(e) => setPastedTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Conteúdo do Texto</Label>
+                  <Textarea 
+                    placeholder="Cole aqui o texto que você quer que a IA analise..." 
+                    className="min-h-[300px]"
+                    value={pastedText}
+                    onChange={(e) => setPastedText(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsPasteOpen(false)}>Cancelar</Button>
+                <Button onClick={handlePasteSubmit} className="bg-indigo-600 hover:bg-indigo-700">
+                  Importar para o Tutor
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isLibraryOpen} onOpenChange={setIsLibraryOpen}>
+            <DialogTrigger render={
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+              >
+                <BookOpen className="w-4 h-4" />
+                Importar do Acervo
+              </Button>
+            } />
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Importar do Acervo Inteligente</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="text-sm text-zinc-500 mb-4">Selecione um material para estudar com o apoio da IgpAI.</p>
+                <ScrollArea className="h-[300px] pr-4">
+                  <div className="space-y-2">
+                    {libraryItems.length === 0 ? (
+                      <p className="text-center py-8 text-zinc-400 text-sm italic">Seu acervo está vazio.</p>
+                    ) : (
+                      libraryItems.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setSelectedContent({ title: item.title, content: item.content, type: item.type });
+                            setMessages([{
+                              role: 'assistant',
+                              content: `Olá! Vamos estudar sobre **${item.title}**. Eu já processei o conteúdo do seu acervo.
+                              
+Como posso te ajudar? Posso explicar de forma simples, dar exemplos ou gerar exercícios sobre este tema.`
+                            }]);
+                            setIsLibraryOpen(false);
+                            toast.success(`Material "${item.title}" importado!`);
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left group"
+                        >
+                          <div className="p-2 bg-zinc-100 rounded-lg text-zinc-500 group-hover:bg-indigo-100 group-hover:text-indigo-600">
+                            {item.type === 'pdf' ? <FileText className="w-4 h-4" /> : 
+                             item.type === 'video' ? <Video className="w-4 h-4" /> : 
+                             item.type === 'link' ? <LinkIcon className="w-4 h-4" /> :
+                             <Type className="w-4 h-4" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-zinc-700 truncate">{item.title}</p>
+                            <p className="text-[10px] text-zinc-400 uppercase font-black">{item.subject}</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-indigo-400" />
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button 
             variant="outline" 
             size="sm" 
@@ -412,8 +597,8 @@ export default function Tutor() {
           )}
         </AnimatePresence>
 
-        <Card className="flex-1 flex flex-col overflow-hidden border-zinc-200">
-          <CardHeader className="border-b bg-zinc-50/50 py-4">
+        <Card className="flex-1 flex flex-col overflow-hidden border-zinc-200 min-h-0">
+          <CardHeader className="border-b bg-zinc-50/50 py-4 shrink-0">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -425,8 +610,12 @@ export default function Tutor() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 p-0 flex flex-col">
-            <ScrollArea className="flex-1 p-6" ref={scrollRef}>
+          <CardContent className="flex-1 p-0 flex flex-col relative min-h-0">
+            <ScrollArea 
+              className="flex-1 p-6 min-h-0" 
+              ref={scrollRef}
+              onScroll={handleScroll}
+            >
               <div className="space-y-6">
                 <AnimatePresence initial={false}>
                   {messages.map((msg, idx) => (
@@ -443,12 +632,12 @@ export default function Tutor() {
                           <AvatarFallback className="bg-zinc-800 text-white"><User className="w-5 h-5" /></AvatarFallback>
                         )}
                       </Avatar>
-                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                      <div className={`max-w-[85%] rounded-2xl px-6 py-4 text-lg leading-relaxed ${
                         msg.role === 'assistant' 
                           ? 'bg-zinc-100 text-zinc-800 rounded-tl-none' 
                           : 'bg-indigo-600 text-white rounded-tr-none'
                       }`}>
-                        <div className="prose prose-sm max-w-none prose-indigo dark:prose-invert">
+                        <div className="prose prose-lg max-w-none prose-indigo dark:prose-invert prose-p:my-4 first:prose-p:mt-0 last:prose-p:mb-0">
                           <Markdown>{msg.content}</Markdown>
                         </div>
                       </div>
@@ -470,19 +659,43 @@ export default function Tutor() {
               </div>
             </ScrollArea>
 
+            <AnimatePresence>
+              {showScrollButton && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  onClick={scrollToBottom}
+                  className="absolute bottom-24 right-8 w-10 h-10 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-colors z-10"
+                >
+                  <ArrowDown className="w-5 h-5" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+
             <div className="p-4 border-t bg-white">
               <form 
                 onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                className="flex gap-2"
+                className="flex gap-2 items-end"
               >
-                <Input 
-                  placeholder="Pergunte qualquer coisa sobre seus estudos..." 
+                <Textarea 
+                  placeholder="Pergunte qualquer coisa sobre seus estudos... (Shift+Enter para nova linha)" 
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  className="flex-1"
+                  className="flex-1 min-h-[44px] max-h-[200px] py-3 resize-none"
                   disabled={loading}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
                 />
-                <Button type="submit" disabled={loading || !input.trim()} className="bg-indigo-600 hover:bg-indigo-700">
+                <Button 
+                  type="submit" 
+                  disabled={loading || !input.trim()} 
+                  className="bg-indigo-600 hover:bg-indigo-700 h-[44px] w-[44px] p-0 shrink-0"
+                >
                   <Send className="w-4 h-4" />
                 </Button>
               </form>

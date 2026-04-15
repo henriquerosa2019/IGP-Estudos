@@ -1038,7 +1038,9 @@ export default function ContentLibrary() {
                           localStorage.setItem('tutor_initial_context', JSON.stringify({
                             title: item.title,
                             subject: item.subject,
-                            summary: item.summary
+                            summary: item.summary,
+                            content: item.content,
+                            type: item.type
                           }));
                           window.location.href = '/tutor';
                         }}

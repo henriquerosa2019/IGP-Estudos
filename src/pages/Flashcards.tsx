@@ -31,7 +31,8 @@ import {
   Youtube,
   Search,
   Plus,
-  BarChart3
+  BarChart3,
+  Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { generateFlashcardsFromMultimodal } from "@/lib/gemini";
@@ -40,6 +41,17 @@ import Markdown from "react-markdown";
 import { db, auth, handleFirestoreError, OperationType } from "@/lib/firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Flashcard {
   id?: string;
@@ -78,6 +90,8 @@ type ContentSource =
 export default function Flashcards() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [deckToDelete, setDeckToDelete] = useState<string | null>(null);
+  const [cardToDelete, setCardToDelete] = useState<{deckId: string, cardId: string} | null>(null);
   const [view, setView] = useState<'list' | 'study' | 'review' | 'metrics'>('list');
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [savedDecks, setSavedDecks] = useState<FlashcardDeck[]>([]);
@@ -346,6 +360,76 @@ export default function Flashcards() {
     setFlashcards([]);
   };
 
+  const handleDeleteDeck = async () => {
+    if (!deckToDelete) return;
+    const deckId = deckToDelete;
+    
+    try {
+      const updatedDecks = savedDecks.filter(d => d.id !== deckId);
+      setSavedDecks(updatedDecks);
+      localStorage.setItem("aestudamos_flashcards", JSON.stringify(updatedDecks));
+
+      const reviewsToDelete = allReviews.filter(r => r.deckId === deckId);
+      for (const review of reviewsToDelete) {
+        if (review.id) {
+          await deleteDoc(doc(db, "flashcardReviews", review.id));
+        }
+      }
+      
+      toast.success("Deck excluído com sucesso!");
+      setDeckToDelete(null);
+    } catch (error) {
+      console.error("Error deleting deck:", error);
+      toast.error("Erro ao excluir deck.");
+    }
+  };
+
+  const handleDeleteCard = async () => {
+    if (!cardToDelete) return;
+    const { deckId, cardId } = cardToDelete;
+
+    try {
+      // 1. Remove from localStorage deck
+      if (deckId) {
+        setSavedDecks(prev => {
+          const updatedDecks = prev.map(deck => {
+            if (deck.id === deckId) {
+              return { ...deck, cards: deck.cards.filter(c => c.id !== cardId) };
+            }
+            return deck;
+          });
+          localStorage.setItem("aestudamos_flashcards", JSON.stringify(updatedDecks));
+          return updatedDecks;
+        });
+      }
+
+      // 2. Remove from current study session
+      const updatedFlashcards = flashcards.filter(c => (c.id || c.cardId) !== cardId);
+      setFlashcards(updatedFlashcards);
+      
+      if (updatedFlashcards.length === 0) {
+        setView('list');
+        toast.success("Card excluído. O deck está vazio.");
+      } else {
+        if (currentIndex >= updatedFlashcards.length) {
+          setCurrentIndex(Math.max(0, updatedFlashcards.length - 1));
+        }
+        setIsFlipped(false);
+        toast.success("Card excluído!");
+      }
+
+      // 3. Remove associated review from Firestore
+      const reviewToDelete = allReviews.find(r => (r.deckId === deckId && r.cardId === cardId) || r.id === cardId);
+      if (reviewToDelete?.id) {
+        await deleteDoc(doc(db, "flashcardReviews", reviewToDelete.id));
+      }
+      setCardToDelete(null);
+    } catch (error) {
+      console.error("Error deleting card:", error);
+      toast.error("Erro ao excluir card.");
+    }
+  };
+
   const currentCard = flashcards[currentIndex];
 
   const updateLocalDeckCardDifficulty = (deckId: string, cardId: string, newDifficulty: 'easy' | 'medium' | 'hard') => {
@@ -488,8 +572,13 @@ export default function Flashcards() {
         </div>
         {view === 'list' ? (
           <div className="flex gap-2">
-            <Button onClick={() => setView('metrics')} variant="outline" className="gap-2">
-              <BarChart3 className="w-4 h-4" />
+            <Button 
+              onClick={() => setView('metrics')} 
+              variant="outline" 
+              className="gap-2 border-zinc-800 text-[#FF9900] hover:text-[#FF9900] hover:bg-zinc-900 font-bold"
+              style={{ fontFamily: "'Deutsch Gothic', serif" }}
+            >
+              <BarChart3 className="w-4 h-4 text-[#FF9900]" />
               Métricas
             </Button>
             <Button onClick={handleStartStudy} className="bg-indigo-600 hover:bg-indigo-700 dark:bg-zinc-900 dark:text-red-600 dark:hover:bg-zinc-800 dark:border dark:border-red-900/50 gap-2">
@@ -715,7 +804,7 @@ export default function Flashcards() {
                     const unratedCount = deck.cards.filter(c => !c.difficulty).length;
                     
                     return (
-                      <Card key={deck.id} className="hover:border-indigo-200 transition-colors cursor-pointer group" onClick={() => {
+                      <Card key={deck.id} className="hover:border-indigo-200 transition-colors cursor-pointer group relative" onClick={() => {
                         setFlashcards(deck.cards);
                         setTopic(deck.name);
                         setCurrentDeckId(deck.id);
@@ -723,7 +812,18 @@ export default function Flashcards() {
                         setIsFlipped(false);
                         setView('study');
                       }}>
-                        <CardHeader className="pb-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-red-500 hover:bg-red-50 z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeckToDelete(deck.id);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                        <CardHeader className="pb-2 pr-10">
                           <CardTitle className="text-sm font-bold text-zinc-700 group-hover:text-indigo-600 transition-colors">
                             {deck.name}
                           </CardTitle>
@@ -849,6 +949,26 @@ export default function Flashcards() {
           </div>
 
           <div className="flex flex-col gap-6">
+            <div className="flex justify-center">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-zinc-400 hover:text-red-500 hover:bg-red-50 gap-2"
+                onClick={() => {
+                  if (currentDeckId && currentCard.id) {
+                    setCardToDelete({ deckId: currentDeckId, cardId: currentCard.id });
+                  } else if (view === 'review' && currentCard.id) {
+                    setCardToDelete({ 
+                      deckId: currentCard.deckId || '', 
+                      cardId: currentCard.cardId || currentCard.id 
+                    });
+                  }
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+                Excluir este Card
+              </Button>
+            </div>
             <div className="flex justify-between pt-4">
               <Button 
                 variant="ghost" 
@@ -883,6 +1003,46 @@ export default function Flashcards() {
           </div>
         </div>
       )}
+      {/* Delete Confirmation Dialogs */}
+      <AlertDialog open={!!deckToDelete} onOpenChange={(open) => !open && setDeckToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Deck</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este deck e todo o seu progresso? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteDeck} 
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!cardToDelete} onOpenChange={(open) => !open && setCardToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Card</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este card? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteCard} 
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
