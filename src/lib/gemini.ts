@@ -1,17 +1,55 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// VERSION: 1.0.6 - Improved fallback and global diagnostics
-(window as any).IGP_GEMINI_VERSION = "1.0.6";
+// VERSION: 1.0.7 - Advanced Diagnostics
+(window as any).IGP_GEMINI_VERSION = "1.0.7";
 
 // Função para o usuário diagnosticar a chave no console
-(window as any).CHECK_GEMINI_KEY = () => {
+(window as any).CHECK_GEMINI_KEY = async () => {
+  console.log("%c🔍 DIAGNÓSTICO IGP ESTUDOS - GEMINI AI", "color: #FF9900; font-weight: bold; font-size: 14px;");
+  
   const key = getApiKey();
-  if (!key) return "❌ Nenhuma chave encontrada nas variáveis de ambiente.";
-  if (key.length < 20) return "⚠️ Chave muito curta ou inválida.";
-  return `✅ Chave detectada: ${key.substring(0, 6)}...${key.substring(key.length - 4)}`;
+  if (!key) {
+    console.log("%c❌ STATUS: Chave NÃO encontrada nas variáveis de ambiente.", "color: #ff4444; font-weight: bold;");
+    console.log("👉 Ação necessária: No Vercel, vá em Settings > Environment Variables, adicione VITE_GEMINI_API_KEY e faça um REDEPLOY.");
+    return "Falha: Chave ausente";
+  }
+
+  if (key.length < 20) {
+    console.log("%c⚠️ STATUS: Chave detectada, mas parece INVÁLIDA (muito curta).", "color: #ffbb33; font-weight: bold;");
+    console.log(`🔑 Valor detectado: ${key.substring(0, 4)}...`);
+    return "Falha: Chave inválida";
+  }
+
+  console.log(`%c✅ STATUS: Chave detectada com sucesso! (${key.substring(0, 6)}...${key.substring(key.length - 4)})`, "color: #00C851; font-weight: bold;");
+  
+  if (!ai) {
+    console.log("%c❌ STATUS: SDK não inicializado. Verifique se a chave está correta.", "color: #ff4444; font-weight: bold;");
+    return "Falha: SDK nulo";
+  }
+
+  console.log("🧪 Testando comunicação com o servidor do Google...");
+  try {
+    const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
+    const result = await model.generateContent("Responda apenas 'Conexão OK'");
+    const text = result.response.text();
+    console.log(`%c🚀 RESPOSTA DA IA: ${text}`, "color: #33b5e5; font-weight: bold;");
+    console.log("%c✨ TUDO PRONTO! O sistema está operando normalmente.", "color: #00C851; font-weight: bold;");
+    return "Sucesso: IA Operacional";
+  } catch (e: any) {
+    console.log("%c❌ ERRO NA COMUNICAÇÃO:", "color: #ff4444; font-weight: bold;");
+    console.error(e);
+    
+    if (e.message?.includes("404")) {
+      console.log("💡 Dica: Erro 404 indica que o modelo 'flash' não está disponível. O sistema usará o 'pro' como fallback automaticamente.");
+    } else if (e.message?.includes("403") || e.message?.includes("PERMISSION_DENIED")) {
+      console.log("💡 Dica: Erro 403/Permission Denied. Sua chave pode estar restrita ou o projeto no Google Cloud desativado.");
+    }
+    return `Erro: ${e.message}`;
+  }
 };
 
-console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.0.6");
+console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.0.7");
+console.log("💡 Digite CHECK_GEMINI_KEY() no console para testar sua chave.");
 
 // Função robusta para capturar a chave da API em diferentes ambientes (Vite, Vercel, Local)
 const getApiKey = () => {
