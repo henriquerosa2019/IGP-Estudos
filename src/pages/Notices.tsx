@@ -42,7 +42,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Type } from "@google/genai";
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from "@/lib/firebase";
-import { ai } from "@/lib/gemini";
+import { ai, GEMINI_MODEL } from "@/lib/gemini";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
 import { 
   collection, 
@@ -455,7 +455,7 @@ export default function Notices() {
       setImportProgress(50);
 
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: GEMINI_MODEL,
         contents: {
           parts: [
             {
@@ -516,7 +516,7 @@ export default function Notices() {
     try {
       setImportProgress(30);
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: GEMINI_MODEL,
         contents: `Acesse o link: ${url}.
         Extraia as informações do concurso. LEIA A PÁGINA INTEIRA E TODOS OS LINKS RELACIONADOS SE NECESSÁRIO PARA OBTER O CONTEÚDO PROGRAMÁTICO COMPLETO.
         
@@ -572,7 +572,7 @@ export default function Notices() {
     try {
       setImportProgress(40);
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: GEMINI_MODEL,
         contents: `Analise o seguinte conteúdo que contém informações de um edital ou curso (pode ser texto puro ou código HTML de uma página de curso como Hotmart):
         
         ${manualText}

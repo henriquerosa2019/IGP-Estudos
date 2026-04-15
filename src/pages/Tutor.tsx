@@ -41,7 +41,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ai } from "@/lib/gemini";
+import { ai, GEMINI_MODEL } from "@/lib/gemini";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
@@ -332,7 +332,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
       }));
 
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: GEMINI_MODEL,
         contents: history,
         config: {
           systemInstruction: `Você é um tutor de estudos objetivo e estruturado chamado IgpAI. 
