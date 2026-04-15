@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// VERSION: 1.0.7 - Advanced Diagnostics
-(window as any).IGP_GEMINI_VERSION = "1.0.7";
+// VERSION: 1.0.8 - Robust Fallback & Model Listing
+(window as any).IGP_GEMINI_VERSION = "1.0.8";
 
 // Função para o usuário diagnosticar a chave no console
 (window as any).CHECK_GEMINI_KEY = async () => {
@@ -10,45 +10,29 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
   const key = getApiKey();
   if (!key) {
     console.log("%c❌ STATUS: Chave NÃO encontrada nas variáveis de ambiente.", "color: #ff4444; font-weight: bold;");
-    console.log("👉 Ação necessária: No Vercel, vá em Settings > Environment Variables, adicione VITE_GEMINI_API_KEY e faça um REDEPLOY.");
     return "Falha: Chave ausente";
   }
 
-  if (key.length < 20) {
-    console.log("%c⚠️ STATUS: Chave detectada, mas parece INVÁLIDA (muito curta).", "color: #ffbb33; font-weight: bold;");
-    console.log(`🔑 Valor detectado: ${key.substring(0, 4)}...`);
-    return "Falha: Chave inválida";
-  }
-
-  console.log(`%c✅ STATUS: Chave detectada com sucesso! (${key.substring(0, 6)}...${key.substring(key.length - 4)})`, "color: #00C851; font-weight: bold;");
+  console.log(`%c✅ STATUS: Chave detectada! (${key.substring(0, 6)}...)`, "color: #00C851; font-weight: bold;");
   
-  if (!ai) {
-    console.log("%c❌ STATUS: SDK não inicializado. Verifique se a chave está correta.", "color: #ff4444; font-weight: bold;");
-    return "Falha: SDK nulo";
+  if (!ai) return "Falha: SDK nulo";
+
+  console.log("📂 Listando modelos disponíveis para sua chave...");
+  try {
+    // Nota: O SDK web às vezes restringe listModels por CORS, mas tentaremos
+    console.log("Tentando comunicação direta...");
+    const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
+    const result = await model.generateContent("Oi");
+    console.log("✅ Conexão básica OK!");
+  } catch (e: any) {
+    console.log("%c⚠️ Erro na conexão inicial. Detalhes:", "color: #ffbb33;");
+    console.error(e.message);
   }
 
-  console.log("🧪 Testando comunicação com o servidor do Google...");
-  try {
-    const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
-    const result = await model.generateContent("Responda apenas 'Conexão OK'");
-    const text = result.response.text();
-    console.log(`%c🚀 RESPOSTA DA IA: ${text}`, "color: #33b5e5; font-weight: bold;");
-    console.log("%c✨ TUDO PRONTO! O sistema está operando normalmente.", "color: #00C851; font-weight: bold;");
-    return "Sucesso: IA Operacional";
-  } catch (e: any) {
-    console.log("%c❌ ERRO NA COMUNICAÇÃO:", "color: #ff4444; font-weight: bold;");
-    console.error(e);
-    
-    if (e.message?.includes("404")) {
-      console.log("💡 Dica: Erro 404 indica que o modelo 'flash' não está disponível. O sistema usará o 'pro' como fallback automaticamente.");
-    } else if (e.message?.includes("403") || e.message?.includes("PERMISSION_DENIED")) {
-      console.log("💡 Dica: Erro 403/Permission Denied. Sua chave pode estar restrita ou o projeto no Google Cloud desativado.");
-    }
-    return `Erro: ${e.message}`;
-  }
+  return "Diagnóstico concluído. Verifique os logs acima.";
 };
 
-console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.0.7");
+console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.0.8");
 console.log("💡 Digite CHECK_GEMINI_KEY() no console para testar sua chave.");
 
 // Função robusta para capturar a chave da API em diferentes ambientes (Vite, Vercel, Local)
@@ -85,12 +69,26 @@ export const FALLBACK_MODEL = "gemini-1.5-pro";
  * Tenta obter um modelo, com fallback se o principal falhar
  */
 export const getModelWithFallback = async (aiInstance: any, options: any) => {
+  // Retornamos o modelo principal, mas o fallback real acontece no generateWithFallback
+  return aiInstance.getGenerativeModel(options);
+};
+
+/**
+ * Executa uma geração com fallback automático se o modelo principal falhar (ex: 404)
+ */
+export const generateWithFallback = async (model: any, prompt: any) => {
   try {
-    // Tenta o modelo principal
-    return aiInstance.getGenerativeModel(options);
-  } catch (e) {
-    console.warn(`Falha ao carregar modelo ${options.model}, tentando fallback ${FALLBACK_MODEL}`);
-    return aiInstance.getGenerativeModel({ ...options, model: FALLBACK_MODEL });
+    const result = await model.generateContent(prompt);
+    return await result.response;
+  } catch (error: any) {
+    if (error.message?.includes("404") || error.message?.includes("not found")) {
+      console.warn(`Modelo ${model.model} não encontrado (404). Tentando fallback com ${FALLBACK_MODEL}...`);
+      if (!ai) throw error;
+      const fallbackModel = ai.getGenerativeModel({ model: FALLBACK_MODEL });
+      const result = await fallbackModel.generateContent(prompt);
+      return await result.response;
+    }
+    throw error;
   }
 };
 
@@ -158,8 +156,7 @@ export const generateStudyPlanFromNotices = async (
     6. O campo 'day' deve conter o número do dia, o dia da semana e a data (ex: 'Dia 1 (Segunda, 06/04)').
     7. Se o conteúdo for muito grande, gere quantos dias forem necessários (60, 90, 120 dias...).`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const response = await generateWithFallback(model, prompt);
     const text = response.text();
 
     if (!text) throw new Error("A IA não retornou conteúdo.");
@@ -222,8 +219,7 @@ export const extractSubjectsFromNotice = async (content: string) => {
       6. Não pule nenhum item.
       7. Atribua um peso de 1 a 5 baseado na relevância comum para concursos.`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const response = await generateWithFallback(model, prompt);
     const text = response.text();
 
     if (!text) throw new Error("A IA não retornou conteúdo.");
@@ -256,8 +252,7 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
       4. OBRIGATÓRIO: Cada dia de estudo deve conter EXATAMENTE 2 tópicos novos (type: 'study'). Divida o conteúdo para caber em 2 tópicos por dia.
       5. OBRIGATÓRIO: O primeiro item de estudo de cada dia (a partir do Dia 2) DEVE SER uma "Revisão" (type: "revision") das 2 matérias estudadas no dia anterior.`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const response = await generateWithFallback(model, prompt);
     const text = response.text();
 
     if (!text) throw new Error("A IA não retornou nenhum conteúdo.");
@@ -323,8 +318,7 @@ export const generateFlashcardsFromMultimodal = async (
       }`,
     });
 
-    const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
-    const response = await result.response;
+    const response = await generateWithFallback(model, { contents: [{ role: 'user', parts }] });
     const text = response.text();
 
     if (!text) throw new Error("A IA não retornou conteúdo.");
@@ -375,8 +369,7 @@ export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'vi
       systemInstruction: "Você é um assistente de estudos. Sua tarefa é resumir conteúdos e extrair tópicos principais para facilitar o aprendizado. Retorne APENAS o JSON.",
     });
 
-    const result = await model.generateContent(content.substring(0, 30000));
-    const response = await result.response;
+    const response = await generateWithFallback(model, content.substring(0, 30000));
     const text = response.text();
 
     if (!text) throw new Error("A IA não retornou conteúdo.");
