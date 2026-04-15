@@ -41,7 +41,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ai, GEMINI_MODEL } from "@/lib/gemini";
+import { ai, GEMINI_MODEL, getModelWithFallback } from "@/lib/gemini";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
@@ -331,7 +331,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
         parts: [{ text: m.content }]
       }));
 
-      const model = ai.getGenerativeModel({ 
+      const model = await getModelWithFallback(ai, { 
         model: GEMINI_MODEL,
         systemInstruction: `Você é um tutor de estudos objetivo e estruturado chamado IgpAI. 
           Sua missão é ajudar o aluno a entender profundamente o conteúdo fornecido.

@@ -40,9 +40,9 @@ import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Type } from "@google/genai";
+// import { Type } from "@google/genai";
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from "@/lib/firebase";
-import { ai, GEMINI_MODEL } from "@/lib/gemini";
+import { ai, GEMINI_MODEL, getModelWithFallback } from "@/lib/gemini";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
 import { 
   collection, 
@@ -454,7 +454,7 @@ export default function Notices() {
       const base64String = base64Data.split(',')[1];
       setImportProgress(50);
 
-      const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
+      const model = await getModelWithFallback(ai, { model: GEMINI_MODEL });
       const result = await model.generateContent({
         contents: [
           {
@@ -520,7 +520,7 @@ export default function Notices() {
 
     try {
       setImportProgress(30);
-      const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
+      const model = await getModelWithFallback(ai, { model: GEMINI_MODEL });
       const result = await model.generateContent({
         contents: [{
           role: 'user',
@@ -580,7 +580,7 @@ export default function Notices() {
 
     try {
       setImportProgress(40);
-      const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
+      const model = await getModelWithFallback(ai, { model: GEMINI_MODEL });
       const result = await model.generateContent({
         contents: [{
           role: 'user',

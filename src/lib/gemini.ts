@@ -1,7 +1,17 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// VERSION: 1.0.4 - Forced update to verify deployment
-(window as any).IGP_GEMINI_VERSION = "1.0.4";
+// VERSION: 1.0.6 - Improved fallback and global diagnostics
+(window as any).IGP_GEMINI_VERSION = "1.0.6";
+
+// Função para o usuário diagnosticar a chave no console
+(window as any).CHECK_GEMINI_KEY = () => {
+  const key = getApiKey();
+  if (!key) return "❌ Nenhuma chave encontrada nas variáveis de ambiente.";
+  if (key.length < 20) return "⚠️ Chave muito curta ou inválida.";
+  return `✅ Chave detectada: ${key.substring(0, 6)}...${key.substring(key.length - 4)}`;
+};
+
+console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.0.6");
 
 // Função robusta para capturar a chave da API em diferentes ambientes (Vite, Vercel, Local)
 const getApiKey = () => {
@@ -31,6 +41,20 @@ if (apiKey) {
 // Inicializa o SDK padrão do Google Generative AI
 export const ai = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 export const GEMINI_MODEL = "gemini-1.5-flash";
+export const FALLBACK_MODEL = "gemini-1.5-pro";
+
+/**
+ * Tenta obter um modelo, com fallback se o principal falhar
+ */
+export const getModelWithFallback = async (aiInstance: any, options: any) => {
+  try {
+    // Tenta o modelo principal
+    return aiInstance.getGenerativeModel(options);
+  } catch (e) {
+    console.warn(`Falha ao carregar modelo ${options.model}, tentando fallback ${FALLBACK_MODEL}`);
+    return aiInstance.getGenerativeModel({ ...options, model: FALLBACK_MODEL });
+  }
+};
 
 if (ai) {
   console.log(`Gemini: SDK inicializado com o modelo ${GEMINI_MODEL}`);
@@ -74,7 +98,7 @@ export const generateStudyPlanFromNotices = async (
   }
 
   try {
-    const model = ai.getGenerativeModel({ 
+    const model = await getModelWithFallback(ai, { 
       model: GEMINI_MODEL,
       systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Se houver links de vídeo no conteúdo, preserve-os no campo videoUrl. Use 'type': 'study' and 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
     });
@@ -141,7 +165,7 @@ export const extractSubjectsFromNotice = async (content: string) => {
   }
 
   try {
-    const model = ai.getGenerativeModel({ 
+    const model = await getModelWithFallback(ai, { 
       model: GEMINI_MODEL,
       systemInstruction: "Você é um especialista em editais e cronogramas de cursos. Sua tarefa é decompor o conteúdo em matérias e tópicos detalhados, PRESERVANDO INTEGRALMENTE a nomenclatura original das aulas e INCLUINDO os tempos de duração se disponíveis. Retorne APENAS o JSON. Seja exaustivo.",
     });
@@ -178,7 +202,7 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
   }
 
   try {
-    const model = ai.getGenerativeModel({ 
+    const model = await getModelWithFallback(ai, { 
       model: GEMINI_MODEL,
       systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) das matérias. Gere um plano extenso e detalhado. Nunca resuma. Retorne APENAS o JSON. Use 'type': 'study' and 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
     });
@@ -242,7 +266,7 @@ export const generateFlashcardsFromMultimodal = async (
 
   try {
     console.log(`Gemini: Iniciando geração de flashcards para "${contentName}" com o modelo ${GEMINI_MODEL}`);
-    const model = ai.getGenerativeModel({ 
+    const model = await getModelWithFallback(ai, { 
       model: GEMINI_MODEL,
       systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido e gerar exatamente 20 flashcards detalhados e variados.
       
@@ -308,7 +332,7 @@ export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'vi
   }
 
   try {
-    const model = ai.getGenerativeModel({ 
+    const model = await getModelWithFallback(ai, { 
       model: GEMINI_MODEL,
       systemInstruction: "Você é um assistente de estudos. Sua tarefa é resumir conteúdos e extrair tópicos principais para facilitar o aprendizado. Retorne APENAS o JSON.",
     });
