@@ -1,9 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Função robusta para capturar a chave da API em diferentes ambientes (Vite, Vercel, Local)
 const getApiKey = () => {
   // 1. Tenta do process.env (Injetado pelo vite.config.ts ou ambiente Node)
-  // O SDK do AI Studio prefere process.env.GEMINI_API_KEY
   const processKey = typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined;
   if (processKey && processKey.length > 10 && processKey !== "undefined" && processKey !== "null") {
     return processKey;
@@ -26,16 +25,16 @@ if (apiKey) {
   console.error("Gemini: ERRO - Chave não encontrada. No Vercel, adicione VITE_GEMINI_API_KEY nas Environment Variables e faça um REDEPLOY.");
 }
 
-// Inicializa o SDK conforme as diretrizes do AI Studio
-export const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
-export const GEMINI_MODEL = "gemini-1.5-flash-latest";
+// Inicializa o SDK padrão do Google Generative AI
+export const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+export const GEMINI_MODEL = "gemini-1.5-flash";
 
-if (ai) {
+if (genAI) {
   console.log(`Gemini: SDK inicializado com o modelo ${GEMINI_MODEL}`);
 }
 
-if (!ai) {
-  console.warn("GoogleGenAI instance (ai) is null. AI features will not work.");
+if (!genAI) {
+  console.warn("GoogleGenerativeAI instance (genAI) is null. AI features will not work.");
 }
 
 const cleanJson = (text: string) => {
@@ -67,11 +66,16 @@ export const generateStudyPlanFromNotices = async (
   examDate: string,
   hoursPerDay: number
 ) => {
-  if (!ai) {
+  if (!genAI) {
     throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
+    const model = genAI.getGenerativeModel({ 
+      model: GEMINI_MODEL,
+      systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Se houver links de vídeo no conteúdo, preserve-os no campo videoUrl. Use 'type': 'study' and 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
+    });
+
     const prompt = `Analise EXAUSTIVAMENTE os seguintes editais/cronogramas:
     ${notices.map(n => `Edital: ${n.name}\nConteúdo: ${n.content}`).join("\n\n")}
     
@@ -89,17 +93,12 @@ export const generateStudyPlanFromNotices = async (
     6. O campo 'day' deve conter o número do dia, o dia da semana e a data (ex: 'Dia 1 (Segunda, 06/04)').
     7. Se o conteúdo for muito grande, gere quantos dias forem necessários (60, 90, 120 dias...).`;
 
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Se houver links de vídeo no conteúdo, preserve-os no campo videoUrl. Use 'type': 'study' e 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
-        responseMimeType: "application/json",
-      }
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-    if (!response.text) throw new Error("A IA não retornou conteúdo.");
-    const resultJson = JSON.parse(cleanJson(response.text));
+    if (!text) throw new Error("A IA não retornou conteúdo.");
+    const resultJson = JSON.parse(cleanJson(text));
     
     if (resultJson.schedule) {
       resultJson.schedule = enforceRevisions(resultJson.schedule);
@@ -134,11 +133,16 @@ export const generateStudyPlanFromNotices = async (
 };
 
 export const extractSubjectsFromNotice = async (content: string) => {
-  if (!ai) {
+  if (!genAI) {
     throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
+    const model = genAI.getGenerativeModel({ 
+      model: GEMINI_MODEL,
+      systemInstruction: "Você é um especialista em editais e cronogramas de cursos. Sua tarefa é decompor o conteúdo em matérias e tópicos detalhados, PRESERVANDO INTEGRALMENTE a nomenclatura original das aulas e INCLUINDO os tempos de duração se disponíveis. Retorne APENAS o JSON. Seja exaustivo.",
+    });
+
     const prompt = `Analise o seguinte conteúdo de um edital de concurso ou cronograma de curso e extraia as matérias principais com seu peso/importância sugerida e a lista de tópicos detalhados de cada matéria.
       
       CONTEÚDO:
@@ -153,17 +157,12 @@ export const extractSubjectsFromNotice = async (content: string) => {
       6. Não pule nenhum item.
       7. Atribua um peso de 1 a 5 baseado na relevância comum para concursos.`;
 
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction: "Você é um especialista em editais e cronogramas de cursos. Sua tarefa é decompor o conteúdo em matérias e tópicos detalhados, PRESERVANDO INTEGRALMENTE a nomenclatura original das aulas e INCLUINDO os tempos de duração se disponíveis. Retorne APENAS o JSON. Seja exaustivo.",
-        responseMimeType: "application/json",
-      }
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-    if (!response.text) throw new Error("A IA não retornou conteúdo.");
-    return JSON.parse(cleanJson(response.text)).subjects;
+    if (!text) throw new Error("A IA não retornou conteúdo.");
+    return JSON.parse(cleanJson(text)).subjects;
   } catch (error) {
     console.error("Erro ao extrair matérias:", error);
     throw error;
@@ -171,11 +170,16 @@ export const extractSubjectsFromNotice = async (content: string) => {
 };
 
 export const generateStudyPlan = async (goal: string, subjects: string[], hoursPerDay: number) => {
-  if (!ai) {
+  if (!genAI) {
     throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
+    const model = genAI.getGenerativeModel({ 
+      model: GEMINI_MODEL,
+      systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) das matérias. Gere um plano extenso e detalhado. Nunca resuma. Retorne APENAS o JSON. Use 'type': 'study' and 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
+    });
+
     const prompt = `Crie um plano de estudos detalhado para o objetivo: "${goal}". 
       Matérias de foco: ${subjects.join(", ")}. 
       Tempo disponível: ${hoursPerDay} horas por dia. 
@@ -187,18 +191,13 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
       4. OBRIGATÓRIO: Cada dia de estudo deve conter EXATAMENTE 2 tópicos novos (type: 'study'). Divida o conteúdo para caber em 2 tópicos por dia.
       5. OBRIGATÓRIO: O primeiro item de estudo de cada dia (a partir do Dia 2) DEVE SER uma "Revisão" (type: "revision") das 2 matérias estudadas no dia anterior.`;
 
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) das matérias. Gere um plano extenso e detalhado. Nunca resuma. Retorne APENAS o JSON. Use 'type': 'study' e 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
-        responseMimeType: "application/json",
-      }
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-    if (!response.text) throw new Error("A IA não retornou nenhum conteúdo.");
+    if (!text) throw new Error("A IA não retornou nenhum conteúdo.");
 
-    const cleanedText = cleanJson(response.text);
+    const cleanedText = cleanJson(text);
     const resultJson = JSON.parse(cleanedText);
     
     if (resultJson.schedule) {
@@ -233,38 +232,38 @@ export const generateFlashcardsFromMultimodal = async (
   parts: any[],
   contentName: string
 ) => {
-  if (!ai) {
+  if (!genAI) {
     console.error("Gemini: Tentativa de gerar flashcards sem chave configurada.");
     throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
-    const response = await ai.models.generateContent({
+    const model = genAI.getGenerativeModel({ 
       model: GEMINI_MODEL,
-      contents: [{ role: 'user', parts }],
-      config: {
-        systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido e gerar exatamente 20 flashcards detalhados e variados.
-        
-        O nome do conteúdo é: "${contentName}".
-        
-        Cada flashcard deve ter uma pergunta instigante e uma resposta clara e completa.
-        IMPORTANTE: A resposta deve OBRIGATORIAMENTE concluir com um exemplo prático ou uma aplicação real do conceito.
-        DESTAQUE: Nos exemplos citados, coloque em negrito (usando markdown **) o termo ou conceito principal que está sendo estudado.
-        ATENÇÃO: NÃO inclua classificações de dificuldade (como "fácil", "médio", "difícil"). O campo 'subject' deve conter apenas o nome da disciplina (ex: Direito Penal).
-        
-        Retorne os dados estritamente no formato JSON:
-        {
-          "flashcards": [
-            { "question": "...", "answer": "...", "subject": "..." }
-          ]
-        }`,
-        responseMimeType: "application/json",
-      }
+      systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido e gerar exatamente 20 flashcards detalhados e variados.
+      
+      O nome do conteúdo é: "${contentName}".
+      
+      Cada flashcard deve ter uma pergunta instigante e uma resposta clara e completa.
+      IMPORTANTE: A resposta deve OBRIGATORIAMENTE concluir com um exemplo prático ou uma aplicação real do conceito.
+      DESTAQUE: Nos exemplos citados, coloque em negrito (usando markdown **) o termo ou conceito principal que está sendo estudado.
+      ATENÇÃO: NÃO inclua classificações de dificuldade (como "fácil", "médio", "difícil"). O campo 'subject' deve conter apenas o nome da disciplina (ex: Direito Penal).
+      
+      Retorne os dados estritamente no formato JSON:
+      {
+        "flashcards": [
+          { "question": "...", "answer": "...", "subject": "..." }
+        ]
+      }`,
     });
 
-    if (!response.text) throw new Error("A IA não retornou conteúdo.");
+    const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
+    const response = await result.response;
+    const text = response.text();
+
+    if (!text) throw new Error("A IA não retornou conteúdo.");
     
-    let cleanedText = cleanJson(response.text);
+    let cleanedText = cleanJson(text);
     
     try {
       const parsed = JSON.parse(cleanedText);
@@ -300,22 +299,22 @@ export const generateFlashcardsFromMultimodal = async (
 };
 
 export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'video' | 'link') => {
-  if (!ai) {
+  if (!genAI) {
     throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
-    const response = await ai.models.generateContent({
+    const model = genAI.getGenerativeModel({ 
       model: GEMINI_MODEL,
-      contents: [{ role: 'user', parts: [{ text: content.substring(0, 30000) }] }],
-      config: {
-        systemInstruction: "Você é um assistente de estudos. Sua tarefa é resumir conteúdos e extrair tópicos principais para facilitar o aprendizado. Retorne APENAS o JSON.",
-        responseMimeType: "application/json",
-      }
+      systemInstruction: "Você é um assistente de estudos. Sua tarefa é resumir conteúdos e extrair tópicos principais para facilitar o aprendizado. Retorne APENAS o JSON.",
     });
 
-    if (!response.text) throw new Error("A IA não retornou conteúdo.");
-    return JSON.parse(cleanJson(response.text));
+    const result = await model.generateContent(content.substring(0, 30000));
+    const response = await result.response;
+    const text = response.text();
+
+    if (!text) throw new Error("A IA não retornou conteúdo.");
+    return JSON.parse(cleanJson(text));
   } catch (error) {
     console.error("Erro ao analisar conteúdo:", error);
     throw error;
