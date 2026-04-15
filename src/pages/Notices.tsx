@@ -454,43 +454,48 @@ export default function Notices() {
       const base64String = base64Data.split(',')[1];
       setImportProgress(50);
 
-      const response = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                data: base64String,
-                mimeType: "application/pdf"
+      const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                inlineData: {
+                  data: base64String,
+                  mimeType: "application/pdf"
+                }
+              },
+              {
+                text: `Extraia as seguintes informações sobre o concurso do PDF:
+                1. Nome do Concurso
+                2. Previsão (ex: Sem Previsão, Edital Publicado)
+                3. Número de Vagas
+                4. Banca Organizadora
+                5. Salário
+                6. Conteúdo Programático detalhado
+
+                Retorne os dados formatados como:
+                Nome: [Nome]
+                Previsão: [Previsão]
+                Vagas: [Vagas]
+                Banca: [Banca]
+                Salário: [Salário]
+
+                Conteúdo Programático:
+                [Texto do conteúdo programático]`
               }
-            },
-            {
-              text: `Extraia as seguintes informações sobre o concurso do PDF:
-              1. Nome do Concurso
-              2. Previsão (ex: Sem Previsão, Edital Publicado)
-              3. Número de Vagas
-              4. Banca Organizadora
-              5. Salário
-              6. Conteúdo Programático detalhado
-
-              Retorne os dados formatados como:
-              Nome: [Nome]
-              Previsão: [Previsão]
-              Vagas: [Vagas]
-              Banca: [Banca]
-              Salário: [Salário]
-
-              Conteúdo Programático:
-              [Texto do conteúdo programático]`
-            }
-          ]
-        }
+            ]
+          }
+        ]
       });
+      const response = await result.response;
+      const text = response.text();
       setImportProgress(80);
 
-      if (!response.text) throw new Error("Não foi possível extrair o conteúdo.");
+      if (!text) throw new Error("Não foi possível extrair o conteúdo.");
 
-      const extractedContent = response.text;
+      const extractedContent = text;
       
       const nameMatch = extractedContent.match(/Nome: (.*)/);
       if (nameMatch) setName(nameMatch[1]);
@@ -515,36 +520,40 @@ export default function Notices() {
 
     try {
       setImportProgress(30);
-      const response = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: `Acesse o link: ${url}.
-        Extraia as informações do concurso. LEIA A PÁGINA INTEIRA E TODOS OS LINKS RELACIONADOS SE NECESSÁRIO PARA OBTER O CONTEÚDO PROGRAMÁTICO COMPLETO.
-        
-        1. Nome do Concurso
-        2. Previsão
-        3. Número de Vagas
-        4. Banca Organizadora
-        5. Salário
-        6. Conteúdo Programático DETALHADO (Liste todas as matérias e tópicos)
+      const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
+      const result = await model.generateContent({
+        contents: [{
+          role: 'user',
+          parts: [{
+            text: `Acesse o link: ${url}.
+            Extraia as informações do concurso. LEIA A PÁGINA INTEIRA E TODOS OS LINKS RELACIONADOS SE NECESSÁRIO PARA OBTER O CONTEÚDO PROGRAMÁTICO COMPLETO.
+            
+            1. Nome do Concurso
+            2. Previsão
+            3. Número de Vagas
+            4. Banca Organizadora
+            5. Salário
+            6. Conteúdo Programático DETALHADO (Liste todas as matérias e tópicos)
 
-        Retorne os dados formatados como:
-        Nome: [Nome]
-        Previsão: [Previsão]
-        Vagas: [Vagas]
-        Banca: [Banca]
-        Salário: [Salário]
+            Retorne os dados formatados como:
+            Nome: [Nome]
+            Previsão: [Previsão]
+            Vagas: [Vagas]
+            Banca: [Banca]
+            Salário: [Salário]
 
-        Conteúdo Programático:
-        [Texto completo do conteúdo programático]`,
-        config: {
-          tools: [{ urlContext: {} }]
-        }
+            Conteúdo Programático:
+            [Texto completo do conteúdo programático]`
+          }]
+        }]
       });
+      const response = await result.response;
+      const text = response.text();
       setImportProgress(70);
 
-      if (!response.text || response.text.length < 100) throw new Error("Conteúdo muito curto ou não encontrado. Tente novamente ou use o PDF.");
+      if (!text || text.length < 100) throw new Error("Conteúdo muito curto ou não encontrado. Tente novamente ou use o PDF.");
 
-      const extractedContent = response.text;
+      const extractedContent = text;
       setImportProgress(90);
       
       const nameMatch = extractedContent.match(/Nome: (.*)/);
@@ -571,41 +580,48 @@ export default function Notices() {
 
     try {
       setImportProgress(40);
-      const response = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: `Analise o seguinte conteúdo que contém informações de um edital ou curso (pode ser texto puro ou código HTML de uma página de curso como Hotmart):
-        
-        ${manualText}
-        
-        Extraia as informações do concurso/curso:
-        1. Nome do Concurso/Curso (Se não encontrar, use "Carreira Policial - IGP Estudos 2.0")
-        2. Previsão (se houver)
-        3. Número de Vagas (se houver)
-        4. Banca Organizadora/Plataforma
-        5. Salário/Preço (se houver)
-        6. Conteúdo Programático DETALHADO (Liste todas as matérias/módulos e tópicos/aulas)
+      const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
+      const result = await model.generateContent({
+        contents: [{
+          role: 'user',
+          parts: [{
+            text: `Analise o seguinte conteúdo que contém informações de um edital ou curso (pode ser texto puro ou código HTML de uma página de curso como Hotmart):
+            
+            ${manualText}
+            
+            Extraia as informações do concurso/curso:
+            1. Nome do Concurso/Curso (Se não encontrar, use "Carreira Policial - IGP Estudos 2.0")
+            2. Previsão (se houver)
+            3. Número de Vagas (se houver)
+            4. Banca Organizadora/Plataforma
+            5. Salário/Preço (se houver)
+            6. Conteúdo Programático DETALHADO (Liste todas as matérias/módulos e tópicos/aulas)
 
-        REGRAS CRÍTICAS:
-        - Mantenha INTEGRALMENTE a estrutura de aulas (ex: "Aula 01 - Parte 01 - Princípios").
-        - Se houver tempos (ex: 33:57), INCLUA-OS no final do título da aula entre parênteses. Exemplo: "Aula 01 - Parte 01 - Lei de drogas (33:57)".
-        - SE O CONTEÚDO FOR HTML, extraia os links (href) das aulas e coloque-os ao lado do título da aula entre colchetes. Exemplo: "Aula 01 - Parte 01 - Princípios (30:00) [https://hotmart.com/...]".
-        - Organize por Matéria/Módulo.
+            REGRAS CRÍTICAS:
+            - Mantenha INTEGRALMENTE a estrutura de aulas (ex: "Aula 01 - Parte 01 - Princípios").
+            - Se houver tempos (ex: 33:57), INCLUA-OS no final do título da aula entre parênteses. Exemplo: "Aula 01 - Parte 01 - Lei de drogas (33:57)".
+            - SE O CONTEÚDO FOR HTML, extraia os links (href) das aulas e coloque-os ao lado do título da aula entre colchetes. Exemplo: "Aula 01 - Parte 01 - Princípios (30:00) [https://hotmart.com/...]".
+            - Organize por Matéria/Módulo.
 
-        Retorne os dados formatados como:
-        Nome: [Nome]
-        Previsão: [Previsão]
-        Vagas: [Vagas]
-        Banca: [Banca]
-        Salário: [Salário]
+            Retorne os dados formatados como:
+            Nome: [Nome]
+            Previsão: [Previsão]
+            Vagas: [Vagas]
+            Banca: [Banca]
+            Salário: [Salário]
 
-        Conteúdo Programático:
-        [Texto completo do conteúdo programático]`
+            Conteúdo Programático:
+            [Texto completo do conteúdo programático]`
+          }]
+        }]
       });
+      const response = await result.response;
+      const text = response.text();
       setImportProgress(80);
 
-      if (!response.text) throw new Error("Não foi possível analisar o texto.");
+      if (!text) throw new Error("Não foi possível analisar o texto.");
 
-      const extractedContent = response.text;
+      const extractedContent = text;
       
       const nameMatch = extractedContent.match(/Nome: (.*)/);
       if (nameMatch && nameMatch[1].trim() !== "" && nameMatch[1] !== "[Nome]") {

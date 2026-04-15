@@ -331,11 +331,9 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
         parts: [{ text: m.content }]
       }));
 
-      const response = await ai.models.generateContent({
+      const model = ai.getGenerativeModel({ 
         model: GEMINI_MODEL,
-        contents: history,
-        config: {
-          systemInstruction: `Você é um tutor de estudos objetivo e estruturado chamado IgpAI. 
+        systemInstruction: `Você é um tutor de estudos objetivo e estruturado chamado IgpAI. 
           Sua missão é ajudar o aluno a entender profundamente o conteúdo fornecido.
           
           DIRETRIZES DE RESPOSTA:
@@ -351,12 +349,15 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
           Título: ${selectedContent.title}
           Tipo: ${selectedContent.type}
           Conteúdo: ${selectedContent.content}` : ''}`,
-        }
       });
 
-      if (!response.text) throw new Error("A IA não retornou resposta.");
+      const result = await model.generateContent({ contents: history });
+      const response = await result.response;
+      const text = response.text();
+
+      if (!text) throw new Error("A IA não retornou resposta.");
       
-      setMessages(prev => [...prev, { role: 'assistant', content: response.text }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: text }]);
       updateDailyCount(dailyCount + 1);
     } catch (error) {
       console.error(error);

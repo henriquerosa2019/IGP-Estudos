@@ -26,15 +26,15 @@ if (apiKey) {
 }
 
 // Inicializa o SDK padrão do Google Generative AI
-export const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+export const ai = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 export const GEMINI_MODEL = "gemini-1.5-flash";
 
-if (genAI) {
+if (ai) {
   console.log(`Gemini: SDK inicializado com o modelo ${GEMINI_MODEL}`);
 }
 
-if (!genAI) {
-  console.warn("GoogleGenerativeAI instance (genAI) is null. AI features will not work.");
+if (!ai) {
+  console.warn("GoogleGenerativeAI instance (ai) is null. AI features will not work.");
 }
 
 const cleanJson = (text: string) => {
@@ -66,12 +66,12 @@ export const generateStudyPlanFromNotices = async (
   examDate: string,
   hoursPerDay: number
 ) => {
-  if (!genAI) {
+  if (!ai) {
     throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
-    const model = genAI.getGenerativeModel({ 
+    const model = ai.getGenerativeModel({ 
       model: GEMINI_MODEL,
       systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Se houver links de vídeo no conteúdo, preserve-os no campo videoUrl. Use 'type': 'study' and 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
     });
@@ -133,12 +133,12 @@ export const generateStudyPlanFromNotices = async (
 };
 
 export const extractSubjectsFromNotice = async (content: string) => {
-  if (!genAI) {
+  if (!ai) {
     throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
-    const model = genAI.getGenerativeModel({ 
+    const model = ai.getGenerativeModel({ 
       model: GEMINI_MODEL,
       systemInstruction: "Você é um especialista em editais e cronogramas de cursos. Sua tarefa é decompor o conteúdo em matérias e tópicos detalhados, PRESERVANDO INTEGRALMENTE a nomenclatura original das aulas e INCLUINDO os tempos de duração se disponíveis. Retorne APENAS o JSON. Seja exaustivo.",
     });
@@ -170,12 +170,12 @@ export const extractSubjectsFromNotice = async (content: string) => {
 };
 
 export const generateStudyPlan = async (goal: string, subjects: string[], hoursPerDay: number) => {
-  if (!genAI) {
+  if (!ai) {
     throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
-    const model = genAI.getGenerativeModel({ 
+    const model = ai.getGenerativeModel({ 
       model: GEMINI_MODEL,
       systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) das matérias. Gere um plano extenso e detalhado. Nunca resuma. Retorne APENAS o JSON. Use 'type': 'study' and 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
     });
@@ -232,13 +232,13 @@ export const generateFlashcardsFromMultimodal = async (
   parts: any[],
   contentName: string
 ) => {
-  if (!genAI) {
+  if (!ai) {
     console.error("Gemini: Tentativa de gerar flashcards sem chave configurada.");
     throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
-    const model = genAI.getGenerativeModel({ 
+    const model = ai.getGenerativeModel({ 
       model: GEMINI_MODEL,
       systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido e gerar exatamente 20 flashcards detalhados e variados.
       
@@ -299,12 +299,12 @@ export const generateFlashcardsFromMultimodal = async (
 };
 
 export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'video' | 'link') => {
-  if (!genAI) {
+  if (!ai) {
     throw new Error("A inteligência artificial não está configurada. Verifique se a chave VITE_GEMINI_API_KEY foi adicionada no Vercel e se você fez um Redeploy.");
   }
 
   try {
-    const model = genAI.getGenerativeModel({ 
+    const model = ai.getGenerativeModel({ 
       model: GEMINI_MODEL,
       systemInstruction: "Você é um assistente de estudos. Sua tarefa é resumir conteúdos e extrair tópicos principais para facilitar o aprendizado. Retorne APENAS o JSON.",
     });
