@@ -30,7 +30,8 @@ import {
   Video,
   Link as LinkIcon,
   Type,
-  ArrowDown
+  ArrowDown,
+  Folder
 } from "lucide-react";
 import { 
   Dialog, 
@@ -79,6 +80,8 @@ export default function Tutor() {
   const [selectedContent, setSelectedContent] = useState<{ title: string; content: string; type: string } | null>(null);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [libraryItems, setLibraryItems] = useState<any[]>([]);
+  const [libraryView, setLibraryView] = useState<'folders' | 'items'>('folders');
+  const [selectedLibrarySubject, setSelectedLibrarySubject] = useState<string | null>(null);
   const [isPasteOpen, setIsPasteOpen] = useState(false);
   const [pastedText, setPastedText] = useState("");
   const [pastedTitle, setPastedTitle] = useState("");
@@ -424,7 +427,13 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isLibraryOpen} onOpenChange={setIsLibraryOpen}>
+          <Dialog open={isLibraryOpen} onOpenChange={(open) => {
+            setIsLibraryOpen(open);
+            if (!open) {
+              setLibraryView('folders');
+              setSelectedLibrarySubject(null);
+            }
+          }}>
             <DialogTrigger render={
               <Button 
                 variant="outline" 
@@ -437,44 +446,92 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
             } />
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Importar do Acervo Inteligente</DialogTitle>
+                <div className="flex items-center gap-2">
+                  {libraryView === 'items' && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={() => {
+                        setLibraryView('folders');
+                        setSelectedLibrarySubject(null);
+                      }}
+                    >
+                      <ArrowDown className="w-4 h-4 rotate-90" />
+                    </Button>
+                  )}
+                  <DialogTitle>
+                    {libraryView === 'folders' ? 'Importar do Acervo Inteligente' : `Acervo: ${selectedLibrarySubject}`}
+                  </DialogTitle>
+                </div>
               </DialogHeader>
               <div className="py-4">
-                <p className="text-sm text-zinc-500 mb-4">Selecione um material para estudar com o apoio da IgpAI.</p>
-                <ScrollArea className="h-[300px] pr-4">
+                <p className="text-sm text-zinc-500 mb-4">
+                  {libraryView === 'folders' 
+                    ? 'Selecione uma disciplina para ver os materiais disponíveis.' 
+                    : 'Selecione um material para estudar com o apoio da IgpAI.'}
+                </p>
+                <ScrollArea className="h-[350px] pr-4">
                   <div className="space-y-2">
                     {libraryItems.length === 0 ? (
                       <p className="text-center py-8 text-zinc-400 text-sm italic">Seu acervo está vazio.</p>
+                    ) : libraryView === 'folders' ? (
+                      // Display unique subjects as folders
+                      Array.from(new Set(libraryItems.map(item => item.subject))).map((subject) => {
+                        const count = libraryItems.filter(i => i.subject === subject).length;
+                        return (
+                          <button
+                            key={subject}
+                            onClick={() => {
+                              setSelectedLibrarySubject(subject);
+                              setLibraryView('items');
+                            }}
+                            className="w-full flex items-center gap-3 p-4 rounded-xl border border-zinc-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left group"
+                          >
+                            <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600 group-hover:bg-indigo-100">
+                              <Folder className="w-5 h-5 fill-current opacity-40" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-bold text-zinc-700">{subject}</p>
+                              <p className="text-[10px] text-zinc-400 font-bold uppercase">{count} ite{count === 1 ? 'm' : 'ns'}</p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-indigo-400" />
+                          </button>
+                        );
+                      })
                     ) : (
-                      libraryItems.map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            setSelectedContent({ title: item.title, content: item.content, type: item.type });
-                            setMessages([{
-                              role: 'assistant',
-                              content: `Olá! Vamos estudar sobre **${item.title}**. Eu já processei o conteúdo do seu acervo.
-                              
-Como posso te ajudar? Posso explicar de forma simples, dar exemplos ou gerar exercícios sobre este tema.`
-                            }]);
-                            setIsLibraryOpen(false);
-                            toast.success(`Material "${item.title}" importado!`);
-                          }}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left group"
-                        >
-                          <div className="p-2 bg-zinc-100 rounded-lg text-zinc-500 group-hover:bg-indigo-100 group-hover:text-indigo-600">
-                            {item.type === 'pdf' ? <FileText className="w-4 h-4" /> : 
-                             item.type === 'video' ? <Video className="w-4 h-4" /> : 
-                             item.type === 'link' ? <LinkIcon className="w-4 h-4" /> :
-                             <Type className="w-4 h-4" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-zinc-700 truncate">{item.title}</p>
-                            <p className="text-[10px] text-zinc-400 uppercase font-black">{item.subject}</p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-indigo-400" />
-                        </button>
-                      ))
+                      // Display items within the selected subject
+                      libraryItems
+                        .filter(item => item.subject === selectedLibrarySubject)
+                        .map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setSelectedContent({ title: item.title, content: item.content, type: item.type });
+                              setMessages([{
+                                role: 'assistant',
+                                content: `Olá! Vamos estudar sobre **${item.title}**. Eu já processei o conteúdo do seu acervo.
+                                
+  Como posso te ajudar? Posso explicar de forma simples, dar exemplos ou gerar exercícios sobre este tema.`
+                              }]);
+                              setIsLibraryOpen(false);
+                              toast.success(`Material "${item.title}" importado!`);
+                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left group"
+                          >
+                            <div className="p-2 bg-zinc-100 rounded-lg text-zinc-500 group-hover:bg-indigo-100 group-hover:text-indigo-600">
+                              {item.type === 'pdf' ? <FileText className="w-4 h-4" /> : 
+                               item.type === 'video' ? <Video className="w-4 h-4" /> : 
+                               item.type === 'link' ? <LinkIcon className="w-4 h-4" /> :
+                               <Type className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-zinc-700 truncate">{item.title}</p>
+                              <p className="text-[10px] text-zinc-400 uppercase font-black">{item.subCategory || item.subject}</p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-indigo-400" />
+                          </button>
+                        ))
                     )}
                   </div>
                 </ScrollArea>
