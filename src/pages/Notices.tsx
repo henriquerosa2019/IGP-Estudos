@@ -42,7 +42,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 // import { Type } from "@google/genai";
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from "@/lib/firebase";
-import { ai, GEMINI_MODEL, getModelWithFallback } from "@/lib/gemini";
+import { ai, GEMINI_MODEL, generateWithFallback } from "@/lib/gemini";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
 import { 
   collection, 
@@ -454,8 +454,7 @@ export default function Notices() {
       const base64String = base64Data.split(',')[1];
       setImportProgress(50);
 
-      const model = await getModelWithFallback(ai, { model: GEMINI_MODEL });
-      const result = await model.generateContent({
+      const response = await generateWithFallback({
         contents: [
           {
             role: 'user',
@@ -489,8 +488,7 @@ export default function Notices() {
           }
         ]
       });
-      const response = await result.response;
-      const text = response.text();
+      const text = response.text;
       setImportProgress(80);
 
       if (!text) throw new Error("Não foi possível extrair o conteúdo.");
@@ -520,8 +518,7 @@ export default function Notices() {
 
     try {
       setImportProgress(30);
-      const model = await getModelWithFallback(ai, { model: GEMINI_MODEL });
-      const result = await model.generateContent({
+      const response = await generateWithFallback({
         contents: [{
           role: 'user',
           parts: [{
@@ -547,8 +544,7 @@ export default function Notices() {
           }]
         }]
       });
-      const response = await result.response;
-      const text = response.text();
+      const text = response.text;
       setImportProgress(70);
 
       if (!text || text.length < 100) throw new Error("Conteúdo muito curto ou não encontrado. Tente novamente ou use o PDF.");
@@ -580,8 +576,7 @@ export default function Notices() {
 
     try {
       setImportProgress(40);
-      const model = await getModelWithFallback(ai, { model: GEMINI_MODEL });
-      const result = await model.generateContent({
+      const response = await generateWithFallback({
         contents: [{
           role: 'user',
           parts: [{
@@ -615,8 +610,7 @@ export default function Notices() {
           }]
         }]
       });
-      const response = await result.response;
-      const text = response.text();
+      const text = response.text;
       setImportProgress(80);
 
       if (!text) throw new Error("Não foi possível analisar o texto.");

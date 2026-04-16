@@ -186,7 +186,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         
         <div className="mt-4 pt-4 border-t border-zinc-800/50 flex flex-col items-center gap-1">
           <span className="text-[10px] text-zinc-600 uppercase tracking-widest font-medium">Versão do Sistema</span>
-          <span className="text-xs text-zinc-500 font-mono">v1.0.8-stable</span>
+          <span className="text-xs text-zinc-500 font-mono">v1.0.9-stable</span>
         </div>
       </div>
     </div>

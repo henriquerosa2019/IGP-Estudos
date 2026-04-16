@@ -41,7 +41,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ai, GEMINI_MODEL, getModelWithFallback } from "@/lib/gemini";
+import { ai, GEMINI_MODEL, generateWithFallback } from "@/lib/gemini";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
@@ -331,29 +331,28 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
         parts: [{ text: m.content }]
       }));
 
-      const model = await getModelWithFallback(ai, { 
-        model: GEMINI_MODEL,
-        systemInstruction: `Você é um tutor de estudos objetivo e estruturado chamado IgpAI. 
-          Sua missão é ajudar o aluno a entender profundamente o conteúdo fornecido.
-          
-          DIRETRIZES DE RESPOSTA:
-          1. Se houver um material de estudo selecionado, use-o como base principal.
-          2. Explique conceitos complexos de forma simples, como se estivesse explicando para um leigo (ELI5).
-          3. Sempre que possível, forneça exemplos práticos do dia a dia.
-          4. Ao final de explicações importantes, sugira um pequeno exercício ou pergunta de reflexão para testar o conhecimento do aluno.
-          5. Mantenha um tom motivador e encorajador.
-          6. Use Markdown para formatar suas respostas (negrito, listas, tabelas).
-          
-          ${userContext}
-          ${selectedContent ? `CONTEÚDO ATUAL EM ESTUDO:
-          Título: ${selectedContent.title}
-          Tipo: ${selectedContent.type}
-          Conteúdo: ${selectedContent.content}` : ''}`,
+      const response = await generateWithFallback({ 
+        contents: history,
+        config: {
+          systemInstruction: `Você é um tutor de estudos objetivo e estruturado chamado IgpAI. 
+            Sua missão é ajudar o aluno a entender profundamente o conteúdo fornecido.
+            
+            DIRETRIZES DE RESPOSTA:
+            1. Se houver um material de estudo selecionado, use-o como base principal.
+            2. Explique conceitos complexos de forma simples, como se estivesse explicando para um leigo (ELI5).
+            3. Sempre que possível, forneça exemplos práticos do dia a dia.
+            4. Ao final de explicações importantes, sugira um pequeno exercício ou pergunta de reflexão para testar o conhecimento do aluno.
+            5. Mantenha um tom motivador e encorajador.
+            6. Use Markdown para formatar suas respostas (negrito, listas, tabelas).
+            
+            ${userContext}
+            ${selectedContent ? `CONTEÚDO ATUAL EM ESTUDO:
+            Título: ${selectedContent.title}
+            Tipo: ${selectedContent.type}
+            Conteúdo: ${selectedContent.content}` : ''}`,
+        }
       });
-
-      const result = await model.generateContent({ contents: history });
-      const response = await result.response;
-      const text = response.text();
+      const text = response.text;
 
       if (!text) throw new Error("A IA não retornou resposta.");
       

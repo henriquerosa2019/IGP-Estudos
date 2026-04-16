@@ -1,7 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-// VERSION: 1.0.8 - Robust Fallback & Model Listing
-(window as any).IGP_GEMINI_VERSION = "1.0.8";
+// VERSION: 1.0.9 - Full Migration to @google/genai & Triple Fallback
+(window as any).IGP_GEMINI_VERSION = "1.0.9";
 
 // Função para o usuário diagnosticar a chave no console
 (window as any).CHECK_GEMINI_KEY = async () => {
@@ -17,33 +17,34 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
   
   if (!ai) return "Falha: SDK nulo";
 
-  console.log("📂 Listando modelos disponíveis para sua chave...");
+  console.log("🧪 Testando comunicação com o servidor do Google...");
   try {
-    // Nota: O SDK web às vezes restringe listModels por CORS, mas tentaremos
-    console.log("Tentando comunicação direta...");
-    const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
-    const result = await model.generateContent("Oi");
-    console.log("✅ Conexão básica OK!");
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: "Oi"
+    });
+    console.log(`%c🚀 RESPOSTA DA IA: ${response.text}`, "color: #33b5e5; font-weight: bold;");
+    console.log("%c✅ Conexão básica OK!", "color: #00C851; font-weight: bold;");
+    return "Sucesso: IA Operacional";
   } catch (e: any) {
     console.log("%c⚠️ Erro na conexão inicial. Detalhes:", "color: #ffbb33;");
     console.error(e.message);
+    return `Erro: ${e.message}`;
   }
-
-  return "Diagnóstico concluído. Verifique os logs acima.";
 };
 
-console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.0.8");
-console.log("💡 Digite CHECK_GEMINI_KEY() no console para testar sua chave.");
+console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.0.9");
+console.log("💡 Digite await CHECK_GEMINI_KEY() no console para testar sua chave.");
 
 // Função robusta para capturar a chave da API em diferentes ambientes (Vite, Vercel, Local)
 const getApiKey = () => {
-  // 1. Tenta do process.env (Injetado pelo vite.config.ts ou ambiente Node)
+  // No AI Studio Build, o GEMINI_API_KEY é injetado automaticamente no process.env
   const processKey = typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined;
   if (processKey && processKey.length > 10 && processKey !== "undefined" && processKey !== "null") {
     return processKey;
   }
 
-  // 2. Tenta do import.meta.env (Padrão do Vite para variáveis com prefixo VITE_)
+  // Fallback para VITE_ prefixado se o usuário configurou manualmente
   const viteKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
   if (viteKey && viteKey.length > 10 && viteKey !== "undefined" && viteKey !== "null") {
     return viteKey;
@@ -60,36 +61,43 @@ if (apiKey) {
   console.error("Gemini: ERRO - Chave não encontrada. No Vercel, adicione VITE_GEMINI_API_KEY nas Environment Variables e faça um REDEPLOY.");
 }
 
-// Inicializa o SDK padrão do Google Generative AI
-export const ai = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-export const GEMINI_MODEL = "gemini-1.5-flash";
-export const FALLBACK_MODEL = "gemini-1.5-pro";
+// Inicializa o SDK recomendado @google/genai
+export const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+
+// Modelos recomendados e fallbacks
+export const GEMINI_MODEL = "gemini-3-flash-preview";
+export const FALLBACK_MODEL_1 = "gemini-3.1-pro-preview";
+export const FALLBACK_MODEL_2 = "gemini-1.5-flash";
+export const FALLBACK_MODEL_3 = "gemini-pro"; // Modelo 1.0 como última esperança
 
 /**
- * Tenta obter um modelo, com fallback se o principal falhar
+ * Executa uma geração com fallback triplo se o modelo principal falhar (ex: 404)
  */
-export const getModelWithFallback = async (aiInstance: any, options: any) => {
-  // Retornamos o modelo principal, mas o fallback real acontece no generateWithFallback
-  return aiInstance.getGenerativeModel(options);
-};
+export const generateWithFallback = async (params: any) => {
+  if (!ai) throw new Error("IA não configurada.");
 
-/**
- * Executa uma geração com fallback automático se o modelo principal falhar (ex: 404)
- */
-export const generateWithFallback = async (model: any, prompt: any) => {
-  try {
-    const result = await model.generateContent(prompt);
-    return await result.response;
-  } catch (error: any) {
-    if (error.message?.includes("404") || error.message?.includes("not found")) {
-      console.warn(`Modelo ${model.model} não encontrado (404). Tentando fallback com ${FALLBACK_MODEL}...`);
-      if (!ai) throw error;
-      const fallbackModel = ai.getGenerativeModel({ model: FALLBACK_MODEL });
-      const result = await fallbackModel.generateContent(prompt);
-      return await result.response;
+  const modelsToTry = [GEMINI_MODEL, FALLBACK_MODEL_1, FALLBACK_MODEL_2, FALLBACK_MODEL_3];
+  let lastError: any = null;
+
+  for (const modelName of modelsToTry) {
+    try {
+      console.log(`Gemini: Tentando modelo ${modelName}...`);
+      const response = await ai.models.generateContent({
+        ...params,
+        model: modelName
+      });
+      return response;
+    } catch (error: any) {
+      lastError = error;
+      if (error.message?.includes("404") || error.message?.includes("not found") || error.message?.includes("not supported")) {
+        console.warn(`Modelo ${modelName} falhou (404/Unsupported). Tentando próximo...`);
+        continue;
+      }
+      // Se for outro erro (ex: 403), para imediatamente
+      throw error;
     }
-    throw error;
   }
+  throw lastError;
 };
 
 if (ai) {
@@ -134,11 +142,6 @@ export const generateStudyPlanFromNotices = async (
   }
 
   try {
-    const model = await getModelWithFallback(ai, { 
-      model: GEMINI_MODEL,
-      systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Se houver links de vídeo no conteúdo, preserve-os no campo videoUrl. Use 'type': 'study' and 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
-    });
-
     const prompt = `Analise EXAUSTIVAMENTE os seguintes editais/cronogramas:
     ${notices.map(n => `Edital: ${n.name}\nConteúdo: ${n.content}`).join("\n\n")}
     
@@ -156,8 +159,13 @@ export const generateStudyPlanFromNotices = async (
     6. O campo 'day' deve conter o número do dia, o dia da semana e a data (ex: 'Dia 1 (Segunda, 06/04)').
     7. Se o conteúdo for muito grande, gere quantos dias forem necessários (60, 90, 120 dias...).`;
 
-    const response = await generateWithFallback(model, prompt);
-    const text = response.text();
+    const response = await generateWithFallback({ 
+      contents: prompt,
+      config: {
+        systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) do edital. Você deve gerar um plano extenso, detalhado e sequencial. Nunca resuma o conteúdo. Retorne APENAS o JSON. Se houver links de vídeo no conteúdo, preserve-os no campo videoUrl. Use 'type': 'study' and 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
+      }
+    });
+    const text = response.text;
 
     if (!text) throw new Error("A IA não retornou conteúdo.");
     const resultJson = JSON.parse(cleanJson(text));
@@ -200,11 +208,6 @@ export const extractSubjectsFromNotice = async (content: string) => {
   }
 
   try {
-    const model = await getModelWithFallback(ai, { 
-      model: GEMINI_MODEL,
-      systemInstruction: "Você é um especialista em editais e cronogramas de cursos. Sua tarefa é decompor o conteúdo em matérias e tópicos detalhados, PRESERVANDO INTEGRALMENTE a nomenclatura original das aulas e INCLUINDO os tempos de duração se disponíveis. Retorne APENAS o JSON. Seja exaustivo.",
-    });
-
     const prompt = `Analise o seguinte conteúdo de um edital de concurso ou cronograma de curso e extraia as matérias principais com seu peso/importância sugerida e a lista de tópicos detalhados de cada matéria.
       
       CONTEÚDO:
@@ -219,8 +222,13 @@ export const extractSubjectsFromNotice = async (content: string) => {
       6. Não pule nenhum item.
       7. Atribua um peso de 1 a 5 baseado na relevância comum para concursos.`;
 
-    const response = await generateWithFallback(model, prompt);
-    const text = response.text();
+    const response = await generateWithFallback({ 
+      contents: prompt,
+      config: {
+        systemInstruction: "Você é um especialista em editais e cronogramas de cursos. Sua tarefa é decompor o conteúdo em matérias e tópicos detalhados, PRESERVANDO INTEGRALMENTE a nomenclatura original das aulas e INCLUINDO os tempos de duração se disponíveis. Retorne APENAS o JSON. Seja exaustivo.",
+      }
+    });
+    const text = response.text;
 
     if (!text) throw new Error("A IA não retornou conteúdo.");
     return JSON.parse(cleanJson(text)).subjects;
@@ -236,11 +244,6 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
   }
 
   try {
-    const model = await getModelWithFallback(ai, { 
-      model: GEMINI_MODEL,
-      systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) das matérias. Gere um plano extenso e detalhado. Nunca resuma. Retorne APENAS o JSON. Use 'type': 'study' and 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
-    });
-
     const prompt = `Crie um plano de estudos detalhado para o objetivo: "${goal}". 
       Matérias de foco: ${subjects.join(", ")}. 
       Tempo disponível: ${hoursPerDay} horas por dia. 
@@ -252,8 +255,13 @@ export const generateStudyPlan = async (goal: string, subjects: string[], hoursP
       4. OBRIGATÓRIO: Cada dia de estudo deve conter EXATAMENTE 2 tópicos novos (type: 'study'). Divida o conteúdo para caber em 2 tópicos por dia.
       5. OBRIGATÓRIO: O primeiro item de estudo de cada dia (a partir do Dia 2) DEVE SER uma "Revisão" (type: "revision") das 2 matérias estudadas no dia anterior.`;
 
-    const response = await generateWithFallback(model, prompt);
-    const text = response.text();
+    const response = await generateWithFallback({ 
+      contents: prompt,
+      config: {
+        systemInstruction: "Você é um especialista em concursos. Sua prioridade absoluta é a COBERTURA TOTAL (100%) das matérias. Gere um plano extenso e detalhado. Nunca resuma. Retorne APENAS o JSON. Use 'type': 'study' and 'type': 'revision'. O campo 'day' deve incluir o dia da semana e a data (ex: Dia 1 (Segunda, 06/04)).",
+      }
+    });
+    const text = response.text;
 
     if (!text) throw new Error("A IA não retornou nenhum conteúdo.");
 
@@ -299,9 +307,10 @@ export const generateFlashcardsFromMultimodal = async (
 
   try {
     console.log(`Gemini: Iniciando geração de flashcards para "${contentName}" com o modelo ${GEMINI_MODEL}`);
-    const model = await getModelWithFallback(ai, { 
-      model: GEMINI_MODEL,
-      systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido e gerar exatamente 20 flashcards detalhados e variados.
+    const response = await generateWithFallback({ 
+      contents: [{ role: 'user', parts }],
+      config: {
+        systemInstruction: `Você é um especialista em memorização e concursos. Sua tarefa é analisar o conteúdo fornecido e gerar exatamente 20 flashcards detalhados e variados.
       
       O nome do conteúdo é: "${contentName}".
       
@@ -316,10 +325,9 @@ export const generateFlashcardsFromMultimodal = async (
           { "question": "...", "answer": "...", "subject": "..." }
         ]
       }`,
+      }
     });
-
-    const response = await generateWithFallback(model, { contents: [{ role: 'user', parts }] });
-    const text = response.text();
+    const text = response.text;
 
     if (!text) throw new Error("A IA não retornou conteúdo.");
     
@@ -364,13 +372,13 @@ export const analyzeContent = async (content: string, type: 'text' | 'pdf' | 'vi
   }
 
   try {
-    const model = await getModelWithFallback(ai, { 
-      model: GEMINI_MODEL,
-      systemInstruction: "Você é um assistente de estudos. Sua tarefa é resumir conteúdos e extrair tópicos principais para facilitar o aprendizado. Retorne APENAS o JSON.",
+    const response = await generateWithFallback({ 
+      contents: content.substring(0, 30000),
+      config: {
+        systemInstruction: "Você é um assistente de estudos. Sua tarefa é resumir conteúdos e extrair tópicos principais para facilitar o aprendizado. Retorne APENAS o JSON.",
+      }
     });
-
-    const response = await generateWithFallback(model, content.substring(0, 30000));
-    const text = response.text();
+    const text = response.text;
 
     if (!text) throw new Error("A IA não retornou conteúdo.");
     return JSON.parse(cleanJson(text));
