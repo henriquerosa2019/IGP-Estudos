@@ -101,7 +101,18 @@ export default function Tutor() {
     const uid = user?.uid || localStorage.getItem('igp_local_uid');
     if (!uid) return;
 
-    const q = query(collection(db, "contentItems"), where("uid", "==", uid));
+    const isAdmin = user && (
+      user.email === "henrique.rosa@poli.ufrj.br" || 
+      user.email === "brunool.rj@gmail.com"
+    );
+
+    let q;
+    if (isAdmin) {
+      q = query(collection(db, "contentItems"));
+    } else {
+      q = query(collection(db, "contentItems"), where("uid", "==", uid));
+    }
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setLibraryItems(items);
