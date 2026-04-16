@@ -892,17 +892,21 @@ export default function Flashcards() {
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
             >
               {/* Front */}
-              <Card className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-12 text-center border-2 border-zinc-100 shadow-xl">
-                <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-4">Pergunta</span>
-                <h2 className="text-2xl font-bold text-zinc-900">{currentCard?.question}</h2>
-                <p className="mt-8 text-zinc-400 text-sm italic">Clique para ver a resposta</p>
+              <Card className="absolute inset-0 backface-hidden flex flex-col p-8 text-center border-2 border-zinc-100 dark:border-zinc-800 shadow-xl dark:bg-zinc-900">
+                <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-4 shrink-0">Pergunta</span>
+                <div className="flex-1 overflow-y-auto w-full pr-2 flex items-center justify-center">
+                  <h2 className="text-xl md:text-2xl font-bold text-zinc-900 dark:text-white leading-relaxed">{currentCard?.question}</h2>
+                </div>
+                <p className="mt-4 text-zinc-400 text-sm italic shrink-0">Clique para ver a resposta</p>
               </Card>
 
               {/* Back */}
-              <Card className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-12 text-center border-2 border-indigo-100 dark:border-indigo-900 shadow-xl bg-indigo-50/30 dark:bg-zinc-800 [transform:rotateY(180deg)]">
-                <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-4">Resposta</span>
-                <div className="text-xl text-zinc-800 dark:text-white dark:font-bold leading-relaxed prose prose-indigo max-w-none">
-                  <Markdown>{currentCard?.answer}</Markdown>
+              <Card className="absolute inset-0 backface-hidden flex flex-col p-8 text-center border-2 border-indigo-100 dark:border-indigo-900 shadow-xl bg-indigo-50/30 dark:bg-zinc-800 [transform:rotateY(180deg)]">
+                <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-4 shrink-0">Resposta</span>
+                <div className="flex-1 overflow-y-auto w-full pr-2 pb-4 flex items-center justify-center">
+                  <div className="text-lg md:text-xl text-zinc-800 dark:text-white dark:font-bold leading-relaxed prose prose-indigo max-w-none text-center">
+                    <Markdown>{currentCard?.answer}</Markdown>
+                  </div>
                 </div>
               </Card>
             </motion.div>
