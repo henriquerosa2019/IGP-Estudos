@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
-// VERSION: 1.0.9 - Full Migration to @google/genai & Triple Fallback
-(window as any).IGP_GEMINI_VERSION = "1.0.9";
+// VERSION: 1.1.1 - AIza Prefix Validation
+(window as any).IGP_GEMINI_VERSION = "1.1.1";
 
 // Função para o usuário diagnosticar a chave no console
 (window as any).CHECK_GEMINI_KEY = async () => {
@@ -9,31 +9,35 @@ import { GoogleGenAI } from "@google/genai";
   
   const key = getApiKey();
   if (!key) {
-    console.log("%c❌ STATUS: Chave NÃO encontrada nas variáveis de ambiente.", "color: #ff4444; font-weight: bold;");
+    console.log("%c❌ STATUS: Chave NÃO encontrada. Verifique se o nome é VITE_GEMINI_API_KEY na Vercel.", "color: #ff4444; font-weight: bold;");
     return "Falha: Chave ausente";
+  }
+
+  if (!key.startsWith("AIza")) {
+    console.log("%c⚠️ ALERTA DE FORMATO: Sua chave não começa com 'AIza'.", "color: #ffbb33; font-weight: bold;");
+    console.log("As chaves do Gemini AI Studio DEVEM começar com AIza. Chaves que começam com 'AQ.' são tokens temporários e NÃO funcionam aqui.");
   }
 
   console.log(`%c✅ STATUS: Chave detectada! (${key.substring(0, 6)}...)`, "color: #00C851; font-weight: bold;");
   
   if (!ai) return "Falha: SDK nulo";
 
-  console.log("🧪 Testando comunicação com o servidor do Google...");
+  console.log("🧪 Testando comunicação...");
   try {
     const response = await ai.models.generateContent({
       model: GEMINI_MODEL,
       contents: "Oi"
     });
     console.log(`%c🚀 RESPOSTA DA IA: ${response.text}`, "color: #33b5e5; font-weight: bold;");
-    console.log("%c✅ Conexão básica OK!", "color: #00C851; font-weight: bold;");
     return "Sucesso: IA Operacional";
   } catch (e: any) {
-    console.log("%c⚠️ Erro na conexão inicial. Detalhes:", "color: #ffbb33;");
+    console.log("%c❌ ERRO NA COMUNICAÇÃO:", "color: #ff4444; font-weight: bold;");
     console.error(e.message);
     return `Erro: ${e.message}`;
   }
 };
 
-console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.0.9");
+console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.1.1");
 console.log("💡 Digite await CHECK_GEMINI_KEY() no console para testar sua chave.");
 
 // Função robusta para capturar a chave da API em diferentes ambientes (Vite, Vercel, Local)
