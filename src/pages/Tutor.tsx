@@ -267,24 +267,57 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
     scrollToBottom();
   }, [messages]);
 
-  const handleSaveConversation = () => {
+  const handleSaveConversation = async () => {
     if (messages.length <= 1) {
       toast.error("Inicie uma conversa antes de salvar.");
       return;
     }
 
-    const title = messages.find(m => m.role === 'user')?.content.substring(0, 30) + "..." || "Conversa sem título";
-    const newConversation: SavedConversation = {
-      id: Date.now().toString(),
-      title,
-      date: new Date().toLocaleString('pt-BR'),
-      messages: [...messages]
-    };
+    const toastId = toast.loading("Gerando título e salvando...");
+    let title = "Conversa de Estudo";
 
-    const updated = [newConversation, ...savedConversations];
-    setSavedConversations(updated);
-    localStorage.setItem("aestudamos_tutor_chats", JSON.stringify(updated));
-    toast.success("Conversa salva com sucesso!");
+    try {
+      // Tentar gerar um título curto com IA baseado no contexto da conversa
+      if (ai && messages.length >= 2) {
+        const firstUserMessage = messages.find(m => m.role === 'user');
+        const contentForTitle = firstUserMessage?.content || "";
+        
+        try {
+          const prompt = `Gere um título curto, direto e profissional (máximo de 5 palavras) em português para uma conversa de estudo que começou com: "${contentForTitle.substring(0, 150)}". Responda APENAS o título, sem aspas ou pontos finais desnecessários.`;
+          
+          const response = await generateWithFallback({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+          });
+          
+          if (response.text) {
+            title = response.text.replace(/"/g, '').replace(/\.$/, '').trim();
+          } else {
+            title = contentForTitle.substring(0, 30) + "...";
+          }
+        } catch (aiError) {
+          console.warn("Falha ao gerar título com IA:", aiError);
+          title = contentForTitle.substring(0, 30) + "...";
+        }
+      } else {
+        const firstUserContent = messages.find(m => m.role === 'user')?.content || "Conversa de Estudo";
+        title = firstUserContent.substring(0, 30) + "...";
+      }
+
+      const newConversation: SavedConversation = {
+        id: Date.now().toString(),
+        title,
+        date: new Date().toLocaleString('pt-BR'),
+        messages: [...messages]
+      };
+
+      const updated = [newConversation, ...savedConversations];
+      setSavedConversations(updated);
+      localStorage.setItem("aestudamos_tutor_chats", JSON.stringify(updated));
+      toast.success(`Conversa "${title}" salva com sucesso!`, { id: toastId });
+    } catch (error) {
+      console.error("Erro ao salvar conversa:", error);
+      toast.error("Erro ao salvar conversa.", { id: toastId });
+    }
   };
 
   const loadConversation = (conv: SavedConversation) => {
@@ -559,6 +592,15 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
             Histórico
           </Button>
           <Button 
+            variant="ghost" 
+            size="sm" 
+            className="gap-2 text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={handleFinishSession}
+          >
+            <LogOut className="w-4 h-4" />
+            Encerrar Conversa
+          </Button>
+          <Button 
             size="sm" 
             className="gap-2 bg-black text-[#FF9900] hover:bg-zinc-900 hover:text-[#FF9900]"
             onClick={handleFinishSession}
@@ -586,7 +628,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                 <CardContent className="flex flex-col gap-3">
                   <Button 
                     className="w-full bg-indigo-600 hover:bg-indigo-700 gap-2"
-                    onClick={() => { handleSaveConversation(); handleNewChat(); }}
+                    onClick={async () => { await handleSaveConversation(); handleNewChat(); }}
                   >
                     <Save className="w-4 h-4" />
                     Sim, Salvar e Encerrar
