@@ -1,43 +1,50 @@
 import { GoogleGenAI } from "@google/genai";
 
-// VERSION: 1.1.1 - AIza Prefix Validation
-(window as any).IGP_GEMINI_VERSION = "1.1.1";
+// VERSION: 1.1.5 - Configuration Finalized
+(window as any).IGP_GEMINI_VERSION = "1.1.5";
 
 // Função para o usuário diagnosticar a chave no console
 (window as any).CHECK_GEMINI_KEY = async () => {
-  console.log("%c🔍 DIAGNÓSTICO IGP ESTUDOS - GEMINI AI", "color: #FF9900; font-weight: bold; font-size: 14px;");
+  console.log("%c🔍 DIAGNÓSTICO IGP ESTUDOS - GEMINI AI (v1.1.4)", "color: #FF9900; font-weight: bold; font-size: 14px;");
   
   const key = getApiKey();
   if (!key) {
-    console.log("%c❌ STATUS: Chave NÃO encontrada. Verifique se o nome é VITE_GEMINI_API_KEY na Vercel.", "color: #ff4444; font-weight: bold;");
+    console.log("%c❌ STATUS: Chave NÃO encontrada.", "color: #ff4444; font-weight: bold;");
+    console.log("Ação: Adicione VITE_GEMINI_API_KEY nas Environment Variables da Vercel.");
     return "Falha: Chave ausente";
   }
 
-  if (!key.startsWith("AIza")) {
-    console.log("%c⚠️ ALERTA DE FORMATO: Sua chave não começa com 'AIza'.", "color: #ffbb33; font-weight: bold;");
-    console.log("As chaves do Gemini AI Studio DEVEM começar com AIza. Chaves que começam com 'AQ.' são tokens temporários e NÃO funcionam aqui.");
+  console.log(`%cℹ️ TIPO DE CHAVE: ${key.startsWith("AIza") ? "Chave Padrão (OK)" : "Token Incompatível (ERRO)"}`, "font-weight: bold;");
+  
+  if (key.startsWith("AQ.")) {
+    console.log("%c🚨 ALERTA CRÍTICO: Você está copiando um 'Token de Acesso' (AQ.) em vez de uma 'Chave de API'.", "color: #ff4444; font-weight: bold;");
+    console.log("Tokens AQ. expiram em 60 minutos. Você precisa de uma chave que comece com AIza.");
+    console.log("DICA: Tente usar um GMAIL PESSOAL em vez da conta da POLI para gerar a chave.");
+    alert("ERRO CRÍTICO: Sua chave começa com 'AQ.'. Use uma conta @gmail.com pessoal para gerar uma chave no AI Studio que comece com 'AIza'.");
   }
 
-  console.log(`%c✅ STATUS: Chave detectada! (${key.substring(0, 6)}...)`, "color: #00C851; font-weight: bold;");
+  console.log(`%c✅ STATUS: Chave detectada pelo sistema! (${key.substring(0, 6)}...)`, "color: #00C851; font-weight: bold;");
   
   if (!ai) return "Falha: SDK nulo";
 
-  console.log("🧪 Testando comunicação...");
+  console.log("🧪 Testando comunicação com o servidor do Google...");
   try {
     const response = await ai.models.generateContent({
       model: GEMINI_MODEL,
       contents: "Oi"
     });
     console.log(`%c🚀 RESPOSTA DA IA: ${response.text}`, "color: #33b5e5; font-weight: bold;");
+    console.log("%c✅ TUDO PRONTO! O sistema está operando normalmente.", "color: #00C851; font-weight: bold;");
     return "Sucesso: IA Operacional";
   } catch (e: any) {
-    console.log("%c❌ ERRO NA COMUNICAÇÃO:", "color: #ff4444; font-weight: bold;");
-    console.error(e.message);
-    return `Erro: ${e.message}`;
+    console.log("%c❌ ERRO RETORNADO PELO GOOGLE:", "color: #ff4444; font-weight: bold;");
+    console.error("Mensagem:", e.message);
+    console.log("Dica: Se o erro diz 'API key expired', a chave AQ. realmente parou de funcionar e você precisa da AIza.");
+    return `Erro final: ${e.message}`;
   }
 };
 
-console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.1.1");
+console.log("IGP ESTUDOS: Módulo Gemini carregado. Versão 1.1.4");
 console.log("💡 Digite await CHECK_GEMINI_KEY() no console para testar sua chave.");
 
 // Função robusta para capturar a chave da API em diferentes ambientes (Vite, Vercel, Local)
