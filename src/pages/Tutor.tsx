@@ -419,12 +419,12 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
     <div className="h-[calc(100vh-8rem)] flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-            <BrainCircuit className="w-6 h-6 text-indigo-600" />
+          <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+            <BrainCircuit className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IgpAI</h1>
-            <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Tire suas dúvidas em tempo real com inteligência artificial.</p>
+            <h1 className="text-5xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IgpAI</h1>
+            <p className="text-white  font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Tire suas dúvidas em tempo real com inteligência artificial.</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -433,7 +433,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                className="gap-2 border-primary/20 text-primary hover:bg-primary/10"
               >
                 <Type className="w-4 h-4" />
                 Colar Texto
@@ -464,7 +464,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsPasteOpen(false)}>Cancelar</Button>
-                <Button onClick={handlePasteSubmit} className="bg-indigo-600 hover:bg-indigo-700">
+                <Button onClick={handlePasteSubmit} className="bg-primary hover:bg-primary/80">
                   Importar para o Tutor
                 </Button>
               </DialogFooter>
@@ -482,7 +482,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                className="gap-2 border-primary/20 text-primary hover:bg-primary/10"
               >
                 <BookOpen className="w-4 h-4" />
                 Importar do Acervo
@@ -530,16 +530,16 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                               setSelectedLibrarySubject(subject);
                               setLibraryView('items');
                             }}
-                            className="w-full flex items-center gap-3 p-4 rounded-xl border border-zinc-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left group"
+                            className="w-full flex items-center gap-3 p-4 rounded-xl border border-zinc-100 hover:border-primary/20 hover:bg-primary/10 transition-all text-left group"
                           >
-                            <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600 group-hover:bg-indigo-100">
+                            <div className="p-3 bg-primary/10 rounded-xl text-primary group-hover:bg-yellow-100">
                               <Folder className="w-5 h-5 fill-current opacity-40" />
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-bold text-zinc-700">{subject}</p>
+                              <p className="text-sm font-bold text-zinc-300">{subject}</p>
                               <p className="text-[10px] text-zinc-400 font-bold uppercase">{count} ite{count === 1 ? 'm' : 'ns'}</p>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-indigo-400" />
+                            <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-yellow-400" />
                           </button>
                         );
                       })
@@ -561,19 +561,19 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                               setIsLibraryOpen(false);
                               toast.success(`Material "${item.title}" importado!`);
                             }}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left group"
+                            className="w-full flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:border-primary/20 hover:bg-primary/10 transition-all text-left group"
                           >
-                            <div className="p-2 bg-zinc-100 rounded-lg text-zinc-500 group-hover:bg-indigo-100 group-hover:text-indigo-600">
+                            <div className="p-2 bg-card rounded-lg text-zinc-500 group-hover:bg-yellow-100 group-hover:text-primary">
                               {item.type === 'pdf' ? <FileText className="w-4 h-4" /> : 
                                item.type === 'video' ? <Video className="w-4 h-4" /> : 
                                item.type === 'link' ? <LinkIcon className="w-4 h-4" /> :
                                <Type className="w-4 h-4" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-zinc-700 truncate">{item.title}</p>
+                              <p className="text-sm font-bold text-zinc-300 truncate">{item.title}</p>
                               <p className="text-[10px] text-zinc-400 uppercase font-black">{item.subCategory || item.subject}</p>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-indigo-400" />
+                            <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-yellow-400" />
                           </button>
                         ))
                     )}
@@ -594,7 +594,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
           <Button 
             variant="ghost" 
             size="sm" 
-            className="gap-2 text-red-600 hover:bg-red-50 hover:text-red-700"
+            className="gap-2 text-primary hover:bg-red-50 hover:text-red-700"
             onClick={handleFinishSession}
           >
             <LogOut className="w-4 h-4" />
@@ -602,7 +602,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
           </Button>
           <Button 
             size="sm" 
-            className="gap-2 bg-black text-[#FF9900] hover:bg-zinc-900 hover:text-[#FF9900]"
+            className="gap-2 bg-black text-primary hover:bg-zinc-900 hover:text-primary"
             onClick={handleFinishSession}
           >
             <Plus className="w-4 h-4" />
@@ -618,16 +618,16 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center p-6"
+              className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-6"
             >
-              <Card className="max-w-md w-full border-indigo-100 shadow-2xl">
+              <Card className="max-w-md w-full border-primary/10 shadow-2xl">
                 <CardHeader className="text-center">
                   <CardTitle className="text-lg">Encerrar Conversa</CardTitle>
                   <p className="text-sm text-zinc-500">Deseja salvar esta conversa no seu histórico antes de sair?</p>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3">
                   <Button 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 gap-2"
+                    className="w-full bg-primary hover:bg-primary/80 gap-2"
                     onClick={async () => { await handleSaveConversation(); handleNewChat(); }}
                   >
                     <Save className="w-4 h-4" />
@@ -635,7 +635,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                   </Button>
                   <Button 
                     variant="outline"
-                    className="w-full gap-2 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    className="w-full gap-2 text-primary hover:bg-red-50 hover:text-red-700"
                     onClick={handleNewChat}
                   >
                     <XCircle className="w-4 h-4" />
@@ -662,9 +662,9 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
               className="h-full overflow-hidden"
             >
               <Card className="h-full flex flex-col border-zinc-200">
-                <CardHeader className="py-4 border-b bg-zinc-50/50">
+                <CardHeader className="py-4 border-b bg-background/50">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-indigo-600" />
+                    <MessageSquare className="w-4 h-4 text-primary" />
                     Conversas Salvas
                   </CardTitle>
                 </CardHeader>
@@ -680,10 +680,10 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                           <div
                             key={conv.id}
                             onClick={() => loadConversation(conv)}
-                            className="group flex items-center justify-between p-3 rounded-lg hover:bg-indigo-50 cursor-pointer transition-colors border border-transparent hover:border-indigo-100"
+                            className="group flex items-center justify-between p-3 rounded-lg hover:bg-primary/10 cursor-pointer transition-colors border border-transparent hover:border-primary/10"
                           >
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-zinc-700 truncate group-hover:text-indigo-700">
+                              <p className="text-xs font-bold text-zinc-300 truncate group-hover:text-yellow-700">
                                 {conv.title}
                               </p>
                               <p className="text-[10px] text-zinc-400 mt-0.5">{conv.date}</p>
@@ -708,7 +708,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
         </AnimatePresence>
 
         <Card className="flex-1 flex flex-col overflow-hidden border-zinc-200 min-h-0">
-          <CardHeader className="border-b bg-zinc-50/50 py-4 shrink-0">
+          <CardHeader className="border-b bg-background/50 py-4 shrink-0">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -735,19 +735,19 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                       animate={{ opacity: 1, y: 0 }}
                       className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
                     >
-                      <Avatar className={msg.role === 'assistant' ? 'bg-indigo-600' : 'bg-zinc-200'}>
+                      <Avatar className={msg.role === 'assistant' ? 'bg-primary' : 'bg-zinc-200'}>
                         {msg.role === 'assistant' ? (
-                          <AvatarFallback className="bg-indigo-600 text-white"><Bot className="w-5 h-5" /></AvatarFallback>
+                          <AvatarFallback className="bg-primary text-white"><Bot className="w-5 h-5" /></AvatarFallback>
                         ) : (
                           <AvatarFallback className="bg-zinc-800 text-white"><User className="w-5 h-5" /></AvatarFallback>
                         )}
                       </Avatar>
                       <div className={`max-w-[85%] rounded-2xl px-6 py-4 text-lg leading-relaxed ${
                         msg.role === 'assistant' 
-                          ? 'bg-zinc-100 text-zinc-800 rounded-tl-none' 
-                          : 'bg-indigo-600 text-white rounded-tr-none'
+                          ? 'bg-card text-white rounded-tl-none' 
+                          : 'bg-primary text-white rounded-tr-none'
                       }`}>
-                        <div className="prose prose-lg max-w-none prose-indigo dark:prose-invert prose-p:my-4 first:prose-p:mt-0 last:prose-p:mb-0">
+                        <div className="prose prose-lg max-w-none prose-yellow dark:prose-invert prose-p:my-4 first:prose-p:mt-0 last:prose-p:mb-0">
                           <Markdown>{msg.content}</Markdown>
                         </div>
                       </div>
@@ -756,10 +756,10 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                 </AnimatePresence>
                 {loading && (
                   <div className="flex gap-4">
-                    <Avatar className="bg-indigo-600">
-                      <AvatarFallback className="bg-indigo-600 text-white"><Bot className="w-5 h-5" /></AvatarFallback>
+                    <Avatar className="bg-primary">
+                      <AvatarFallback className="bg-primary text-white"><Bot className="w-5 h-5" /></AvatarFallback>
                     </Avatar>
-                    <div className="bg-zinc-100 rounded-2xl rounded-tl-none px-4 py-3 flex gap-1 items-center">
+                    <div className="bg-card rounded-2xl rounded-tl-none px-4 py-3 flex gap-1 items-center">
                       <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" />
                       <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:0.2s]" />
                       <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:0.4s]" />
@@ -776,14 +776,14 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   onClick={scrollToBottom}
-                  className="absolute bottom-24 right-8 w-10 h-10 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-colors z-10"
+                  className="absolute bottom-24 right-8 w-10 h-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary/80 transition-colors z-10"
                 >
                   <ArrowDown className="w-5 h-5" />
                 </motion.button>
               )}
             </AnimatePresence>
 
-            <div className="p-4 border-t bg-white">
+            <div className="p-4 border-t bg-background">
               <form 
                 onSubmit={(e) => { e.preventDefault(); handleSend(); }}
                 className="flex gap-2 items-end"
@@ -804,7 +804,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                 <Button 
                   type="submit" 
                   disabled={loading || !input.trim()} 
-                  className="bg-indigo-600 hover:bg-indigo-700 h-[44px] w-[44px] p-0 shrink-0"
+                  className="bg-primary hover:bg-primary/80 h-[44px] w-[44px] p-0 shrink-0"
                 >
                   <Send className="w-4 h-4" />
                 </Button>

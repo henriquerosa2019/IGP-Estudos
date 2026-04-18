@@ -38,7 +38,7 @@ export default function Dashboard() {
     { label: "Tópicos Concluídos", value: "0", icon: CheckCircle2, color: "text-green-500", description: "", tooltip: "" },
     { label: "Horas de Estudo", value: "0h", icon: Clock, color: "text-blue-500", description: "", tooltip: "" },
     { label: "Ofensiva", value: "0 dias", icon: Trophy, color: "text-orange-500", description: "Dias seguidos de estudo", tooltip: "Sua ofensiva aumenta a cada dia consecutivo que você conclui pelo menos um tópico de estudo." },
-    { label: "Precisão", value: "0%", icon: TrendingUp, color: "text-indigo-500", description: "Acertos nos flashcards", tooltip: "Sua precisão é calculada com base na quantidade de flashcards que você acertou (marcou como fácil) durante as revisões." },
+    { label: "Precisão", value: "0%", icon: TrendingUp, color: "text-primary", description: "Acertos nos flashcards", tooltip: "Sua precisão é calculada com base na quantidade de flashcards que você acertou (marcou como fácil) durante as revisões." },
   ]);
   const [subjectProgress, setSubjectProgress] = useState<{subject: string, progress: number}[]>([]);
   const [unauthorizedAttempts, setUnauthorizedAttempts] = useState<any[]>([]);
@@ -229,7 +229,7 @@ export default function Dashboard() {
         { label: "Tópicos Concluídos", value: totalCompleted.toString(), icon: CheckCircle2, color: "text-green-500", description: "", tooltip: "" },
         { label: "Horas de Estudo", value: `${hours}h`, icon: Clock, color: "text-blue-500", description: "", tooltip: "" },
         { label: "Ofensiva", value: `${streak} dia${streak !== 1 ? 's' : ''}`, icon: Trophy, color: "text-orange-500", description: "Dias seguidos de estudo", tooltip: "Sua ofensiva aumenta a cada dia consecutivo que você conclui pelo menos um tópico de estudo." },
-        { label: "Precisão", value: accuracy, icon: TrendingUp, color: "text-indigo-500", description: "Acertos nos flashcards", tooltip: "Sua precisão é calculada com base na quantidade de flashcards que você acertou (marcou como fácil) durante as revisões." },
+        { label: "Precisão", value: accuracy, icon: TrendingUp, color: "text-primary", description: "Acertos nos flashcards", tooltip: "Sua precisão é calculada com base na quantidade de flashcards que você acertou (marcou como fácil) durante as revisões." },
       ]);
     };
 
@@ -241,20 +241,20 @@ export default function Dashboard() {
   }, [authReady, user]);
 
   return (
-    <div className="space-y-8 text-zinc-900 dark:text-zinc-50">
+    <div className="space-y-8 text-white dark:text-zinc-50">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-5xl tracking-wide text-[#FF9900]" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Bem-vindo de volta!</h1>
-          <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Seu progresso é medido por cada tópico concluído nos seus editais.</p>
+          <h1 className="text-5xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Bem-vindo de volta!</h1>
+          <p className="text-white  font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Seu progresso é medido por cada tópico concluído nos seus editais.</p>
         </div>
-        <div className="p-4 bg-white rounded-2xl border border-zinc-200 shadow-sm flex flex-col items-center justify-center gap-2">
+        <div className="p-4 bg-background rounded-2xl border border-zinc-200 shadow-sm flex flex-col items-center justify-center gap-2">
           <img 
             src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
             alt="IGP Estudos 2.0 Logo" 
             className="h-32 w-auto object-contain"
             referrerPolicy="no-referrer"
           />
-          <span className="text-[#FF9900] text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
+          <span className="text-primary text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
         </div>
       </div>
 
@@ -322,10 +322,10 @@ export default function Dashboard() {
             {subjectProgress.map((item) => (
               <div key={item.subject} className="space-y-2">
                 <div className="flex justify-between items-center text-sm font-medium">
-                  <span className="truncate max-w-[200px] text-zinc-700">{item.subject}</span>
-                  <span className="text-indigo-600 font-bold">{item.progress}%</span>
+                  <span className="truncate max-w-[200px] text-zinc-300">{item.subject}</span>
+                  <span className="text-primary font-bold">{item.progress}%</span>
                 </div>
-                <Progress value={item.progress} className="h-2.5 bg-zinc-100" />
+                <Progress value={item.progress} className="h-2.5 bg-card" />
               </div>
             ))}
           </CardContent>
@@ -335,7 +335,7 @@ export default function Dashboard() {
       {user?.email === "henrique.rosa@poli.ufrj.br" && unauthorizedAttempts.length > 0 && (
         <Card className="border-red-200 bg-red-50/30">
           <CardHeader>
-            <CardTitle className="text-red-600 flex items-center gap-2">
+            <CardTitle className="text-primary flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
               Tentativas de Acesso Não Autorizadas
             </CardTitle>
@@ -344,13 +344,13 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-4">
               {unauthorizedAttempts.map((attempt) => (
-                <div key={attempt.id} className="flex items-center justify-between p-3 bg-white border border-red-100 rounded-xl shadow-sm">
+                <div key={attempt.id} className="flex items-center justify-between p-3 bg-background border border-red-100 rounded-xl shadow-sm">
                   <div className="flex items-center gap-4">
                     <div className="p-2 bg-red-100 rounded-full">
-                      <MailIcon className="w-4 h-4 text-red-600" />
+                      <MailIcon className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <p className="font-bold text-zinc-900">{attempt.email}</p>
+                      <p className="font-bold text-white">{attempt.email}</p>
                       <p className="text-xs text-zinc-500">
                         {attempt.details?.name} {attempt.details?.surname} • {attempt.details?.whatsapp}
                       </p>

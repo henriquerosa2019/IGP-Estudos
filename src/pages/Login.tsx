@@ -128,7 +128,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-4 py-12">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 py-12">
       <div className="mb-8 flex flex-col items-center">
         <img 
           src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
@@ -136,14 +136,14 @@ export default function Login() {
           className="h-48 w-auto object-contain mb-4"
           referrerPolicy="no-referrer"
         />
-        <h1 className="text-4xl tracking-wide text-[#FF9900]" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</h1>
+        <h1 className="text-4xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</h1>
         <p className="text-zinc-500 mt-2">Acesso ao Portal do Aluno</p>
       </div>
 
       <Card className="max-w-md w-full border-zinc-200 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <LogIn className="w-6 h-6 text-indigo-600" />
+            <LogIn className="w-6 h-6 text-primary" />
             Entrar
           </CardTitle>
           <CardDescription>
@@ -182,7 +182,7 @@ export default function Login() {
             </div>
             <Button 
               type="submit" 
-              className="w-full bg-indigo-600 hover:bg-indigo-700 py-6 text-lg font-bold shadow-lg shadow-indigo-100"
+              className="w-full bg-primary hover:bg-primary/80 py-6 text-lg font-bold shadow-lg shadow-yellow-100"
               disabled={loading}
             >
               {loading ? "Entrando..." : "Entrar"}
@@ -193,7 +193,7 @@ export default function Login() {
                 type="button"
                 onClick={handleForgotPassword}
                 disabled={resetLoading}
-                className="text-xs text-zinc-500 hover:text-indigo-600 hover:underline"
+                className="text-xs text-zinc-500 hover:text-primary hover:underline"
               >
                 {resetLoading ? "Enviando..." : "Esqueceu a senha?"}
               </button>
@@ -205,13 +205,13 @@ export default function Login() {
               <span className="w-full border-t border-zinc-200" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-zinc-500">Ou continue com</span>
+              <span className="bg-background px-2 text-zinc-500">Ou continue com</span>
             </div>
           </div>
 
           <Button 
             variant="outline" 
-            className="w-full py-6 border-zinc-200 hover:bg-zinc-50"
+            className="w-full py-6 border-zinc-200 hover:bg-background"
             onClick={handleGoogleLogin}
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5 mr-2" alt="Google" />
@@ -221,7 +221,7 @@ export default function Login() {
           <div className="text-center space-y-2">
             <p className="text-sm text-zinc-600">
               Não tem uma conta?{" "}
-              <Link to="/registrar" className="text-indigo-600 font-bold hover:underline">
+              <Link to="/registrar" className="text-primary font-bold hover:underline">
                 Inscreva-se agora
               </Link>
             </p>

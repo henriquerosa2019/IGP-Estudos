@@ -208,31 +208,31 @@ export default function Register() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full border-zinc-200 shadow-xl">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
               <CheckCircle2 className="w-10 h-10 text-green-600" />
             </div>
-            <CardTitle className="text-2xl font-bold text-zinc-900">Inscrição Confirmada!</CardTitle>
+            <CardTitle className="text-2xl font-bold text-white">Inscrição Confirmada!</CardTitle>
             <CardDescription className="text-lg">
               Sua conta foi criada com sucesso na **IGP Estudos 2.0**.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 space-y-3">
-              <h4 className="font-bold text-indigo-900 flex items-center gap-2">
+            <div className="p-4 bg-primary/10 rounded-xl border border-primary/10 space-y-3">
+              <h4 className="font-bold text-yellow-900 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" /> Próximos Passos:
               </h4>
-              <p className="text-sm text-indigo-800">
+              <p className="text-sm text-yellow-800">
                 Sua conta foi ativada para o e-mail: **{formData.email}**.
               </p>
-              <p className="text-sm text-indigo-800">
+              <p className="text-sm text-yellow-800">
                 Você já pode acessar o sistema com sua senha padrão.
               </p>
             </div>
 
-            <div className="p-4 bg-zinc-100 rounded-xl border border-zinc-200">
+            <div className="p-4 bg-card rounded-xl border border-zinc-200">
               <p className="text-xs text-zinc-500 uppercase font-bold mb-2">Credenciais de Acesso</p>
               <div className="space-y-1">
                 <p className="text-sm"><strong>Login:</strong> {formData.email}</p>
@@ -240,7 +240,7 @@ export default function Register() {
               </div>
             </div>
 
-            <Button className="w-full p-0 bg-indigo-600 hover:bg-indigo-700">
+            <Button className="w-full p-0 bg-primary hover:bg-primary/80">
               <Link to="/login" className="flex items-center justify-center w-full h-full py-2">Ir para o Login</Link>
             </Button>
           </CardContent>
@@ -250,7 +250,7 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-4 py-12">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 py-12">
       <div className="mb-8 flex flex-col items-center">
         <img 
           src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
@@ -258,7 +258,7 @@ export default function Register() {
           className="h-48 w-auto object-contain mb-4"
           referrerPolicy="no-referrer"
         />
-        <h1 className="text-4xl tracking-wide text-[#FF9900]" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</h1>
+        <h1 className="text-4xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</h1>
         <p className="text-zinc-500 mt-2">Inscrição de Novo Aluno</p>
       </div>
 
@@ -266,7 +266,7 @@ export default function Register() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <UserPlus className="w-6 h-6 text-indigo-600" />
+              <UserPlus className="w-6 h-6 text-primary" />
               Formulário de Inscrição
             </CardTitle>
             <Button variant="ghost" size="sm" className="text-zinc-500 p-0">
@@ -284,7 +284,7 @@ export default function Register() {
             <div className="flex justify-center mb-4">
               <p className="text-sm text-zinc-600">
                 Já tem uma conta?{" "}
-                <Link to="/login" className="text-indigo-600 font-bold hover:underline">
+                <Link to="/login" className="text-primary font-bold hover:underline">
                   Faça Login
                 </Link>
               </p>
@@ -378,7 +378,7 @@ export default function Register() {
                 </Label>
                 <select 
                   id="paymentMethod"
-                  className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
+                  className="flex h-10 w-full rounded-md border border-zinc-200 bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
                   value={formData.paymentMethod}
                   onChange={handleChange}
                 >
@@ -393,7 +393,7 @@ export default function Register() {
             <div className="pt-4">
               <Button 
                 type="submit" 
-                className="w-full bg-indigo-600 hover:bg-indigo-700 py-6 text-lg font-bold shadow-lg shadow-indigo-100"
+                className="w-full bg-primary hover:bg-primary/80 py-6 text-lg font-bold shadow-lg shadow-yellow-100"
                 disabled={loading}
               >
                 {loading ? "Processando Inscrição..." : "Finalizar Inscrição"}

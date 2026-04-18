@@ -322,8 +322,8 @@ export default function StudyPlan() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-5xl tracking-wide text-red-600" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Plano de Estudos</h1>
-          <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Personalização avançada com inteligência artificial.</p>
+          <h1 className="text-5xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Plano de Estudos</h1>
+          <p className="text-white  font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Personalização avançada com inteligência artificial.</p>
         </div>
         {plan && (
           <div className="flex gap-2">
@@ -354,25 +354,25 @@ export default function StudyPlan() {
               </TabsList>
 
               <TabsContent value="manual">
-                <Card className="max-w-2xl mx-auto">
+                <Card className="max-w-2xl mx-auto bg-card">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-indigo-500" />
+                    <CardTitle className="flex items-center gap-2 text-primary uppercase">
+                      <Sparkles className="w-5 h-5 text-primary" />
                       Gerador Rápido
                     </CardTitle>
-                    <CardDescription>Crie um plano com base em objetivos diretos.</CardDescription>
+                    <CardDescription className="text-white">Crie um plano com base em objetivos diretos.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-2">
-                      <Label>Objetivo do Concurso</Label>
+                      <Label className="text-white">Objetivo do Concurso</Label>
                       <Input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Ex: Auditor Fiscal" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Matérias</Label>
+                      <Label className="text-white">Matérias</Label>
                       <Input value={subjects} onChange={(e) => setSubjects(e.target.value)} placeholder="Ex: Direito, Contabilidade" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Horas por Dia</Label>
+                      <Label className="text-white">Horas por Dia</Label>
                       <Input type="number" value={hours} onChange={(e) => setHours(Number(e.target.value))} />
                     </div>
                       <TooltipProvider>
@@ -381,7 +381,7 @@ export default function StudyPlan() {
                             <span 
                               onClick={handleCreateManualPlan} 
                               className={cn(
-                                "w-full inline-flex items-center justify-center rounded-md text-sm font-bold bg-red-600 text-white hover:bg-red-700 h-10 px-4 py-2 cursor-pointer transition-opacity",
+                                "w-full inline-flex items-center justify-center rounded-md text-sm font-bold bg-primary text-black hover:bg-primary/80 h-10 px-4 py-2 cursor-pointer transition-opacity",
                                 loading && "opacity-50 cursor-not-allowed"
                               )}
                             >
@@ -399,23 +399,23 @@ export default function StudyPlan() {
 
               <TabsContent value="notices">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <Card>
+                  <Card className="bg-card">
                     <CardHeader>
-                      <CardTitle>Configuração do Plano</CardTitle>
-                      <CardDescription>Defina os parâmetros para o cruzamento de editais.</CardDescription>
+                      <CardTitle className="text-primary uppercase">Configuração do Plano</CardTitle>
+                      <CardDescription className="text-white">Defina os parâmetros para o cruzamento de editais.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                       <div className="space-y-2">
-                        <Label>Data Prevista da Prova</Label>
+                        <Label className="text-white">Data Prevista da Prova</Label>
                         <Input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
                       </div>
                       <div className="space-y-2">
-                        <Label>Horas por Dia</Label>
+                        <Label className="text-white">Horas por Dia</Label>
                         <Input type="number" value={hours} onChange={(e) => setHours(Number(e.target.value))} />
                         <p className="text-[10px] text-zinc-400 italic">Dica: Se você escolher 4 horas, a IA distribuirá os tópicos para cobrir o edital respeitando esse limite diário.</p>
                       </div>
                       <Button 
-                        className="w-full bg-indigo-600 h-12 text-lg font-bold shadow-lg shadow-indigo-200"
+                        className="w-full bg-primary h-12 text-lg font-bold shadow-lg shadow-yellow-200"
                         disabled={loading || selectedNoticeIds.length === 0}
                         onClick={handleCreateNoticePlan}
                       >
@@ -425,11 +425,11 @@ export default function StudyPlan() {
                   </Card>
 
                   <div className="space-y-6">
-                    <Card>
+                    <Card className="bg-card">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0">
                         <div>
-                          <CardTitle>Selecionar Editais ({selectedNoticeIds.length})</CardTitle>
-                          <CardDescription>Escolha os editais que deseja cruzar.</CardDescription>
+                          <CardTitle className="text-primary uppercase">Selecionar Editais ({selectedNoticeIds.length})</CardTitle>
+                          <CardDescription className="text-white">Escolha os editais que deseja cruzar.</CardDescription>
                         </div>
                         <Link to="/editais">
                           <Button variant="outline" size="sm" className="gap-2">
@@ -462,20 +462,20 @@ export default function StudyPlan() {
                             className={cn(
                               "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer",
                               selectedNoticeIds.includes(n.id)
-                                ? "bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200"
-                                : "bg-zinc-50 border-zinc-100 hover:border-zinc-300"
+                                ? "bg-primary/10 border-primary/20 ring-1 ring-yellow-200"
+                                : "bg-background border-zinc-100 hover:border-zinc-300"
                             )}
                           >
                             <div className="flex items-center gap-3">
                               <div className={cn(
                                 "w-4 h-4 rounded border flex items-center justify-center transition-colors",
-                                selectedNoticeIds.includes(n.id) ? "bg-indigo-600 border-indigo-600" : "bg-white border-zinc-300"
+                                selectedNoticeIds.includes(n.id) ? "bg-primary border-primary" : "bg-background border-zinc-300"
                               )}>
                                 {selectedNoticeIds.includes(n.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
                               </div>
                               <div className="flex items-center gap-2">
-                                <FileText className={cn("w-4 h-4", selectedNoticeIds.includes(n.id) ? "text-indigo-600" : "text-zinc-400")} />
-                                <span className={cn("font-medium text-sm", selectedNoticeIds.includes(n.id) ? "text-indigo-900" : "text-zinc-700")}>
+                                <FileText className={cn("w-4 h-4", selectedNoticeIds.includes(n.id) ? "text-primary" : "text-zinc-400")} />
+                                <span className={cn("font-medium text-sm", selectedNoticeIds.includes(n.id) ? "text-yellow-900" : "text-zinc-300")}>
                                   {n.name}
                                 </span>
                               </div>
@@ -499,17 +499,17 @@ export default function StudyPlan() {
                     </div>
                   )}
                   {savedPlans.map(p => (
-                    <Card key={p.id} className="group hover:border-indigo-200 transition-all">
+                    <Card key={p.id} className="group hover:border-primary/20 transition-all bg-card">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">{p.title}</CardTitle>
-                        <CardDescription>{p.goal}</CardDescription>
+                        <CardTitle className="text-lg text-primary uppercase">{p.title}</CardTitle>
+                        <CardDescription className="text-white font-medium">{p.goal}</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div className="flex gap-2 items-center pt-4">
                           <Button onClick={() => { setPlan(p); setViewMode('calendar'); }} variant="secondary" size="sm" className="gap-2 flex-1">
                             <CalendarIcon className="w-4 h-4" /> Calendário
                           </Button>
-                          <Button onClick={() => { setPlan(p); setViewMode('vertical'); }} variant="outline" size="sm" className="gap-2 flex-1 border-indigo-200 text-indigo-600">
+                          <Button onClick={() => { setPlan(p); setViewMode('vertical'); }} variant="outline" size="sm" className="gap-2 flex-1 border-primary/20 text-primary">
                             <Layers className="w-4 h-4" /> Vertical
                           </Button>
                           <Button onClick={() => deletePlan(p.id)} variant="ghost" size="sm" className="text-zinc-400 hover:text-red-500">
@@ -529,13 +529,13 @@ export default function StudyPlan() {
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            <div className="bg-white border border-zinc-100 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between shadow-sm gap-4">
+            <div className="bg-background border border-zinc-100 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between shadow-sm gap-4">
               <div className="flex items-center gap-4">
-                <div className="p-2 bg-indigo-100 rounded-xl">
-                  <Sparkles className="w-5 h-5 text-indigo-600" />
+                <div className="p-2 bg-yellow-100 rounded-xl">
+                  <Sparkles className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-zinc-900">{plan.title}</h2>
+                  <h2 className="font-bold text-white">{plan.title}</h2>
                   <p className="text-xs text-zinc-500">{plan.goal}</p>
                 </div>
               </div>
@@ -545,9 +545,9 @@ export default function StudyPlan() {
                   <span>Progresso do Edital</span>
                   <span>{Math.round((plan.schedule.reduce((acc, day) => acc + day.topics.filter(t => t.completed).length, 0) / plan.schedule.reduce((acc, day) => acc + day.topics.length, 1)) * 100)}%</span>
                 </div>
-                <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-card rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-indigo-600 transition-all duration-500" 
+                    className="h-full bg-primary transition-all duration-500" 
                     style={{ width: `${(plan.schedule.reduce((acc, day) => acc + day.topics.filter(t => t.completed).length, 0) / plan.schedule.reduce((acc, day) => acc + day.topics.length, 1)) * 100}%` }}
                   />
                 </div>
@@ -557,7 +557,7 @@ export default function StudyPlan() {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex bg-zinc-100 p-1 rounded-lg">
+                <div className="flex bg-card p-1 rounded-lg">
                   <Button 
                     variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} 
                     size="sm" 
@@ -575,7 +575,7 @@ export default function StudyPlan() {
                     Verticalizado
                   </Button>
                 </div>
-                <Button variant="outline" size="sm" className="gap-2 h-9 border-indigo-200 text-indigo-600" onClick={() => handleSavePlan(plan)}>
+                <Button variant="outline" size="sm" className="gap-2 h-9 border-primary/20 text-primary" onClick={() => handleSavePlan(plan)}>
                   <Save className="w-4 h-4" /> Salvar Plano
                 </Button>
               </div>
@@ -599,7 +599,7 @@ export default function StudyPlan() {
           >
             <div className={cn(
               "p-4 flex items-center justify-between border-b",
-              timerMode === 'study' ? "bg-red-700 text-white border-red-900/50" : "bg-zinc-900 text-red-600 border-red-900/50"
+              timerMode === 'study' ? "bg-red-700 text-white border-red-900/50" : "bg-zinc-900 text-primary border-red-900/50"
             )}>
               <div className="flex items-center gap-2">
                 {timerMode === 'study' ? <Timer className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
@@ -610,7 +610,7 @@ export default function StudyPlan() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className={cn("h-6 w-6", timerMode === 'study' ? "text-white hover:bg-white/20" : "text-red-600 hover:bg-red-900/20")}
+                className={cn("h-6 w-6", timerMode === 'study' ? "text-white hover:bg-background/20" : "text-primary hover:bg-red-900/20")}
                 onClick={() => setShowTimerSettings(!showTimerSettings)}
               >
                 <Settings2 className="w-4 h-4" />
@@ -667,7 +667,7 @@ export default function StudyPlan() {
                   className={cn(
                     "flex-1 h-10 font-bold",
                     timerActive 
-                      ? "bg-zinc-900 text-red-600 border border-red-900/50 hover:bg-zinc-800" 
+                      ? "bg-zinc-900 text-primary border border-red-900/50 hover:bg-zinc-800" 
                       : "bg-red-700 text-white hover:bg-red-600 shadow-md shadow-red-900/20"
                   )}
                   onClick={toggleTimer}
@@ -684,7 +684,7 @@ export default function StudyPlan() {
                   className="h-10 w-10 border-red-900/50 bg-zinc-900 hover:bg-zinc-800"
                   onClick={resetTimer}
                 >
-                  <RotateCcw className="w-4 h-4 text-red-600" />
+                  <RotateCcw className="w-4 h-4 text-primary" />
                 </Button>
               </div>
             </div>

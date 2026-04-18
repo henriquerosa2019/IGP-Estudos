@@ -108,7 +108,7 @@ export default function Settings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -116,7 +116,7 @@ export default function Settings() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Configurações do Perfil</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-white">Configurações do Perfil</h1>
         <p className="text-zinc-500 mt-2">Gerencie suas informações pessoais e dados de inscrição.</p>
       </div>
 
@@ -125,7 +125,7 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-indigo-600" />
+                <UserPlus className="w-5 h-5 text-primary" />
                 Dados Pessoais
               </CardTitle>
               <CardDescription>
@@ -197,7 +197,7 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-indigo-600" />
+                <BookOpen className="w-5 h-5 text-primary" />
                 Inscrição e Concurso
               </CardTitle>
               <CardDescription>
@@ -221,7 +221,7 @@ export default function Settings() {
                 </Label>
                 <select 
                   id="payment"
-                  className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-zinc-200 bg-background px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.paymentMethod}
                   onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
                 >
@@ -238,7 +238,7 @@ export default function Settings() {
             <Button 
               onClick={handleSave} 
               disabled={saving}
-              className="gap-2 bg-indigo-600 px-8"
+              className="gap-2 bg-primary px-8"
             >
               <Save className="w-4 h-4" />
               {saving ? "Salvando..." : "Salvar Alterações"}
@@ -246,9 +246,9 @@ export default function Settings() {
           </div>
 
           {(user?.role === 'admin' || auth.currentUser?.email === 'henrique.rosa@poli.ufrj.br') && (
-            <Card className="border-indigo-200 bg-indigo-50/30">
+            <Card className="border-primary/20 bg-primary/5">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-indigo-900">
+                <CardTitle className="flex items-center gap-2 text-yellow-900">
                   <UserPlus className="w-5 h-5" />
                   Painel Administrativo
                 </CardTitle>
@@ -257,7 +257,7 @@ export default function Settings() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="outline" className="w-full p-0 border-indigo-200 text-indigo-600 hover:bg-indigo-50">
+                <Button variant="outline" className="w-full p-0 border-primary/20 text-primary hover:bg-primary/10">
                   <Link to="/registrar" className="flex items-center justify-center gap-2 w-full h-full py-2">
                     <UserPlus className="w-4 h-4" />
                     Abrir Formulário de Inscrição
@@ -276,7 +276,7 @@ export default function Settings() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between py-2 border-b border-zinc-100">
                 <span className="text-sm text-zinc-500">Tipo de Plano</span>
-                <span className="text-sm font-bold text-indigo-600">Premium</span>
+                <span className="text-sm font-bold text-primary">Premium</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-zinc-100">
                 <span className="text-sm text-zinc-500">Vencimento</span>
@@ -291,12 +291,12 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100">
-            <h4 className="font-bold text-indigo-900 mb-2">Precisa de ajuda?</h4>
-            <p className="text-sm text-indigo-700 mb-4">
+          <div className="p-6 bg-primary/10 rounded-2xl border border-primary/10">
+            <h4 className="font-bold text-yellow-900 mb-2">Precisa de ajuda?</h4>
+            <p className="text-sm text-yellow-700 mb-4">
               Se tiver dúvidas sobre sua assinatura ou dados de pagamento, entre em contato com nosso suporte.
             </p>
-            <Button variant="outline" className="w-full bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50">
+            <Button variant="outline" className="w-full bg-background border-primary/20 text-primary hover:bg-primary/10">
               Falar com Suporte
             </Button>
           </div>

@@ -85,7 +85,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
-        <div className="flex items-center bg-white border border-amber-200 rounded-lg overflow-hidden">
+        <div className="flex items-center bg-background border border-amber-200 rounded-lg overflow-hidden">
           <span className="px-2 py-1 text-[10px] font-mono text-zinc-500 border-r border-amber-100">brunool.rj@gmail.com</span>
           <button 
             onClick={() => copyToClipboard("brunool.rj@gmail.com", "E-mail")}
@@ -95,7 +95,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
             {copiedField === "E-mail" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         </div>
-        <div className="flex items-center bg-white border border-amber-200 rounded-lg overflow-hidden">
+        <div className="flex items-center bg-background border border-amber-200 rounded-lg overflow-hidden">
           <span className="px-2 py-1 text-[10px] font-mono text-zinc-500 border-r border-amber-100">Ad16eoh28@=</span>
           <button 
             onClick={() => copyToClipboard("Ad16eoh28@=", "Senha")}
@@ -116,7 +116,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plan.schedule.map((day, idx) => (
           <Card key={idx} className="border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="bg-zinc-50/50 border-b border-zinc-100 py-4">
+            <CardHeader className="bg-background/50 border-b border-zinc-100 py-4">
               <CardTitle className="text-lg flex items-center gap-2">
                 <CalendarIcon className="w-4 h-4 text-zinc-400" />
                 {day.day}
@@ -129,8 +129,8 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                   topic.completed 
                     ? "bg-green-50/30 border-green-100" 
                     : topic.startTime 
-                      ? "bg-indigo-50/50 border-indigo-200 shadow-sm" 
-                      : "bg-white border-zinc-100 hover:border-indigo-200"
+                      ? "bg-primary/10/50 border-primary/20 shadow-sm" 
+                      : "bg-background border-zinc-100 hover:border-primary/20"
                 )}>
                   <div className="flex items-start gap-3">
                     <div className="mt-1">
@@ -150,13 +150,13 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                         </div>
                         <p className={cn(
                           "font-semibold text-sm leading-tight flex-1 break-words",
-                          topic.completed ? "text-zinc-400 line-through" : "text-zinc-900"
+                          topic.completed ? "text-zinc-400 line-through" : "text-white"
                         )}>
                           {topic.title}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span className="text-[10px] font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded shrink-0">
+                        <span className="text-[10px] font-medium text-zinc-500 bg-card px-2 py-0.5 rounded shrink-0">
                           {topic.subject}
                         </span>
                         <span className="text-[10px] text-zinc-400 flex items-center gap-1 shrink-0">
@@ -168,7 +168,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                             href={formatVideoUrl(topic.videoUrl)} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-[10px] text-indigo-600 hover:underline flex items-center gap-1 shrink-0"
+                            className="text-[10px] text-primary hover:underline flex items-center gap-1 shrink-0"
                           >
                             <Play className="w-3 h-3" /> Ver Aula
                           </a>
@@ -190,7 +190,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                                 type="number" 
                                 value={manualMinutes} 
                                 onChange={(e) => setManualMinutes(e.target.value)}
-                                className="h-9 w-20 text-sm bg-white border-green-200 focus-visible:ring-green-500 font-bold"
+                                className="h-9 w-20 text-sm bg-background border-green-200 focus-visible:ring-green-500 font-bold"
                                 autoFocus
                               />
                               <div className="flex flex-col gap-1">
@@ -204,7 +204,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-6 text-[9px] text-zinc-400 hover:text-indigo-600 p-0"
+                          className="h-6 text-[9px] text-zinc-400 hover:text-primary p-0"
                           onClick={() => handleFinish(idx, tIdx, undefined, topic.actualDuration)}
                         >
                           <Clock className="w-3 h-3 mr-1" /> Editar tempo
@@ -216,9 +216,9 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                   {!topic.completed && (
                     <div className="flex flex-col gap-2 mt-1 pl-8">
                       {finishingTopic?.dayIdx === idx && finishingTopic?.topicIdx === tIdx ? (
-                        <div className="flex flex-col gap-2 bg-indigo-50/80 p-3 rounded-xl border border-indigo-200 shadow-sm max-w-[220px]">
+                        <div className="flex flex-col gap-2 bg-primary/10/80 p-3 rounded-xl border border-primary/20 shadow-sm max-w-[220px]">
                           <div className="space-y-2">
-                            <p className="text-[10px] font-bold text-indigo-700 uppercase flex items-center gap-1">
+                            <p className="text-[10px] font-bold text-yellow-700 uppercase flex items-center gap-1">
                               <Clock className="w-3 h-3" /> Minutos estudados:
                             </p>
                             <div className="flex items-center gap-2">
@@ -226,12 +226,12 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                                 type="number" 
                                 value={manualMinutes} 
                                 onChange={(e) => setManualMinutes(e.target.value)}
-                                className="h-9 w-20 text-sm bg-white border-indigo-200 focus-visible:ring-indigo-500 font-bold"
+                                className="h-9 w-20 text-sm bg-background border-primary/20 focus-visible:ring-yellow-500 font-bold"
                                 autoFocus
                               />
                               <div className="flex flex-col gap-1">
-                                <Button size="sm" className="h-7 px-3 text-[10px] bg-indigo-600 hover:bg-indigo-700 font-bold" onClick={confirmFinish}>Confirmar</Button>
-                                <Button size="sm" variant="ghost" className="h-7 px-3 text-[10px] text-indigo-700 hover:bg-indigo-100" onClick={() => setFinishingTopic(null)}>Cancelar</Button>
+                                <Button size="sm" className="h-7 px-3 text-[10px] bg-primary hover:bg-primary/80 font-bold" onClick={confirmFinish}>Confirmar</Button>
+                                <Button size="sm" variant="ghost" className="h-7 px-3 text-[10px] text-yellow-700 hover:bg-yellow-100" onClick={() => setFinishingTopic(null)}>Cancelar</Button>
                               </div>
                             </div>
                           </div>
@@ -243,7 +243,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="h-7 text-[10px] border-indigo-200 text-indigo-600 hover:bg-indigo-50 shrink-0"
+                                className="h-7 text-[10px] border-primary/20 text-primary hover:bg-primary/10 shrink-0"
                                 onClick={() => onToggleTopic(idx, tIdx)}
                               >
                                 <Play className="w-3 h-3 mr-1" /> Iniciar
@@ -251,7 +251,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                               <Button 
                                 size="sm" 
                                 variant="ghost" 
-                                className="h-7 text-[10px] text-zinc-400 hover:text-indigo-600 shrink-0"
+                                className="h-7 text-[10px] text-zinc-400 hover:text-primary shrink-0"
                                 onClick={() => handleFinish(idx, tIdx)}
                               >
                                 <CheckCircle className="w-3 h-3 mr-1" /> Concluir
@@ -260,7 +260,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                           ) : (
                             <Button 
                               size="sm" 
-                              className="h-7 text-[10px] bg-indigo-600 hover:bg-indigo-700 shrink-0"
+                              className="h-7 text-[10px] bg-primary hover:bg-primary/80 shrink-0"
                               onClick={() => handleFinish(idx, tIdx, topic.startTime)}
                             >
                               <Square className="w-3 h-3 mr-1" /> Finalizar
@@ -273,8 +273,8 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                   
                   {topic.startTime && !topic.completed && (
                     <div className="pl-8">
-                      <span className="text-[10px] text-indigo-600 font-bold animate-pulse flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-ping" />
+                      <span className="text-[10px] text-primary font-bold animate-pulse flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-ping" />
                         ESTUDANDO DESDE {new Date(topic.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </span>
                     </div>
@@ -293,9 +293,9 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
     <div className="space-y-6">
       <HotmartHelper />
       <Card className="border-none shadow-lg shadow-zinc-100 overflow-hidden">
-      <CardHeader className="bg-zinc-50/50 border-b border-zinc-100">
-        <CardTitle className="text-lg flex items-center gap-2 text-zinc-800">
-          <Layers className="w-5 h-5 text-indigo-500" />
+      <CardHeader className="bg-background/50 border-b border-zinc-100">
+        <CardTitle className="text-lg flex items-center gap-2 text-white">
+          <Layers className="w-5 h-5 text-primary" />
           Plano de Estudos Verticalizado
         </CardTitle>
         <CardDescription>Lista completa de todos os tópicos do edital distribuídos por ordem de estudo.</CardDescription>
@@ -307,7 +307,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
           ).map((topic, idx) => (
             <div key={idx} className={cn(
               "flex items-center gap-4 p-4 transition-colors",
-              topic.completed ? "bg-green-50/20" : topic.startTime ? "bg-indigo-50/30" : "hover:bg-zinc-50/50"
+              topic.completed ? "bg-green-50/20" : topic.startTime ? "bg-primary/5" : "hover:bg-background/50"
             )}>
               <div className="flex-shrink-0 w-8 text-center text-xs font-bold text-zinc-300">
                 {idx + 1}
@@ -324,7 +324,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                   </div>
                   <p className={cn(
                     "font-semibold text-sm leading-tight break-words",
-                    topic.completed ? "text-zinc-400 line-through" : "text-zinc-900"
+                    topic.completed ? "text-zinc-400 line-through" : "text-white"
                   )}>
                     {topic.title}
                   </p>
@@ -333,7 +333,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                       href={formatVideoUrl(topic.videoUrl)} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-[10px] text-indigo-600 hover:underline flex items-center gap-1 ml-2 shrink-0 mt-0.5"
+                      className="text-[10px] text-primary hover:underline flex items-center gap-1 ml-2 shrink-0 mt-0.5"
                     >
                       <Play className="w-2.5 h-2.5" /> Aula
                     </a>
@@ -348,17 +348,17 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                 {!topic.completed ? (
                   <div className="flex items-center gap-2">
                     {finishingTopic?.dayIdx === topic.dIdx && finishingTopic?.topicIdx === topic.tIdx ? (
-                      <div className="flex items-center gap-2 bg-indigo-50/80 p-2 rounded-xl border border-indigo-200 shadow-sm">
+                      <div className="flex items-center gap-2 bg-primary/10/80 p-2 rounded-xl border border-primary/20 shadow-sm">
                         <Input 
                           type="number" 
                           value={manualMinutes} 
                           onChange={(e) => setManualMinutes(e.target.value)}
-                          className="h-8 w-16 text-xs bg-white border-indigo-200 font-bold"
+                          className="h-8 w-16 text-xs bg-background border-primary/20 font-bold"
                           autoFocus
                         />
                         <div className="flex gap-1">
-                          <Button size="sm" className="h-8 text-[10px] bg-indigo-600 px-3 font-bold" onClick={confirmFinish}>Ok</Button>
-                          <Button size="sm" variant="ghost" className="h-8 text-[10px] px-2 text-indigo-700 hover:bg-indigo-100" onClick={() => setFinishingTopic(null)}>X</Button>
+                          <Button size="sm" className="h-8 text-[10px] bg-primary px-3 font-bold" onClick={confirmFinish}>Ok</Button>
+                          <Button size="sm" variant="ghost" className="h-8 text-[10px] px-2 text-yellow-700 hover:bg-yellow-100" onClick={() => setFinishingTopic(null)}>X</Button>
                         </div>
                       </div>
                     ) : (
@@ -368,7 +368,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                           variant={topic.startTime ? "default" : "outline"}
                           className={cn(
                             "h-8 text-[10px] gap-1 px-3",
-                            topic.startTime ? "bg-indigo-600 text-white" : "border-indigo-200 text-indigo-600"
+                            topic.startTime ? "bg-primary text-white" : "border-primary/20 text-primary"
                           )}
                           onClick={topic.startTime ? () => handleFinish(topic.dIdx, topic.tIdx, topic.startTime) : () => onToggleTopic(topic.dIdx, topic.tIdx)}
                         >
@@ -379,7 +379,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                           <Button 
                             size="sm" 
                             variant="ghost" 
-                            className="h-8 text-[10px] text-zinc-400 hover:text-indigo-600 px-2"
+                            className="h-8 text-[10px] text-zinc-400 hover:text-primary px-2"
                             onClick={() => handleFinish(topic.dIdx, topic.tIdx)}
                             title="Concluir Manualmente"
                           >
@@ -397,7 +397,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                           type="number" 
                           value={manualMinutes} 
                           onChange={(e) => setManualMinutes(e.target.value)}
-                          className="h-8 w-16 text-xs bg-white border-green-200 font-bold"
+                          className="h-8 w-16 text-xs bg-background border-green-200 font-bold"
                           autoFocus
                         />
                         <div className="flex gap-1">
@@ -411,7 +411,7 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-6 w-6 p-0 text-zinc-300 hover:text-indigo-600"
+                          className="h-6 w-6 p-0 text-zinc-300 hover:text-primary"
                           onClick={() => handleFinish(topic.dIdx, topic.tIdx, undefined, topic.actualDuration)}
                           title="Editar tempo"
                         >

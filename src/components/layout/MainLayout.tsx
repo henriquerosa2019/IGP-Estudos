@@ -31,7 +31,7 @@ export function MainLayout() {
 
   return (
     <TooltipProvider>
-      <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="flex min-h-screen bg-background ">
         {/* Mobile Menu Toggle */}
         <div className="md:hidden fixed top-4 left-4 z-50">
           <Button variant="ghost" size="icon" className="w-12 h-12" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>

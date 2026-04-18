@@ -105,51 +105,51 @@ export function FlashcardMetrics({ reviews }: FlashcardMetricsProps) {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-8">
-        <h2 className="text-4xl tracking-wide text-[#FF9900]" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Métricas de Desempenho</h2>
+        <h2 className="text-4xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Métricas de Desempenho</h2>
         <p className="text-zinc-400 font-medium mt-1">Acompanhe sua evolução e retenção de conteúdo.</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-none shadow-md bg-white dark:bg-zinc-900">
+        <Card className="border-none shadow-md bg-background ">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Total de Cards</CardTitle>
-            <Layers className="w-4 h-4 text-indigo-500" />
+            <Layers className="w-4 h-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{stats.total}</div>
+            <div className="text-2xl font-bold text-white ">{stats.total}</div>
             <p className="text-[10px] text-zinc-400 mt-1">Cards na sua biblioteca</p>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md bg-white dark:bg-zinc-900">
+        <Card className="border-none shadow-md bg-background ">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Prontos para Revisar</CardTitle>
             <AlertCircle className="w-4 h-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{stats.readyToReview}</div>
+            <div className="text-2xl font-bold text-white ">{stats.readyToReview}</div>
             <p className="text-[10px] text-zinc-400 mt-1">Aguardando sua revisão</p>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md bg-white dark:bg-zinc-900">
+        <Card className="border-none shadow-md bg-background ">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Taxa de Retenção</CardTitle>
             <TrendingUp className="w-4 h-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{stats.retentionRate}%</div>
-            <Progress value={stats.retentionRate} className="h-1.5 mt-2 bg-zinc-100" />
+            <div className="text-2xl font-bold text-white ">{stats.retentionRate}%</div>
+            <Progress value={stats.retentionRate} className="h-1.5 mt-2 bg-card" />
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md bg-white dark:bg-zinc-900">
+        <Card className="border-none shadow-md bg-background ">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Nível de Domínio</CardTitle>
-            <CheckCircle2 className="w-4 h-4 text-indigo-500" />
+            <CheckCircle2 className="w-4 h-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-900 dark:text-white">
+            <div className="text-2xl font-bold text-white ">
               {stats.retentionRate > 80 ? 'Excelente' : stats.retentionRate > 50 ? 'Bom' : 'Em evolução'}
             </div>
             <p className="text-[10px] text-zinc-400 mt-1">Baseado no seu desempenho</p>
@@ -161,7 +161,7 @@ export function FlashcardMetrics({ reviews }: FlashcardMetricsProps) {
         <Card className="lg:col-span-2 border-none shadow-md">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <BrainCircuit className="w-5 h-5 text-indigo-500" />
+              <BrainCircuit className="w-5 h-5 text-primary" />
               Domínio por Disciplina
             </CardTitle>
             <CardDescription>Quantidade de cards e taxa de acerto</CardDescription>
@@ -227,7 +227,7 @@ export function FlashcardMetrics({ reviews }: FlashcardMetricsProps) {
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                     <span className="text-zinc-600">{item.name}</span>
                   </div>
-                  <span className="font-bold text-zinc-900">{item.value}</span>
+                  <span className="font-bold text-white">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -238,7 +238,7 @@ export function FlashcardMetrics({ reviews }: FlashcardMetricsProps) {
       <Card className="border-none shadow-md">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-indigo-500" />
+            <Calendar className="w-5 h-5 text-primary" />
             Criação de Novos Cards
           </CardTitle>
           <CardDescription>Volume de novos flashcards nos últimos 7 dias</CardDescription>
@@ -278,9 +278,9 @@ export function FlashcardMetrics({ reviews }: FlashcardMetricsProps) {
 
 function Progress({ value, className }: { value: number, className?: string }) {
   return (
-    <div className={cn("w-full h-2 bg-zinc-100 rounded-full overflow-hidden", className)}>
+    <div className={cn("w-full h-2 bg-card rounded-full overflow-hidden", className)}>
       <div 
-        className="h-full bg-indigo-500 transition-all duration-500" 
+        className="h-full bg-primary/100 transition-all duration-500" 
         style={{ width: `${value}%` }}
       />
     </div>

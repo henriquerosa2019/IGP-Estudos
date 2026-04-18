@@ -522,16 +522,16 @@ export default function ContentLibrary() {
 
   if (loadError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] w-full bg-white dark:bg-zinc-950 rounded-3xl p-8 text-center">
+      <div className="flex flex-col items-center justify-center min-h-[400px] w-full bg-background  rounded-3xl p-8 text-center">
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-full mb-4">
           <BrainCircuit className="w-10 h-10 text-red-500" />
         </div>
-        <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Ops! Algo deu errado</h2>
+        <h2 className="text-xl font-bold text-white  mb-2">Ops! Algo deu errado</h2>
         <p className="text-zinc-500 mb-6 max-w-md">{loadError}</p>
         <div className="flex flex-col gap-2 items-center">
           <Button 
             onClick={() => window.location.reload()}
-            className="bg-[#FF9900] hover:bg-[#e68a00] text-white w-fit"
+            className="bg-primary hover:bg-[#e68a00] text-white w-fit"
           >
             Tentar Novamente
           </Button>
@@ -544,7 +544,7 @@ export default function ContentLibrary() {
             {showDebug ? "Ocultar Detalhes" : "Ver Detalhes Técnicos"}
           </Button>
           {showDebug && (
-            <div className="mt-4 p-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-left text-[10px] font-mono overflow-auto max-w-md w-full">
+            <div className="mt-4 p-4 bg-card  rounded-lg text-left text-[10px] font-mono overflow-auto max-w-md w-full">
               <p>UID: {getUid()}</p>
               <p>Auth Ready: {authReady ? "Sim" : "Não"}</p>
               <p>User: {user ? user.email : "Anônimo"}</p>
@@ -559,8 +559,8 @@ export default function ContentLibrary() {
 
   if (!authReady || loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] w-full bg-white dark:bg-zinc-950 rounded-3xl">
-        <Loader2 className="w-10 h-10 text-[#FF9900] animate-spin mb-4" />
+      <div className="flex flex-col items-center justify-center min-h-[400px] w-full bg-background  rounded-3xl">
+        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
         <p className="text-zinc-500 font-medium">
           {!authReady ? "Iniciando Acervo Inteligente..." : "Carregando seus materiais..."}
         </p>
@@ -578,7 +578,7 @@ export default function ContentLibrary() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <BookOpen className="w-8 h-8 text-[#FF9900]" />
+              <BookOpen className="w-8 h-8 text-primary" />
               Acervo Inteligente
             </h1>
             <p className="text-zinc-400 mt-1">Organize seus materiais por disciplina e gere flashcards com IA.</p>
@@ -587,7 +587,7 @@ export default function ContentLibrary() {
         <div className="flex gap-3">
           <Button 
             variant="outline"
-            className="border-[#FF9900] text-[#FF9900] hover:bg-orange-50 font-bold"
+            className="border-primary text-primary hover:bg-orange-50 font-bold"
             onClick={async () => {
               const uid = getUid();
               const loadingToast = toast.loading("Importando material de Direito Penal...");
@@ -614,7 +614,7 @@ export default function ContentLibrary() {
 
           <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
             <DialogTrigger render={
-              <Button className="bg-[#FF9900] hover:bg-[#e68a00] text-white gap-2">
+              <Button className="bg-primary hover:bg-primary/80 text-black font-bold gap-2">
                 <Plus className="w-4 h-4" /> Adicionar
               </Button>
             } />
@@ -638,7 +638,7 @@ export default function ContentLibrary() {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="h-7 text-[10px] text-[#FF9900] gap-1 hover:text-[#e68a00] hover:bg-orange-50"
+                    className="h-7 text-[10px] text-primary gap-1 hover:text-[#e68a00] hover:bg-orange-50"
                     onClick={async () => {
                       if (!newContent && !newFile) {
                         toast.error("Adicione conteúdo primeiro para a IA analisar.");
@@ -686,7 +686,7 @@ export default function ContentLibrary() {
                         {existingSubjects.map(s => (
                           <SelectItem key={s} value={s}>{s}</SelectItem>
                         ))}
-                        <SelectItem value="_new" className="text-indigo-600 font-bold">+ Criar Nova Disciplina</SelectItem>
+                        <SelectItem value="_new" className="text-primary font-bold">+ Criar Nova Disciplina</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
@@ -803,14 +803,14 @@ export default function ContentLibrary() {
                 <div className="w-full mb-4 px-1">
                   <div className="flex justify-between text-xs mb-2 font-medium text-zinc-400">
                     <span className="flex items-center gap-2">
-                      <Loader2 className="w-3 h-3 animate-spin text-[#FF9900]" />
+                      <Loader2 className="w-3 h-3 animate-spin text-primary" />
                       {uploadProgress === 100 ? "Processando..." : "Enviando arquivo..."}
                     </span>
-                    <span className="text-[#FF9900]">{uploadProgress > 0 ? `${uploadProgress}%` : "Aguarde..."}</span>
+                    <span className="text-primary">{uploadProgress > 0 ? `${uploadProgress}%` : "Aguarde..."}</span>
                   </div>
                   <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden border border-zinc-700">
                     <div 
-                      className="h-full bg-[#FF9900] transition-all duration-500 ease-out"
+                      className="h-full bg-primary transition-all duration-500 ease-out"
                       style={{ width: `${uploadProgress > 0 ? uploadProgress : 5}%` }}
                     />
                   </div>
@@ -821,7 +821,7 @@ export default function ContentLibrary() {
                 <Button 
                   onClick={handleUpload} 
                   disabled={uploadLoading}
-                  className="bg-[#FF9900] hover:bg-[#e68a00] text-white border-none"
+                  className="bg-primary hover:bg-[#e68a00] text-white border-none"
                 >
                   {uploadLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Salvar Conteúdo
@@ -842,7 +842,7 @@ export default function ContentLibrary() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="md:col-span-2 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF9900]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
           <Input 
             placeholder="Buscar por título ou disciplina..." 
             className="pl-10 focus-visible:ring-[#FF9900]"
@@ -859,7 +859,7 @@ export default function ContentLibrary() {
             <Select value={filterSubject} onValueChange={setFilterSubject}>
               <SelectTrigger className="focus:ring-[#FF9900]">
                 <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-[#FF9900]" />
+                  <Filter className="w-4 h-4 text-primary" />
                   <SelectValue placeholder="Disciplina" />
                 </div>
               </SelectTrigger>
@@ -889,7 +889,7 @@ export default function ContentLibrary() {
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-[#FF9900] animate-spin mb-4" />
+          <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
           <p className="text-zinc-500">Carregando seu acervo...</p>
         </div>
       ) : filteredItems.length > 0 ? (
@@ -899,7 +899,7 @@ export default function ContentLibrary() {
             <div className="flex items-center gap-2 text-sm text-zinc-400 mb-6 bg-[#1a1a1a] p-2 px-4 rounded-full w-fit border border-zinc-800">
               <button 
                 onClick={() => setCurrentFolder(null)}
-                className="hover:text-[#FF9900] transition-colors flex items-center gap-1 font-medium"
+                className="hover:text-primary transition-colors flex items-center gap-1 font-medium"
               >
                 <Folder className="w-4 h-4" /> Acervo
               </button>
@@ -907,7 +907,7 @@ export default function ContentLibrary() {
               <button 
                 onClick={() => setCurrentFolder({ subject: currentFolder.subject })}
                 className={cn(
-                  "hover:text-[#FF9900] transition-colors font-medium",
+                  "hover:text-primary transition-colors font-medium",
                   !currentFolder.subCategory && "text-white"
                 )}
               >
@@ -928,10 +928,10 @@ export default function ContentLibrary() {
           {(() => {
             const renderItemCard = (item: ContentItem) => (
               <div key={item.id}>
-                <Card className="group bg-white border-none transition-all duration-300 shadow-lg hover:shadow-xl overflow-hidden flex flex-col h-full rounded-[2rem]">
+                <Card className="group bg-background border-none transition-all duration-300 shadow-lg hover:shadow-xl overflow-hidden flex flex-col h-full rounded-[2rem]">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
-                      <div className="p-3 bg-orange-100 rounded-2xl text-[#FF9900]">
+                      <div className="p-3 bg-orange-100 rounded-2xl text-primary">
                         {item.type === 'pdf' ? <FileText className="w-6 h-6" /> : 
                          item.type === 'video' ? <Video className="w-6 h-6" /> : 
                          item.type === 'link' ? <LinkIcon className="w-6 h-6" /> :
@@ -940,7 +940,7 @@ export default function ContentLibrary() {
                       <DropdownMenu>
                         <DropdownMenuTrigger className={cn(
                           buttonVariants({ variant: "ghost", size: "icon" }),
-                          "h-8 w-8 p-0 text-zinc-400 hover:text-zinc-900"
+                          "h-8 w-8 p-0 text-zinc-400 hover:text-white"
                         )}>
                           <MoreVertical className="w-5 h-5" />
                         </DropdownMenuTrigger>
@@ -953,7 +953,7 @@ export default function ContentLibrary() {
                           }}>
                             <Edit2 className="w-4 h-4 mr-2" /> Editar
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600" onClick={() => setItemToDelete(item.id)}>
+                          <DropdownMenuItem className="text-primary" onClick={() => setItemToDelete(item.id)}>
                             <Trash2 className="w-4 h-4 mr-2" /> Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -961,16 +961,16 @@ export default function ContentLibrary() {
                     </div>
                     <div className="mt-4">
                       <div className="flex flex-wrap gap-2 mb-3">
-                        <Badge className="bg-black text-[#FF9900] hover:bg-black border-none px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-full">
+                        <Badge className="bg-black text-primary hover:bg-black border-none px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-full">
                           {item.subject}
                         </Badge>
                         {item.subCategory && (
-                          <Badge className="bg-zinc-500 text-white hover:bg-zinc-500 border-none px-3 py-1 text-[10px] font-bold rounded-full">
+                          <Badge className="bg-background0 text-white hover:bg-background0 border-none px-3 py-1 text-[10px] font-bold rounded-full">
                             {item.subCategory}
                           </Badge>
                         )}
                       </div>
-                      <CardTitle className="text-xl font-bold text-zinc-900 leading-tight">
+                      <CardTitle className="text-xl font-bold text-white leading-tight">
                         {item.title}
                       </CardTitle>
                       <CardDescription className="text-zinc-400 text-xs mt-1 font-medium">
@@ -993,7 +993,7 @@ export default function ContentLibrary() {
                           rel="noopener noreferrer"
                           className={cn(
                             buttonVariants({ variant: "outline", size: "sm" }),
-                            "flex-1 gap-2 rounded-xl border-zinc-200 text-zinc-400 hover:bg-zinc-50"
+                            "flex-1 gap-2 rounded-xl border-zinc-200 text-zinc-400 hover:bg-background"
                           )}
                         >
                           <Download className="w-4 h-4" /> Baixar
@@ -1005,7 +1005,7 @@ export default function ContentLibrary() {
                           rel="noopener noreferrer"
                           className={cn(
                             buttonVariants({ variant: "outline", size: "sm" }),
-                            "flex-1 gap-2 rounded-xl border-zinc-200 text-zinc-400 hover:bg-zinc-50"
+                            "flex-1 gap-2 rounded-xl border-zinc-200 text-zinc-400 hover:bg-background"
                           )}
                         >
                           <ExternalLink className="w-4 h-4" /> Abrir
@@ -1014,7 +1014,7 @@ export default function ContentLibrary() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="flex-1 gap-2 rounded-xl border-zinc-300 text-zinc-400 hover:bg-zinc-50 font-bold"
+                          className="flex-1 gap-2 rounded-xl border-zinc-300 text-zinc-400 hover:bg-background font-bold"
                           onClick={() => {
                             toast.info("Conteúdo de texto: " + item.title);
                           }}
@@ -1024,7 +1024,7 @@ export default function ContentLibrary() {
                       )}
                       
                       <Button 
-                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-[#FF9900] font-bold rounded-xl border-none" 
+                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-primary font-bold rounded-xl border-none" 
                         size="sm"
                         onClick={() => handleGenerateFlashcards(item)}
                       >
@@ -1032,7 +1032,7 @@ export default function ContentLibrary() {
                       </Button>
                       
                       <Button 
-                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-[#FF9900] font-bold rounded-xl border-none" 
+                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-primary font-bold rounded-xl border-none" 
                         size="sm"
                         onClick={() => {
                           localStorage.setItem('tutor_initial_context', JSON.stringify({
@@ -1056,17 +1056,17 @@ export default function ContentLibrary() {
             const renderFolderCard = (title: string, count: number, onClick: () => void) => (
               <Card 
                 key={title}
-                className="cursor-pointer bg-[#1a1a1a] border-zinc-800 hover:border-[#FF9900] transition-all flex items-center p-5 gap-4 shadow-xl rounded-2xl group"
+                className="cursor-pointer bg-[#1a1a1a] border-zinc-800 hover:border-primary transition-all flex items-center p-5 gap-4 shadow-xl rounded-2xl group"
                 onClick={onClick}
               >
-                <div className="p-3 bg-zinc-800 rounded-xl text-[#FF9900] group-hover:bg-[#FF9900] group-hover:text-black transition-colors">
+                <div className="p-3 bg-zinc-800 rounded-xl text-primary group-hover:bg-primary group-hover:text-black transition-colors">
                   <Folder className="w-6 h-6 fill-current opacity-40" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-bold text-white line-clamp-1 text-lg tracking-tight">{title}</h3>
                   <p className="text-sm text-zinc-500 font-medium">{count} ite{count === 1 ? 'm' : 'ns'}</p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-zinc-700 group-hover:text-[#FF9900] transition-colors" />
+                <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-primary transition-colors" />
               </Card>
             );
 
@@ -1143,17 +1143,17 @@ export default function ContentLibrary() {
           })()}
         </div>
       ) : (
-        <div className="text-center py-20 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-800">
-          <div className="bg-white dark:bg-zinc-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+        <div className="text-center py-20 bg-background /50 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-800">
+          <div className="bg-background  w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <BookOpen className="w-8 h-8 text-zinc-300" />
           </div>
-          <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Nenhum conteúdo encontrado</h3>
+          <h3 className="text-lg font-bold text-white ">Nenhum conteúdo encontrado</h3>
           <p className="text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto mt-2">
             Comece adicionando PDFs, textos ou vídeos para organizar seu acervo inteligente.
           </p>
           <Button 
             variant="outline" 
-            className="mt-6 border-orange-200 text-[#FF9900] hover:bg-orange-50"
+            className="mt-6 border-orange-200 text-primary hover:bg-orange-50"
             onClick={() => setIsUploadOpen(true)}
           >
             Adicionar Primeiro Conteúdo
@@ -1216,7 +1216,7 @@ export default function ContentLibrary() {
             <Button variant="outline" onClick={() => setItemToEdit(null)}>
               Cancelar
             </Button>
-            <Button className="bg-[#FF9900] hover:bg-[#e68a00] text-white" onClick={handleEditSave}>
+            <Button className="bg-primary hover:bg-[#e68a00] text-white" onClick={handleEditSave}>
               Salvar Alterações
             </Button>
           </DialogFooter>

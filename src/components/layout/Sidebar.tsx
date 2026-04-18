@@ -80,7 +80,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   return (
     <div className="w-64 h-screen bg-zinc-950 text-zinc-400 flex flex-col border-r border-zinc-800">
       <div className="p-6 flex flex-col items-center justify-center mb-2 bg-zinc-900/50">
-        <div className="border border-[#FF9900] p-0.5 rounded-full mb-4 shadow-sm bg-white">
+        <div className="border border-primary p-0.5 rounded-full mb-4 shadow-sm bg-background">
           <img 
             src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
             alt="IGP Estudos 2.0 Logo" 
@@ -88,7 +88,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             referrerPolicy="no-referrer"
           />
         </div>
-        <span className="text-[#FF9900] text-xl font-bold tracking-wide text-center" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
+        <span className="text-primary text-xl font-bold tracking-wide text-center" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1">
@@ -100,8 +100,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
               location.pathname === item.path 
-                ? "bg-zinc-900 text-[#FF9900]" 
-                : "hover:bg-zinc-900 hover:text-[#FF9900]"
+                ? "bg-zinc-900 text-primary" 
+                : "hover:bg-zinc-900 hover:text-primary"
             )}
           >
             <item.icon className="w-5 h-5" />
@@ -112,19 +112,19 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
       <div className="p-2 mx-3 mb-2 bg-black rounded-md border border-red-900/50 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5 text-[#FF9900]">
+          <div className="flex items-center gap-1.5 text-primary">
             <Timer className="w-4 h-4" />
             <span className="text-xs font-bold uppercase tracking-wider" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Pomodoro</span>
           </div>
-          <span className="text-xs font-mono font-bold text-[#FF9900]">{formatTime(timeLeft)}</span>
+          <span className="text-xs font-mono font-bold text-primary">{formatTime(timeLeft)}</span>
         </div>
         <button 
           onClick={() => setIsActive(!isActive)}
           className={cn(
             "w-full py-1 rounded text-[10px] font-bold transition-all uppercase tracking-widest",
             isActive 
-              ? "bg-zinc-900 text-[#FF9900] border border-red-900/50 hover:bg-zinc-800" 
-              : "bg-black text-[#FF9900] hover:bg-zinc-900 shadow-md shadow-black/20 border border-zinc-800"
+              ? "bg-zinc-900 text-primary border border-red-900/50 hover:bg-zinc-800" 
+              : "bg-black text-primary hover:bg-zinc-900 shadow-md shadow-black/20 border border-zinc-800"
           )}
         >
           {isActive ? "Pausar" : "Focar"}
@@ -134,7 +134,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="p-4 border-t border-zinc-800 space-y-1">
         <button
           onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-zinc-900 hover:text-[#FF9900] text-zinc-400"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-zinc-900 hover:text-primary text-zinc-400"
         >
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           <span className="font-medium">Trocar Tela</span>
@@ -145,8 +145,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
             location.pathname === "/configuracoes" 
-              ? "bg-zinc-900 text-[#FF9900]" 
-              : "hover:bg-zinc-900 hover:text-[#FF9900]"
+              ? "bg-zinc-900 text-primary" 
+              : "hover:bg-zinc-900 hover:text-primary"
           )}
         >
           <Settings className="w-5 h-5" />

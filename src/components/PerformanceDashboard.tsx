@@ -110,46 +110,46 @@ export function PerformanceDashboard({ plan }: PerformanceDashboardProps) {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-none shadow-md bg-white dark:bg-zinc-900">
+        <Card className="border-none shadow-md bg-background ">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Progresso Geral</CardTitle>
-            <Target className="w-4 h-4 text-indigo-500" />
+            <Target className="w-4 h-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{stats.progressPercentage}%</div>
-            <Progress value={stats.progressPercentage} className="h-1.5 mt-2 bg-zinc-100" />
+            <div className="text-2xl font-bold text-white ">{stats.progressPercentage}%</div>
+            <Progress value={stats.progressPercentage} className="h-1.5 mt-2 bg-card" />
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md bg-white dark:bg-zinc-900">
+        <Card className="border-none shadow-md bg-background ">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Tópicos</CardTitle>
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{stats.completedTopics} / {stats.totalTopics}</div>
+            <div className="text-2xl font-bold text-white ">{stats.completedTopics} / {stats.totalTopics}</div>
             <p className="text-[10px] text-zinc-400 mt-1">Itens concluídos no plano</p>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md bg-white dark:bg-zinc-900">
+        <Card className="border-none shadow-md bg-background ">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Tempo Real</CardTitle>
             <Clock className="w-4 h-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{stats.totalActualHours}h</div>
+            <div className="text-2xl font-bold text-white ">{stats.totalActualHours}h</div>
             <p className="text-[10px] text-zinc-400 mt-1">Dedicadas ao estudo efetivo</p>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md bg-white dark:bg-zinc-900">
+        <Card className="border-none shadow-md bg-background ">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Meta Planejada</CardTitle>
-            <TrendingUp className="w-4 h-4 text-indigo-500" />
+            <TrendingUp className="w-4 h-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{stats.totalPlannedHours}h</div>
+            <div className="text-2xl font-bold text-white ">{stats.totalPlannedHours}h</div>
             <p className="text-[10px] text-zinc-400 mt-1">Carga total do edital</p>
           </CardContent>
         </Card>
@@ -159,7 +159,7 @@ export function PerformanceDashboard({ plan }: PerformanceDashboardProps) {
         <Card className="lg:col-span-2 border-none shadow-md">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-indigo-500" />
+              <BookOpen className="w-5 h-5 text-primary" />
               Desempenho por Disciplina
             </CardTitle>
             <CardDescription>Comparativo de conclusão e tempo investido</CardDescription>
@@ -225,7 +225,7 @@ export function PerformanceDashboard({ plan }: PerformanceDashboardProps) {
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                     <span className="text-zinc-600">{item.name}</span>
                   </div>
-                  <span className="font-bold text-zinc-900">{item.value}</span>
+                  <span className="font-bold text-white">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -237,7 +237,7 @@ export function PerformanceDashboard({ plan }: PerformanceDashboardProps) {
         <Card className="border-none shadow-md">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-indigo-500" />
+              <Calendar className="w-5 h-5 text-primary" />
               Atividade Recente
             </CardTitle>
             <CardDescription>Tópicos concluídos nos últimos 7 dias</CardDescription>
@@ -281,19 +281,19 @@ export function PerformanceDashboard({ plan }: PerformanceDashboardProps) {
               {stats.subjectProgress.map((item, idx) => (
                 <div key={idx} className="py-4 flex items-center justify-between">
                   <div className="flex-1 min-w-0 pr-4">
-                    <p className="text-sm font-bold text-zinc-900 truncate">{item.name}</p>
+                    <p className="text-sm font-bold text-white truncate">{item.name}</p>
                     <div className="flex items-center gap-3 mt-1">
-                      <div className="flex-1 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                      <div className="flex-1 h-1.5 bg-card rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-indigo-500 transition-all duration-500" 
+                          className="h-full bg-primary/100 transition-all duration-500" 
                           style={{ width: `${item.progress}%` }}
                         />
                       </div>
-                      <span className="text-[10px] font-bold text-indigo-600">{item.progress}%</span>
+                      <span className="text-[10px] font-bold text-primary">{item.progress}%</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-xs font-bold text-zinc-900">{item.actualTime}h / {item.plannedTime}h</p>
+                    <p className="text-xs font-bold text-white">{item.actualTime}h / {item.plannedTime}h</p>
                     <p className="text-[10px] text-zinc-400">{item.completedCount} de {item.topicsCount} tópicos</p>
                   </div>
                 </div>

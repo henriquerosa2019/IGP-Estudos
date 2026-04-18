@@ -648,7 +648,7 @@ export default function Notices() {
   if (!authReady) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -657,14 +657,14 @@ export default function Notices() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-5xl tracking-wide text-[#FF9900]" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Meus Editais</h1>
-          <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Gerencie os editais para cruzamento de matérias e criação de planos.</p>
+          <h1 className="text-5xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Meus Editais</h1>
+          <p className="text-white  font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Gerencie os editais para cruzamento de matérias e criação de planos.</p>
         </div>
         <div className="flex gap-2">
           <Button 
             variant="ghost" 
             size="sm" 
-            className="gap-2 text-zinc-500 hover:text-red-600"
+            className="gap-2 text-zinc-500 hover:text-primary"
             onClick={handleLogout}
           >
             <LogOutIcon className="w-4 h-4" />
@@ -676,7 +676,7 @@ export default function Notices() {
                 <TooltipTrigger>
                   <span 
                     onClick={() => setIsAdding(true)} 
-                    className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 h-10 px-4 py-2 gap-2 cursor-pointer"
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-black hover:bg-primary/80 h-10 px-4 py-2 gap-2 cursor-pointer"
                   >
                     <Plus className="w-4 h-4" /> Novo Edital
                   </span>
@@ -704,9 +704,9 @@ export default function Notices() {
             exit={{ opacity: 0, y: -20 }}
           >
             <div className="max-w-3xl mx-auto space-y-6">
-              <Card className="border-red-200 bg-white dark:bg-white shadow-lg">
+              <Card className="border-red-200 bg-background dark:bg-background shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-red-600">
+                  <CardTitle className="flex items-center gap-2 text-primary">
                     <Sparkles className="w-5 h-5" />
                     Importar Edital via Link
                   </CardTitle>
@@ -720,7 +720,7 @@ export default function Notices() {
                       placeholder="https://app.qconcursos.com/..." 
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
-                      className="bg-white text-zinc-900 border-red-200 placeholder:text-red-300"
+                      className="bg-background text-white border-red-200 placeholder:text-red-300"
                     />
                     <Button 
                       onClick={handleImport} 
@@ -735,7 +735,7 @@ export default function Notices() {
                       <span className="w-full border-t border-red-200" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-red-600">Ou</span>
+                      <span className="bg-background px-2 text-primary">Ou</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -746,7 +746,7 @@ export default function Notices() {
                         const file = e.target.files?.[0];
                         if (file) handleFileUpload(file);
                       }}
-                      className="bg-white text-zinc-900 border-red-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                      className="bg-background text-white border-red-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
                     />
                   </div>
                   <div className="relative">
@@ -754,16 +754,16 @@ export default function Notices() {
                       <span className="w-full border-t border-red-200" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-red-600">Ou</span>
+                      <span className="bg-background px-2 text-primary">Ou</span>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-red-600">Colar conteúdo do Edital/Curso</Label>
+                      <Label className="text-primary">Colar conteúdo do Edital/Curso</Label>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                            <span className="inline-flex items-center justify-center rounded-md text-[10px] font-medium text-zinc-400 hover:text-red-600 h-6 px-2 cursor-pointer">
+                            <span className="inline-flex items-center justify-center rounded-md text-[10px] font-medium text-zinc-400 hover:text-primary h-6 px-2 cursor-pointer">
                               Como extrair da Hotmart?
                             </span>
                           </TooltipTrigger>
@@ -788,7 +788,7 @@ export default function Notices() {
                       placeholder="Cole aqui o texto ou o HTML da lista de aulas..."
                       value={manualText}
                       onChange={(e) => setManualText(e.target.value)}
-                      className="min-h-[150px] bg-white text-zinc-900 border-red-200 placeholder:text-red-300"
+                      className="min-h-[150px] bg-background text-white border-red-200 placeholder:text-red-300"
                     />
                     <Button 
                       onClick={handleManualImport} 
@@ -800,7 +800,7 @@ export default function Notices() {
                   </div>
                   {importing && (
                     <div className="space-y-1">
-                      <div className="flex justify-between text-xs text-red-600">
+                      <div className="flex justify-between text-xs text-primary">
                         <span>Progresso</span>
                         <span>{importProgress}%</span>
                       </div>
@@ -839,7 +839,7 @@ export default function Notices() {
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
-                    className="flex-1 gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                    className="flex-1 gap-2 border-primary/20 text-primary hover:bg-primary/10"
                     onClick={() => {
                       setName("PMRJ Soldado 2024 (Último Edital)");
                       setContent(`LÍNGUA PORTUGUESA:
@@ -911,7 +911,7 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                     <Sparkles className="w-4 h-4" /> Usar Edital PMRJ Soldado
                   </Button>
                 </div>
-                <Button className="w-full bg-indigo-600" onClick={handleAddNotice} disabled={loading}>
+                <Button className="w-full bg-primary" onClick={handleAddNotice} disabled={loading}>
                   {loading ? "Analisando com IA..." : "Analisar e Salvar Edital"}
                 </Button>
               </CardContent>
@@ -925,13 +925,13 @@ NOÇÕES DE ÉTICA E CIDADANIA:
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            <div className="flex items-center justify-between bg-zinc-50 p-6 rounded-2xl border border-zinc-100">
+            <div className="flex items-center justify-between bg-background p-6 rounded-2xl border border-zinc-100">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-100 rounded-xl">
-                  <FileText className="w-6 h-6 text-indigo-600" />
+                <div className="p-3 bg-yellow-100 rounded-xl">
+                  <FileText className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-zinc-900">{selectedNotice.name}</h2>
+                  <h2 className="text-2xl font-bold text-white">{selectedNotice.name}</h2>
                   <div className="flex gap-4 mt-1">
                     <span className="text-sm text-zinc-500 flex items-center gap-1">
                       <Calendar className="w-4 h-4" /> {selectedNotice.examDate ? new Date(selectedNotice.examDate).toLocaleDateString() : "Data não definida"}
@@ -966,7 +966,7 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                   onClick={handleReanalyze} 
                   variant="outline" 
                   disabled={isReanalyzing}
-                  className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                  className="gap-2 text-primary border-primary/20 hover:bg-primary/10"
                 >
                   <Sparkles className={`w-4 h-4 ${isReanalyzing ? 'animate-spin' : ''}`} />
                   {isReanalyzing ? "Analisando..." : "Atualizar Tópicos"}
@@ -986,7 +986,7 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                   <CardContent className="p-2 space-y-1">
                     <Button 
                       variant={noticeViewMode === 'subjects' ? 'secondary' : 'ghost'} 
-                      className="w-full justify-start gap-3 text-zinc-600 hover:text-indigo-600 hover:bg-indigo-50"
+                      className="w-full justify-start gap-3 text-zinc-600 hover:text-primary hover:bg-primary/10"
                       onClick={() => setNoticeViewMode('subjects')}
                     >
                       <Layers className="w-4 h-4" />
@@ -994,7 +994,7 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                     </Button>
                     <Button 
                       variant={noticeViewMode === 'vertical' ? 'secondary' : 'ghost'} 
-                      className="w-full justify-start gap-3 text-zinc-600 hover:text-indigo-600 hover:bg-indigo-50"
+                      className="w-full justify-start gap-3 text-zinc-600 hover:text-primary hover:bg-primary/10"
                       onClick={() => setNoticeViewMode('vertical')}
                     >
                       <LayoutList className="w-4 h-4" />
@@ -1002,7 +1002,7 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                     </Button>
                     <Button 
                       variant={noticeViewMode === 'calendar' ? 'secondary' : 'ghost'} 
-                      className="w-full justify-start gap-3 text-zinc-600 hover:text-indigo-600 hover:bg-indigo-50"
+                      className="w-full justify-start gap-3 text-zinc-600 hover:text-primary hover:bg-primary/10"
                       onClick={() => setNoticeViewMode('calendar')}
                     >
                       <CalendarDays className="w-4 h-4" />
@@ -1010,7 +1010,7 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                     </Button>
                     <Button 
                       variant={noticeViewMode === 'performance' ? 'secondary' : 'ghost'} 
-                      className="w-full justify-start gap-3 text-zinc-600 hover:text-indigo-600 hover:bg-indigo-50"
+                      className="w-full justify-start gap-3 text-zinc-600 hover:text-primary hover:bg-primary/10"
                       onClick={() => setNoticeViewMode('performance')}
                     >
                       <BarChart3 className="w-4 h-4" />
@@ -1019,18 +1019,18 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                   </CardContent>
                 </Card>
 
-                <Card className="bg-indigo-600 text-white border-none">
+                <Card className="bg-primary text-white border-none">
                   <CardContent className="p-6">
                     <h3 className="font-bold mb-2">Progresso Total</h3>
                     <div className="flex items-end gap-2 mb-4">
                       <span className="text-3xl font-bold">
                         {Math.round(selectedNotice.subjects.reduce((acc, s) => acc + (s.progress || 0), 0) / selectedNotice.subjects.length)}%
                       </span>
-                      <span className="text-indigo-200 text-sm mb-1">concluído</span>
+                      <span className="text-yellow-200 text-sm mb-1">concluído</span>
                     </div>
                     <Progress 
                       value={selectedNotice.subjects.reduce((acc, s) => acc + (s.progress || 0), 0) / selectedNotice.subjects.length} 
-                      className="h-2 bg-indigo-400/30"
+                      className="h-2 bg-yellow-400/30"
                     />
                   </CardContent>
                 </Card>
@@ -1039,7 +1039,7 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                   <Card className="border-zinc-200 shadow-sm">
                     <CardHeader className="py-4">
                       <CardTitle className="text-sm font-bold flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-indigo-600" />
+                        <Clock className="w-4 h-4 text-primary" />
                         Estimativa de Conclusão
                       </CardTitle>
                     </CardHeader>
@@ -1075,15 +1075,15 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                         <div className="pt-2 space-y-3 border-t border-zinc-100">
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-zinc-500">Tempo restante:</span>
-                            <span className="text-sm font-bold text-zinc-900">{Math.round(estimates.remainingMinutes / 60)}h</span>
+                            <span className="text-sm font-bold text-white">{Math.round(estimates.remainingMinutes / 60)}h</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-zinc-500">Dias para concluir:</span>
-                            <span className="text-sm font-bold text-zinc-900">{estimates.daysToFinish} dias</span>
+                            <span className="text-sm font-bold text-white">{estimates.daysToFinish} dias</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-zinc-500">Data de conclusão:</span>
-                            <span className="text-sm font-bold text-indigo-600">{estimates.finishDate.toLocaleDateString()}</span>
+                            <span className="text-sm font-bold text-primary">{estimates.finishDate.toLocaleDateString()}</span>
                           </div>
 
                           {estimates.status !== 'no-date' && (
@@ -1106,9 +1106,9 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                               </div>
                               
                               {estimates.requiredDailyHours > 0 && (
-                                <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                                  <p className="text-[10px] text-indigo-600 font-bold uppercase mb-1">Carga Horária Recomendada</p>
-                                  <p className="text-xs text-indigo-900">
+                                <div className="p-3 bg-primary/10 rounded-xl border border-primary/10">
+                                  <p className="text-[10px] text-primary font-bold uppercase mb-1">Carga Horária Recomendada</p>
+                                  <p className="text-xs text-yellow-900">
                                     Para concluir exatamente no dia da prova, você precisa estudar <strong>{estimates.requiredDailyHours.toFixed(1)}h</strong> por dia.
                                   </p>
                                 </div>
@@ -1117,7 +1117,7 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                           )}
 
                           {estimates.status === 'no-date' && !manualExamDate && (
-                            <div className="p-3 bg-zinc-50 rounded-xl text-[10px] text-zinc-500 italic">
+                            <div className="p-3 bg-background rounded-xl text-[10px] text-zinc-500 italic">
                               Insira a data da prova para verificar se você conseguirá concluir o edital a tempo.
                             </div>
                           )}
@@ -1131,27 +1131,27 @@ NOÇÕES DE ÉTICA E CIDADANIA:
               <div className="flex-1 space-y-4">
                 {noticeViewMode === 'subjects' && (
                   <>
-                    <h3 className="text-lg font-bold text-zinc-800 flex items-center gap-2">
-                      <Layers className="w-5 h-5 text-indigo-500" />
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Layers className="w-5 h-5 text-primary" />
                       Disciplinas do Edital
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
                       {selectedNotice.subjects.map((subject, idx) => (
                         <Card 
                           key={idx} 
-                          className={`overflow-hidden transition-all duration-300 border-zinc-200 ${expandedSubject === idx ? 'ring-2 ring-indigo-500 border-transparent' : 'hover:border-indigo-200'}`}
+                          className={`overflow-hidden transition-all duration-300 border-zinc-200 ${expandedSubject === idx ? 'ring-2 ring-yellow-500 border-transparent' : 'hover:border-primary/20'}`}
                         >
                           <div 
                             className="p-4 cursor-pointer flex items-center justify-between"
                             onClick={() => setExpandedSubject(expandedSubject === idx ? null : idx)}
                           >
                             <div className="flex items-center gap-4 flex-1">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${expandedSubject === idx ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-500'}`}>
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${expandedSubject === idx ? 'bg-primary text-white' : 'bg-card text-zinc-500'}`}>
                                 <span className="text-xs font-bold">{idx + 1}</span>
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <h4 className="font-bold text-zinc-900">{subject.name}</h4>
+                                  <h4 className="font-bold text-white">{subject.name}</h4>
                                   <Badge variant={subject.importance === 'high' ? 'destructive' : subject.importance === 'medium' ? 'default' : 'secondary'} className="text-[10px] py-0">
                                     {subject.importance === 'high' ? 'ALTA' : subject.importance === 'medium' ? 'MÉDIA' : 'BAIXA'}
                                   </Badge>
@@ -1173,18 +1173,18 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                className="border-t border-zinc-100 bg-zinc-50/30"
+                                className="border-t border-zinc-100 bg-background/30"
                               >
                                 <div className="p-6 space-y-4">
                                   <div className="flex items-center justify-between">
-                                    <h5 className="text-sm font-bold text-zinc-700 uppercase tracking-wider">Conteúdo Programático</h5>
+                                    <h5 className="text-sm font-bold text-zinc-300 uppercase tracking-wider">Conteúdo Programático</h5>
                                     <span className="text-xs text-zinc-500">{subject.topics?.length || 0} tópicos listados</span>
                                   </div>
                                   <div className="grid grid-cols-1 gap-2">
                                     {subject.topics?.map((topic, tIdx) => (
-                                      <div key={tIdx} className="flex items-start gap-3 p-3 bg-white rounded-xl border border-zinc-100 group hover:border-indigo-200 transition-colors">
+                                      <div key={tIdx} className="flex items-start gap-3 p-3 bg-background rounded-xl border border-zinc-100 group hover:border-primary/20 transition-colors">
                                         <div className="mt-0.5">
-                                          <CheckCircle2 className="w-4 h-4 text-zinc-200 group-hover:text-indigo-300 transition-colors" />
+                                          <CheckCircle2 className="w-4 h-4 text-zinc-200 group-hover:text-yellow-300 transition-colors" />
                                         </div>
                                         <span className="text-sm text-zinc-600 leading-relaxed">{topic}</span>
                                       </div>
@@ -1212,14 +1212,14 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                         onToggleTopic={toggleTopicCompletion} 
                       />
                     ) : (
-                      <Card className="border-dashed border-2 border-zinc-200 bg-zinc-50/50">
+                      <Card className="border-dashed border-2 border-zinc-200 bg-background/50">
                         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                           <CalendarDays className="w-12 h-12 text-zinc-300 mb-4" />
-                          <h3 className="text-lg font-bold text-zinc-700 mb-2">Nenhum plano gerado</h3>
+                          <h3 className="text-lg font-bold text-zinc-300 mb-2">Nenhum plano gerado</h3>
                           <p className="text-zinc-500 max-w-md mb-6">
                             Você ainda não gerou um plano de estudos para este edital. Clique no botão "Gerar Plano de Estudos" acima para começar.
                           </p>
-                          <Button onClick={handleGeneratePlan} disabled={generatingPlan} className="bg-indigo-600 hover:bg-indigo-700">
+                          <Button onClick={handleGeneratePlan} disabled={generatingPlan} className="bg-primary hover:bg-primary/80">
                             {generatingPlan ? "Gerando..." : "Gerar Plano Agora"}
                           </Button>
                         </CardContent>
@@ -1233,14 +1233,14 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                     {currentPlan ? (
                       <PerformanceDashboard plan={currentPlan} />
                     ) : (
-                      <Card className="border-dashed border-2 border-zinc-200 bg-zinc-50/50">
+                      <Card className="border-dashed border-2 border-zinc-200 bg-background/50">
                         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                           <BarChart3 className="w-12 h-12 text-zinc-300 mb-4" />
-                          <h3 className="text-lg font-bold text-zinc-700 mb-2">Sem dados de desempenho</h3>
+                          <h3 className="text-lg font-bold text-zinc-300 mb-2">Sem dados de desempenho</h3>
                           <p className="text-zinc-500 max-w-md mb-6">
                             Gere um plano de estudos e comece a marcar tópicos como concluídos para visualizar seu desempenho.
                           </p>
-                          <Button onClick={handleGeneratePlan} disabled={generatingPlan} className="bg-indigo-600 hover:bg-indigo-700">
+                          <Button onClick={handleGeneratePlan} disabled={generatingPlan} className="bg-primary hover:bg-primary/80">
                             {generatingPlan ? "Gerando..." : "Gerar Plano Agora"}
                           </Button>
                         </CardContent>
@@ -1260,10 +1260,10 @@ NOÇÕES DE ÉTICA E CIDADANIA:
           >
             {notices.length === 0 && (
               <div className="col-span-full py-20 text-center border-2 border-dashed border-zinc-200 rounded-3xl">
-                <div className="p-4 bg-zinc-50 rounded-full w-fit mx-auto mb-4">
+                <div className="p-4 bg-background rounded-full w-fit mx-auto mb-4">
                   <Search className="w-8 h-8 text-zinc-300" />
                 </div>
-                <h3 className="text-lg font-medium text-zinc-900">Nenhum edital cadastrado</h3>
+                <h3 className="text-lg font-medium text-white">Nenhum edital cadastrado</h3>
                 <p className="text-zinc-500 max-w-xs mx-auto mt-2">Adicione seu primeiro edital para começar a cruzar matérias e gerar planos inteligentes.</p>
                 <Button onClick={() => setIsAdding(true)} variant="outline" className="mt-6 gap-2">
                   <Plus className="w-4 h-4" /> Adicionar Edital
@@ -1273,25 +1273,25 @@ NOÇÕES DE ÉTICA E CIDADANIA:
             {notices.map(notice => (
               <Card 
                 key={notice.id} 
-                className="group cursor-pointer hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-50 transition-all duration-300"
+                className="group cursor-pointer hover:border-primary/20 hover:shadow-lg hover:shadow-yellow-50 transition-all duration-300 bg-card"
                 onClick={() => setSelectedNotice(notice)}
               >
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div className="p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                      <FileText className="w-5 h-5 text-indigo-600" />
+                    <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                      <FileText className="w-5 h-5 text-primary" />
                     </div>
-                    <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-indigo-400 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-primary transition-colors" />
                   </div>
-                  <CardTitle className="mt-4 text-lg line-clamp-1">{notice.name}</CardTitle>
-                  <CardDescription className="line-clamp-2">
+                  <CardTitle className="mt-4 text-lg line-clamp-1 text-primary uppercase">{notice.name}</CardTitle>
+                  <CardDescription className="line-clamp-2 text-white">
                     {notice.subjects.length} matérias identificadas.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-1">
                     {notice.subjects.slice(0, 3).map((s, i) => (
-                      <Badge key={i} variant="outline" className="text-[10px] py-0 px-1.5">
+                      <Badge key={i} variant="outline" className="text-[10px] py-0 px-1.5 text-white border-zinc-700">
                         {s.name}
                       </Badge>
                     ))}

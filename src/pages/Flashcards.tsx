@@ -567,21 +567,21 @@ export default function Flashcards() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-5xl tracking-wide text-[#FF9900]" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Flashcards</h1>
-          <p className="text-zinc-900 dark:text-white font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Memorização ativa com repetição espaçada.</p>
+          <h1 className="text-5xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Flashcards</h1>
+          <p className="text-white  font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Memorização ativa com repetição espaçada.</p>
         </div>
         {view === 'list' ? (
           <div className="flex gap-2">
             <Button 
               onClick={() => setView('metrics')} 
               variant="outline" 
-              className="gap-2 border-zinc-800 text-[#FF9900] hover:text-[#FF9900] hover:bg-zinc-900 font-bold"
+              className="gap-2 border-zinc-800 text-primary hover:text-primary hover:bg-zinc-900 font-bold"
               style={{ fontFamily: "'Deutsch Gothic', serif" }}
             >
-              <BarChart3 className="w-4 h-4 text-[#FF9900]" />
+              <BarChart3 className="w-4 h-4 text-primary" />
               Métricas
             </Button>
-            <Button onClick={handleStartStudy} className="bg-indigo-600 hover:bg-indigo-700 dark:bg-zinc-900 dark:text-red-600 dark:hover:bg-zinc-800 dark:border dark:border-red-900/50 gap-2">
+            <Button onClick={handleStartStudy} className="bg-primary hover:bg-primary/80  dark:text-primary dark:hover:bg-zinc-800 dark:border dark:border-red-900/50 gap-2">
               <Layers className="w-4 h-4" />
               Estudar Agora
             </Button>
@@ -601,9 +601,9 @@ export default function Flashcards() {
             exit={{ opacity: 0, y: -20 }}
             className="max-w-3xl mx-auto"
           >
-            <Card className="border-indigo-100 shadow-xl shadow-indigo-50 dark:bg-zinc-900 dark:border-zinc-800">
+            <Card className="border-primary/10 shadow-xl shadow-yellow-50  dark:border-zinc-800">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-indigo-600 dark:text-red-600">
+                <CardTitle className="flex items-center gap-2 text-primary dark:text-primary">
                   <BrainCircuit className="w-5 h-5" />
                   Gerar Novos Flashcards
                 </CardTitle>
@@ -613,42 +613,42 @@ export default function Flashcards() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="deckName" className="text-zinc-900 dark:text-white font-bold">Nome do Deck (Ex: Dir. Penal - Prof. Silva - 10/04)</Label>
+                  <Label htmlFor="deckName" className="text-white  font-bold">Nome do Deck (Ex: Dir. Penal - Prof. Silva - 10/04)</Label>
                   <Input 
                     id="deckName"
                     placeholder="Identifique este conjunto de flashcards..." 
                     value={deckName}
                     onChange={(e) => setDeckName(e.target.value)}
                     disabled={loading}
-                    className="bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                    className="bg-background  border-zinc-200 dark:border-zinc-700 text-white  placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                   />
                 </div>
 
                 <div className="space-y-4">
-                  <Label className="text-zinc-900 dark:text-white font-bold">Fontes de Conteúdo (Adicione várias)</Label>
+                  <Label className="text-white  font-bold">Fontes de Conteúdo (Adicione várias)</Label>
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={() => addSource('topic')} disabled={loading} className="border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    <Button variant="outline" size="sm" onClick={() => addSource('topic')} disabled={loading} className="border-zinc-200 dark:border-zinc-700 text-zinc-300  hover:bg-card dark:hover:bg-zinc-800">
                       <FileText className="w-4 h-4 mr-2"/> Texto / Tópico
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => document.getElementById('file-upload')?.click()} disabled={loading} className="border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    <Button variant="outline" size="sm" onClick={() => document.getElementById('file-upload')?.click()} disabled={loading} className="border-zinc-200 dark:border-zinc-700 text-zinc-300  hover:bg-card dark:hover:bg-zinc-800">
                       <Upload className="w-4 h-4 mr-2"/> Arquivo (PDF/Img)
                     </Button>
                     <input id="file-upload" type="file" multiple accept="application/pdf,image/*" className="hidden" onChange={handleFileChange} />
-                    <Button variant="outline" size="sm" onClick={() => addSource('link')} disabled={loading} className="border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    <Button variant="outline" size="sm" onClick={() => addSource('link')} disabled={loading} className="border-zinc-200 dark:border-zinc-700 text-zinc-300  hover:bg-card dark:hover:bg-zinc-800">
                       <LinkIcon className="w-4 h-4 mr-2"/> Link / Vídeo
                     </Button>
                   </div>
                   
                   <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
                     {sources.map(source => (
-                      <div key={source.id} className="flex items-center gap-2 p-2 border rounded-md border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+                      <div key={source.id} className="flex items-center gap-2 p-2 border rounded-md border-zinc-200 dark:border-zinc-800 bg-background /50">
                         {source.type === 'topic' && (
                           <Input 
                             value={source.text} 
                             onChange={(e) => updateSource(source.id, e.target.value)} 
                             placeholder="Digite o texto ou tópico..." 
                             disabled={loading}
-                            className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 border-zinc-200 dark:border-zinc-700"
+                            className="bg-background  text-white  placeholder:text-zinc-400 dark:placeholder:text-zinc-500 border-zinc-200 dark:border-zinc-700"
                           />
                         )}
                         {source.type === 'link' && (
@@ -657,13 +657,13 @@ export default function Flashcards() {
                             onChange={(e) => updateSource(source.id, e.target.value)} 
                             placeholder="Cole o link do YouTube ou site..." 
                             disabled={loading}
-                            className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 border-zinc-200 dark:border-zinc-700"
+                            className="bg-background  text-white  placeholder:text-zinc-400 dark:placeholder:text-zinc-500 border-zinc-200 dark:border-zinc-700"
                           />
                         )}
                         {source.type === 'file' && (
-                          <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-white dark:bg-zinc-800 rounded-md border border-zinc-200 dark:border-zinc-700">
+                          <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-background  rounded-md border border-zinc-200 dark:border-zinc-700">
                             {source.file.type.includes('pdf') ? <FileText className="w-4 h-4 text-red-500" /> : <ImageIcon className="w-4 h-4 text-blue-500" />}
-                            <span className="text-sm truncate text-zinc-900 dark:text-white font-medium">{source.file.name}</span>
+                            <span className="text-sm truncate text-white  font-medium">{source.file.name}</span>
                           </div>
                         )}
                         <Button variant="ghost" size="icon" onClick={() => removeSource(source.id)} disabled={loading} className="shrink-0 text-zinc-400 hover:text-red-500">
@@ -682,7 +682,7 @@ export default function Flashcards() {
                 <div className="flex gap-3 pt-4 border-t dark:border-zinc-800">
                   <Button 
                     onClick={handleGenerate} 
-                    className="flex-1 bg-black hover:bg-zinc-900 text-[#FF9900] font-bold border border-zinc-800"
+                    className="flex-1 bg-black hover:bg-zinc-900 text-primary font-bold border border-zinc-800"
                     disabled={loading || sources.length === 0 || !deckName.trim()}
                   >
                     {loading ? (
@@ -733,9 +733,9 @@ export default function Flashcards() {
                 </CardContent>
               </Card>
 
-              <Card className="hover:border-yellow-400 transition-colors cursor-pointer group bg-yellow-50/50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-900/50" onClick={() => startReview('medium')}>
+              <Card className="hover:border-yellow-400 transition-colors cursor-pointer group bg-primary/10/50 dark:bg-yellow-900/10 border-primary/20 dark:border-yellow-900/50" onClick={() => startReview('medium')}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-bold text-yellow-700 dark:text-yellow-500 flex items-center justify-between">
+                  <CardTitle className="text-lg font-bold text-yellow-700 dark:text-primary flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <AlertCircle className="w-5 h-5" />
                       Revisão Questões Médias
@@ -746,7 +746,7 @@ export default function Flashcards() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400/80">
+                  <p className="text-sm text-primary dark:text-yellow-400/80">
                     Revisão rápida (30 min).
                   </p>
                 </CardContent>
@@ -765,7 +765,7 @@ export default function Flashcards() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-red-600 dark:text-red-400/80">
+                  <p className="text-sm text-primary dark:text-red-400/80">
                     Revisão imediata (10 min).
                   </p>
                 </CardContent>
@@ -776,7 +776,7 @@ export default function Flashcards() {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Save className="w-5 h-5 text-indigo-500" />
+                <Save className="w-5 h-5 text-primary" />
                 Biblioteca de Cards
               </h2>
               <div className="relative w-full sm:w-72">
@@ -785,7 +785,7 @@ export default function Flashcards() {
                   placeholder="Buscar por tópico, nome..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 dark:bg-zinc-900 dark:border-zinc-800"
+                  className="pl-9  dark:border-zinc-800"
                 />
               </div>
             </div>
@@ -804,7 +804,7 @@ export default function Flashcards() {
                     const unratedCount = deck.cards.filter(c => !c.difficulty).length;
                     
                     return (
-                      <Card key={deck.id} className="hover:border-indigo-200 transition-colors cursor-pointer group relative" onClick={() => {
+                      <Card key={deck.id} className="hover:border-primary/20 transition-colors cursor-pointer group relative" onClick={() => {
                         setFlashcards(deck.cards);
                         setTopic(deck.name);
                         setCurrentDeckId(deck.id);
@@ -824,7 +824,7 @@ export default function Flashcards() {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                         <CardHeader className="pb-2 pr-10">
-                          <CardTitle className="text-sm font-bold text-zinc-700 group-hover:text-indigo-600 transition-colors">
+                          <CardTitle className="text-sm font-bold text-zinc-300 group-hover:text-primary transition-colors">
                             {deck.name}
                           </CardTitle>
                         </CardHeader>
@@ -843,12 +843,12 @@ export default function Flashcards() {
                                 </Badge>
                               )}
                               {mediumCount > 0 && (
-                                <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50 text-[10px] px-1.5 py-0">
+                                <Badge variant="outline" className="text-primary border-primary/20 bg-primary/10 text-[10px] px-1.5 py-0">
                                   Médio: {mediumCount}
                                 </Badge>
                               )}
                               {hardCount > 0 && (
-                                <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 text-[10px] px-1.5 py-0">
+                                <Badge variant="outline" className="text-red-600 font-bold border-red-200 bg-red-50 text-[10px] px-1.5 py-0">
                                   Difícil: {hardCount}
                                 </Badge>
                               )}
@@ -876,7 +876,7 @@ export default function Flashcards() {
               {flashcards.map((_, i) => (
                 <div 
                   key={i} 
-                  className={`h-1 w-4 rounded-full ${i === currentIndex ? 'bg-indigo-600' : 'bg-zinc-200'}`} 
+                  className={`h-1 w-4 rounded-full ${i === currentIndex ? 'bg-primary' : 'bg-zinc-200'}`} 
                 />
               ))}
             </div>
@@ -892,22 +892,22 @@ export default function Flashcards() {
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
             >
               {/* Front */}
-              <Card className="absolute inset-0 backface-hidden flex flex-col p-8 text-center border-2 border-zinc-100 dark:border-zinc-800 shadow-xl dark:bg-zinc-900">
-                <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-4 shrink-0">Pergunta</span>
+              <Card className="absolute inset-0 backface-hidden flex flex-col p-8 text-center border-2 border-zinc-100 dark:border-zinc-800 shadow-xl ">
+                <span className="text-xs font-bold uppercase tracking-widest text-primary mb-4 shrink-0">Pergunta</span>
                 <div className="flex-1 overflow-y-auto w-full pr-2">
                   <div className="min-h-full flex flex-col items-center justify-center">
-                    <h2 className="text-xl md:text-2xl font-bold text-zinc-900 dark:text-white leading-relaxed py-2">{currentCard?.question}</h2>
+                    <h2 className="text-xl md:text-2xl font-bold text-white  leading-relaxed py-2">{currentCard?.question}</h2>
                   </div>
                 </div>
                 <p className="mt-4 text-zinc-400 text-sm italic shrink-0">Clique para ver a resposta</p>
               </Card>
 
               {/* Back */}
-              <Card className="absolute inset-0 backface-hidden flex flex-col p-8 text-center border-2 border-indigo-100 dark:border-indigo-900 shadow-xl bg-indigo-50/30 dark:bg-zinc-800 [transform:rotateY(180deg)]">
-                <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-4 shrink-0">Resposta</span>
+              <Card className="absolute inset-0 backface-hidden flex flex-col p-8 text-center border-2 border-primary/10 dark:border-yellow-900 shadow-xl bg-primary/5  [transform:rotateY(180deg)]">
+                <span className="text-xs font-bold uppercase tracking-widest text-primary mb-4 shrink-0">Resposta</span>
                 <div className="flex-1 overflow-y-auto w-full pr-2">
                   <div className="min-h-full flex flex-col items-center justify-center">
-                    <div className="text-lg md:text-xl text-zinc-800 dark:text-white dark:font-bold leading-relaxed prose prose-indigo max-w-none text-center py-2">
+                    <div className="text-lg md:text-xl text-white  dark:font-bold leading-relaxed prose prose-yellow max-w-none text-center py-2">
                       <Markdown>{currentCard?.answer}</Markdown>
                     </div>
                   </div>
@@ -922,7 +922,7 @@ export default function Flashcards() {
                 <Button 
                   variant="outline" 
                   size="lg" 
-                  className="rounded-full px-8 h-14 border-green-200 text-green-600 hover:bg-green-50 dark:bg-zinc-900 dark:border-green-900 dark:text-white dark:font-bold dark:hover:bg-green-900/50"
+                  className="rounded-full px-8 h-14 border-green-200 text-green-600 hover:bg-green-50  dark:border-green-900  dark:font-bold dark:hover:bg-green-900/50"
                   onClick={(e) => { e.stopPropagation(); handleReview('easy'); }}
                 >
                   Fácil
@@ -930,7 +930,7 @@ export default function Flashcards() {
                 <Button 
                   variant="outline" 
                   size="lg" 
-                  className="rounded-full px-8 h-14 border-yellow-200 text-yellow-600 hover:bg-yellow-50 dark:bg-zinc-900 dark:border-yellow-900 dark:text-white dark:font-bold dark:hover:bg-yellow-900/50"
+                  className="rounded-full px-8 h-14 border-primary/20 text-primary hover:bg-primary/10  dark:border-yellow-900  dark:font-bold dark:hover:bg-yellow-900/50"
                   onClick={(e) => { e.stopPropagation(); handleReview('medium'); }}
                 >
                   Média
@@ -938,7 +938,7 @@ export default function Flashcards() {
                 <Button 
                   variant="outline" 
                   size="lg" 
-                  className="rounded-full px-8 h-14 border-red-200 text-red-600 hover:bg-red-50 dark:bg-zinc-900 dark:border-red-900 dark:text-white dark:font-bold dark:hover:bg-red-900/50"
+                  className="rounded-full px-8 h-14 border-red-200 text-red-600 font-bold hover:bg-red-50  dark:border-red-900  dark:hover:bg-red-900/50"
                   onClick={(e) => { e.stopPropagation(); handleReview('hard'); }}
                 >
                   Difícil
@@ -948,7 +948,7 @@ export default function Flashcards() {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="rounded-full px-8 h-14 border-zinc-200 text-zinc-500 hover:bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800 dark:text-white dark:hover:bg-zinc-800"
+                className="rounded-full px-8 h-14 border-zinc-200 text-zinc-500 hover:bg-background  dark:border-zinc-800  dark:hover:bg-zinc-800"
                 onClick={() => setIsFlipped(true)}
               >
                 <RotateCcw className="w-5 h-5 mr-2" /> Mostrar Resposta
