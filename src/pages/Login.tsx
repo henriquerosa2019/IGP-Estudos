@@ -159,7 +159,7 @@ export default function Login() {
                   id="email" 
                   type="email" 
                   placeholder="seu@email.com" 
-                  className="pl-10 bg-zinc-900 border-primary text-primary focus:border-yellow-200"
+                  className="pl-10 !bg-zinc-900 !border-primary !text-primary !placeholder-zinc-500 focus:border-yellow-200"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -173,7 +173,7 @@ export default function Login() {
                   id="password" 
                   type="password" 
                   placeholder="••••••••" 
-                  className="pl-10 bg-zinc-900 border-primary text-primary focus:border-yellow-200"
+                  className="pl-10 !bg-zinc-900 !border-primary !text-primary !placeholder-zinc-500 focus:border-yellow-200"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
