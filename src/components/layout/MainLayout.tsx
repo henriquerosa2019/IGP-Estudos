@@ -40,7 +40,7 @@ export function MainLayout() {
         </div>
 
         {/* Sidebar */}
-        <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-zinc-950 transform transition-transform duration-300 ease-in-out md:relative md:transform-none ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className={`fixed inset-y-0 left-0 z-40 w-72 bg-zinc-950 transform transition-transform duration-300 ease-in-out md:relative md:transform-none ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
           <Sidebar onClose={() => setIsSidebarOpen(false)} />
         </div>
 

@@ -251,14 +251,13 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 py-12">
-      <div className="mb-8 flex flex-col items-center">
+      <div className="mb-8 flex flex-col items-center w-full">
         <img 
-          src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
-          alt="IGP Estudos 2.0 Logo" 
-          className="h-48 w-auto object-contain mb-4"
+          src="https://www.dropbox.com/scl/fi/3mbpui4v6ujy3qpietkz3/file_00000000f3e071f5b7b9002a82001ba3.png?rlkey=brg42q31mtfniaz0nblqzdwrf&st=ffx5om1y&raw=1" 
+          alt="IGP Estudos Logo" 
+          className="w-full max-w-[400px] h-auto object-contain mb-4 rounded-xl"
           referrerPolicy="no-referrer"
         />
-        <h1 className="text-4xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</h1>
         <p className="text-zinc-500 mt-2">Inscrição de Novo Aluno</p>
       </div>
 

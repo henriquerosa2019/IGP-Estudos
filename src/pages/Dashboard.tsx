@@ -247,14 +247,13 @@ export default function Dashboard() {
           <h1 className="text-5xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Bem-vindo de volta!</h1>
           <p className="text-white  font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Seu progresso é medido por cada tópico concluído nos seus editais.</p>
         </div>
-        <div className="p-4 bg-background rounded-2xl border border-zinc-200 shadow-sm flex flex-col items-center justify-center gap-2">
+        <div className="p-4 bg-background rounded-2xl border border-zinc-900 shadow-sm flex flex-col items-center justify-center gap-2">
           <img 
-            src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
-            alt="IGP Estudos 2.0 Logo" 
-            className="h-32 w-auto object-contain"
+            src="https://www.dropbox.com/scl/fi/3mbpui4v6ujy3qpietkz3/file_00000000f3e071f5b7b9002a82001ba3.png?rlkey=brg42q31mtfniaz0nblqzdwrf&st=ffx5om1y&raw=1" 
+            alt="IGP Estudos Logo" 
+            className="w-[300px] h-auto object-contain rounded-lg"
             referrerPolicy="no-referrer"
           />
-          <span className="text-primary text-3xl tracking-wide" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
         </div>
       </div>
 

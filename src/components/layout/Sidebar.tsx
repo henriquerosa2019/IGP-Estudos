@@ -78,17 +78,16 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <div className="w-64 h-screen bg-zinc-950 text-zinc-400 flex flex-col border-r border-zinc-800">
-      <div className="p-6 flex flex-col items-center justify-center mb-2 bg-zinc-900/50">
-        <div className="border border-primary p-0.5 rounded-full mb-4 shadow-sm bg-background">
+    <div className="w-72 h-screen bg-zinc-950 text-zinc-400 flex flex-col border-r border-zinc-800">
+      <div className="py-8 flex flex-col items-center justify-center mb-2 bg-zinc-900/50 overflow-visible">
+        <div className="w-full flex justify-center px-4">
           <img 
-            src="https://www.dropbox.com/scl/fi/t9aw3i5o4av294p5jmcb1/IGP_LOGO_CONCURSOS-removebg-preview.png?rlkey=d7zvuui3a8w2u6a892z93p84u&st=mppckzi9&raw=1" 
-            alt="IGP Estudos 2.0 Logo" 
-            className="h-24 w-24 object-contain rounded-full"
+            src="https://www.dropbox.com/scl/fi/3mbpui4v6ujy3qpietkz3/file_00000000f3e071f5b7b9002a82001ba3.png?rlkey=brg42q31mtfniaz0nblqzdwrf&st=ffx5om1y&raw=1" 
+            alt="IGP Estudos Logo" 
+            className="w-[280px] scale-125 object-contain"
             referrerPolicy="no-referrer"
           />
         </div>
-        <span className="text-primary text-xl font-bold tracking-wide text-center" style={{ fontFamily: "'Deutsch Gothic', serif" }}>IGP Estudos 2.0</span>
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1">
