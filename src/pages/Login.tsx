@@ -152,28 +152,28 @@ export default function Login() {
         <CardContent className="space-y-6">
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email" className="text-white">E-mail</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-primary" />
                 <Input 
                   id="email" 
                   type="email" 
                   placeholder="seu@email.com" 
-                  className="pl-10"
+                  className="pl-10 bg-zinc-900 border-primary text-primary focus:border-yellow-200"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password" className="text-white">Senha</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-primary" />
                 <Input 
                   id="password" 
                   type="password" 
                   placeholder="••••••••" 
-                  className="pl-10"
+                  className="pl-10 bg-zinc-900 border-primary text-primary focus:border-yellow-200"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
