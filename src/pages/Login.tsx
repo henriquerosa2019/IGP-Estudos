@@ -139,13 +139,13 @@ export default function Login() {
         <p className="text-zinc-500 mt-2">Acesso ao Portal do Aluno</p>
       </div>
 
-      <Card className="max-w-md w-full border-zinc-200 shadow-lg">
+      <Card className="max-w-md w-full border border-primary bg-zinc-950 shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-primary">
             <LogIn className="w-6 h-6 text-primary" />
             Entrar
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-zinc-300">
             Use suas credenciais para acessar o plano de estudos.
           </CardDescription>
         </CardHeader>
