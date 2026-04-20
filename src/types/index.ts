@@ -90,4 +90,6 @@ export interface ContentItem {
   createdAt: string;
   summary?: string;
   topics?: string[];
+  banca?: string;
+  bancaCharacteristics?: string;
 }

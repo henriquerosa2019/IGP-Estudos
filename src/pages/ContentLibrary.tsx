@@ -32,13 +32,21 @@ import {
   ChevronRight,
   ArrowLeft,
   Edit2,
-  MessageSquare
+  MessageSquare,
+  Info
 } from "lucide-react";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
+  DialogDescription,
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
@@ -76,7 +84,12 @@ import * as pdfjsLib from 'pdfjs-dist';
 // Configurar o worker do PDF.js usando um CDN confiável (Unpkg)
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 import { ContentItem } from "@/types";
-import { analyzeContent, generateFlashcardsFromMultimodal } from "@/lib/gemini";
+import { 
+  analyzeContent, 
+  generateFlashcardsFromMultimodal, 
+  generateQuestions,
+  extractTextFromFile 
+} from "@/lib/gemini";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -97,6 +110,9 @@ export default function ContentLibrary() {
 
   // Upload Modal State
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isQuestionsOpen, setIsQuestionsOpen] = useState(false);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
   const [showDebug, setShowDebug] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -112,6 +128,8 @@ export default function ContentLibrary() {
   const [editTitle, setEditTitle] = useState("");
   const [editSubject, setEditSubject] = useState("");
   const [editSubCategory, setEditSubCategory] = useState("");
+  const [editBanca, setEditBanca] = useState("");
+  const [editBancaCharacteristics, setEditBancaCharacteristics] = useState("");
 
   // Função para extrair texto do PDF localmente (Fallback para erro de CORS)
   const extractTextFromPDF = async (file: File): Promise<string> => {
@@ -160,6 +178,8 @@ export default function ContentLibrary() {
   const [newFile, setNewFile] = useState<File | null>(null);
   const [newSubject, setNewSubject] = useState("");
   const [newSubCategory, setNewSubCategory] = useState("");
+  const [newBanca, setNewBanca] = useState("");
+  const [newBancaCharacteristics, setNewBancaCharacteristics] = useState("");
   const [existingSubjects, setExistingSubjects] = useState<string[]>([]);
   const [isCreatingNewSubject, setIsCreatingNewSubject] = useState(false);
 
@@ -340,7 +360,7 @@ export default function ContentLibrary() {
           toast.loading("Upload bloqueado pelo servidor. Extraindo texto do PDF para salvar como texto...", { id: loadingToast });
           
           try {
-            const extractedText = await extractTextFromPDF(newFile);
+            const extractedText = await extractTextFromFile(newFile);
             if (!extractedText) {
               throw new Error("O PDF parece ser uma imagem escaneada (sem texto selecionável).");
             }
@@ -383,6 +403,8 @@ export default function ContentLibrary() {
         content: contentValue,
         subject: newSubject,
         subCategory: newSubCategory,
+        banca: newBanca || null,
+        bancaCharacteristics: newBancaCharacteristics || null,
         createdAt: new Date().toISOString(),
         summary: analysis.summary,
         topics: analysis.topics
@@ -407,6 +429,8 @@ export default function ContentLibrary() {
     setNewFile(null);
     setNewSubject("");
     setNewSubCategory("");
+    setNewBanca("");
+    setNewBancaCharacteristics("");
     setIsCreatingNewSubject(false);
   };
 
@@ -436,13 +460,45 @@ export default function ContentLibrary() {
       await updateDoc(doc(db, "contentItems", itemToEdit.id), {
         title: editTitle,
         subject: editSubject,
-        subCategory: editSubCategory || null
+        subCategory: editSubCategory || null,
+        banca: editBanca || null,
+        bancaCharacteristics: editBancaCharacteristics || null
       });
       toast.success("Conteúdo atualizado com sucesso!");
       setItemToEdit(null);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `contentItems/${itemToEdit.id}`);
       toast.error("Erro ao atualizar conteúdo.");
+    }
+  };
+
+  const handleGenerateQuestions = async (item: ContentItem) => {
+    setIsGeneratingQuestions(true);
+    setIsQuestionsOpen(true);
+    setGeneratedQuestions([]);
+    const toastId = toast.loading("Gerando banco de questões...");
+
+    try {
+      let text = item.content;
+      if (item.type === 'pdf') {
+        const response = await fetch(item.content);
+        const blob = await response.blob();
+        const file = new File([blob], "material.pdf", { type: "application/pdf" });
+        text = await extractTextFromFile(file);
+      }
+      
+      const q = await generateQuestions(text, 10, {
+        banca: item.banca,
+        characteristics: item.bancaCharacteristics
+      });
+      setGeneratedQuestions(q);
+      toast.success("Banco de questões gerado com sucesso!", { id: toastId });
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Erro ao gerar questões: " + (error.message || "Erro desconhecido"), { id: toastId });
+      setIsQuestionsOpen(false);
+    } finally {
+      setIsGeneratingQuestions(false);
     }
   };
 
@@ -612,6 +668,17 @@ export default function ContentLibrary() {
             <Zap className="w-4 h-4 mr-2" /> Importar Chat
           </Button>
 
+          <Button 
+            className="bg-primary hover:bg-primary/80 text-black font-bold gap-2"
+            onClick={() => {
+              setNewType('pdf');
+              setNewSubCategory('Simulado / Prova');
+              setIsUploadOpen(true);
+            }}
+          >
+            <FileText className="w-4 h-4" /> Enviar Prova
+          </Button>
+
           <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
             <DialogTrigger render={
               <Button className="bg-primary hover:bg-primary/80 text-black font-bold gap-2">
@@ -620,7 +687,10 @@ export default function ContentLibrary() {
             } />
             <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Novo Conteúdo</DialogTitle>
+              <DialogTitle className="text-2xl font-bold text-primary">Novo Conteúdo</DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                Adicione materiais de estudo ou envie uma <b>prova anterior (PDF)</b> para que a IA gere um simulado personalizado de questões.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -762,17 +832,54 @@ export default function ContentLibrary() {
               )}
 
               {newType === 'pdf' && (
-                <div className="space-y-2">
-                  <Label>Arquivo PDF</Label>
-                  <Input 
-                    type="file" 
-                    accept=".pdf" 
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      console.log("File selected:", file?.name, "Size:", file?.size);
-                      setNewFile(file);
-                    }}
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Arquivo PDF</Label>
+                    <Input 
+                      type="file" 
+                      accept=".pdf" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        console.log("File selected:", file?.name, "Size:", file?.size);
+                        setNewFile(file);
+                      }}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label>Banca Examinadora</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger render={
+                            <Info className="w-4 h-4 text-zinc-500 cursor-help" />
+                          } />
+                          <TooltipContent className="bg-zinc-900 border-zinc-800 text-white max-w-[250px]">
+                            <p className="text-xs">
+                              <b>Dica:</b> Pesquise no Google ou pergunte ao ChatGPT: 
+                              "Quais as principais características e pegadinhas da banca [Nome da Banca] em provas de [Sua Área]?" 
+                              Copie e cole os pontos principais ao lado para questões mais assertivas.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Input 
+                      placeholder="Ex: CESPE, FGV, VUNESP..." 
+                      value={newBanca}
+                      onChange={(e) => setNewBanca(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Características da Banca (Opcional)</Label>
+                    <Textarea 
+                      placeholder="Ex: Gosta de jurisprudência atualizada, enunciados longos, pegadinhas em prazos..." 
+                      className="min-h-[80px]"
+                      value={newBancaCharacteristics}
+                      onChange={(e) => setNewBancaCharacteristics(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -835,6 +942,63 @@ export default function ContentLibrary() {
                 </div>
               )}
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={isQuestionsOpen} onOpenChange={setIsQuestionsOpen}>
+          <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto bg-[#121212] border-zinc-800 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-primary text-2xl font-bold flex items-center gap-2">
+                <Sparkles className="w-6 h-6" /> Banco de Questões Inteligente
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
+              {isGeneratingQuestions ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                  <p className="text-zinc-400 animate-pulse">A IgpAI está formulando questões de alto nível para você...</p>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {generatedQuestions.map((q, idx) => (
+                    <div key={idx} className="bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800 relative group overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+                      <h4 className="font-bold text-lg mb-4 text-zinc-100 flex gap-3">
+                        <span className="text-primary">Q{idx + 1}.</span> {q.question}
+                      </h4>
+                      <div className="space-y-3">
+                        {q.options.map((option: string, oIdx: number) => (
+                          <div 
+                            key={oIdx} 
+                            className={cn(
+                              "p-3 rounded-xl border transition-all cursor-pointer",
+                              oIdx === q.correctIndex 
+                                ? "bg-green-500/10 border-green-500/30 text-green-400" 
+                                : "bg-zinc-900 border-zinc-800 hover:border-zinc-600 text-zinc-400"
+                            )}
+                          >
+                            <span className="font-bold mr-2">{String.fromCharCode(65 + oIdx)})</span>
+                            {option}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-6 p-4 bg-primary/5 rounded-xl border border-primary/20">
+                        <p className="text-xs font-bold text-primary mb-1 uppercase tracking-wider">Fundamentação IgpAI:</p>
+                        <p className="text-sm text-zinc-300 leading-relaxed italic">{q.explanation}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <Button 
+                    className="w-full bg-primary hover:bg-primary/80 text-black font-bold h-12 rounded-xl"
+                    onClick={() => {
+                      // Save to a "Questions" collection potentially
+                      toast.success("Sugestão: Use screenshots das questões para revisar mais tarde!");
+                    }}
+                  >
+                    Salvar Banco de Questões
+                  </Button>
+                </div>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -949,6 +1113,8 @@ export default function ContentLibrary() {
                             setEditTitle(item.title);
                             setEditSubject(item.subject);
                             setEditSubCategory(item.subCategory || "");
+                            setEditBanca(item.banca || "");
+                            setEditBancaCharacteristics(item.bancaCharacteristics || "");
                             setItemToEdit(item);
                           }}>
                             <Edit2 className="w-4 h-4 mr-2" /> Editar
@@ -1022,6 +1188,14 @@ export default function ContentLibrary() {
                           <Type className="w-4 h-4" /> Ver Texto
                         </Button>
                       )}
+                      
+                      <Button 
+                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-primary font-bold rounded-xl border-none" 
+                        size="sm"
+                        onClick={() => handleGenerateQuestions(item)}
+                      >
+                        <Sparkles className="w-4 h-4" /> Questões
+                      </Button>
                       
                       <Button 
                         className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-primary font-bold rounded-xl border-none" 
@@ -1211,6 +1385,25 @@ export default function ContentLibrary() {
                 onChange={(e) => setEditSubCategory(e.target.value)}
               />
             </div>
+            {itemToEdit?.type === 'pdf' && (
+              <>
+                <div className="space-y-2">
+                  <Label>Banca Examinadora</Label>
+                  <Input 
+                    value={editBanca}
+                    onChange={(e) => setEditBanca(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Características da Banca (Opcional)</Label>
+                  <Textarea 
+                    value={editBancaCharacteristics}
+                    onChange={(e) => setEditBancaCharacteristics(e.target.value)}
+                    className="min-h-[80px]"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => setItemToEdit(null)}>

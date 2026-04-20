@@ -16,6 +16,7 @@ import {
   Trash2, 
   Search, 
   Sparkles, 
+  Loader2,
   ChevronRight,
   Calendar,
   Layers,
@@ -42,7 +43,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 // import { Type } from "@google/genai";
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from "@/lib/firebase";
-import { ai, GEMINI_MODEL, generateWithFallback } from "@/lib/gemini";
+import { GEMINI_MODEL, generateWithFallback } from "@/lib/gemini";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
 import { 
   collection, 
@@ -145,6 +146,9 @@ export default function Notices() {
     };
   }, [currentPlan, dailyStudyHours, manualExamDate, selectedNotice?.examDate]);
 
+  const [selectedNoticeIds, setSelectedNoticeIds] = useState<string[]>([]);
+  const [isCrossing, setIsCrossing] = useState(false);
+  
   const getUid = () => {
     if (user) return user.uid;
     let localUid = localStorage.getItem('localUid');
@@ -362,6 +366,43 @@ export default function Notices() {
     } catch (error) {
       console.error("Erro ao atualizar tópico:", error);
       toast.error("Erro ao atualizar progresso do plano.");
+    }
+  };
+
+  const handleCrossNotices = async () => {
+    if (selectedNoticeIds.length < 2) {
+      toast.error("Selecione pelo menos 2 editais para cruzar.");
+      return;
+    }
+
+    const selectedNotices = notices.filter(n => selectedNoticeIds.includes(n.id));
+    setIsCrossing(true);
+    const toastId = toast.loading("Cruzando matérias dos editais...");
+
+    try {
+      // Use the existing generateStudyPlanFromNotices which handles multiple notices
+      // But maybe I should have a specialized 'analysis' instead of just a plan
+      const plan = await generateStudyPlanFromNotices(
+        selectedNotices.map(n => ({ name: n.name, content: n.content })),
+        manualExamDate,
+        dailyStudyHours
+      );
+
+      const uid = getUid();
+      await addDoc(collection(db, "plans"), {
+        ...plan,
+        uid,
+        title: `Combo: ${selectedNotices.map(n => n.name).join(' + ')}`,
+        createdAt: new Date().toISOString()
+      });
+
+      toast.success("Otimização concluída! Plano de estudo incremental gerado.", { id: toastId });
+      setSelectedNoticeIds([]);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao cruzar editais.", { id: toastId });
+    } finally {
+      setIsCrossing(false);
     }
   };
 
@@ -657,19 +698,34 @@ export default function Notices() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-5xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Meus Editais</h1>
-          <p className="text-white  font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Gerencie os editais para cruzamento de matérias e criação de planos.</p>
+          <h1 className="text-5xl tracking-wide text-primary" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Gestão de Editais</h1>
+          <p className="text-white  font-bold mt-2 text-2xl" style={{ fontFamily: "'Deutsch Gothic', serif" }}>Selecione editais para cruzamento ou gerencie seus planos.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-4">
+          {selectedNoticeIds.length >= 2 && (
+            <Button 
+              onClick={handleCrossNotices} 
+              disabled={isCrossing}
+              className="bg-primary text-black font-bold h-12 px-6 rounded-xl animate-pulse"
+            >
+              {isCrossing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              Cruzar {selectedNoticeIds.length} Editais
+            </Button>
+          )}
+          <Button onClick={() => setIsAdding(true)} className="bg-primary hover:bg-primary/80 text-black font-bold h-12 px-6 rounded-xl">
+            <Plus className="w-4 h-4 mr-2" /> Novo Edital
+          </Button>
+
           <Button 
             variant="ghost" 
             size="sm" 
-            className="gap-2 text-zinc-500 hover:text-primary"
+            className="gap-2 text-zinc-500 hover:text-primary h-12"
             onClick={handleLogout}
           >
             <LogOutIcon className="w-4 h-4" />
             Sair
           </Button>
+        </div>
           {!isAdding && !selectedNotice && (
             <TooltipProvider>
               <Tooltip>
@@ -693,7 +749,6 @@ export default function Notices() {
             </Button>
           )}
         </div>
-      </div>
 
       <AnimatePresence mode="wait">
         {isAdding ? (
@@ -1271,11 +1326,31 @@ NOÇÕES DE ÉTICA E CIDADANIA:
               </div>
             )}
             {notices.map(notice => (
-              <Card 
-                key={notice.id} 
-                className="group cursor-pointer hover:border-primary/20 hover:shadow-lg hover:shadow-yellow-50 transition-all duration-300 bg-card"
-                onClick={() => setSelectedNotice(notice)}
-              >
+              <div key={notice.id} className="relative">
+                {notices.length > 1 && (
+                  <div className="absolute top-4 right-4 z-10">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 accent-primary cursor-pointer"
+                      checked={selectedNoticeIds.includes(notice.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        if (e.target.checked) {
+                          setSelectedNoticeIds(prev => [...prev, notice.id]);
+                        } else {
+                          setSelectedNoticeIds(prev => prev.filter(id => id !== notice.id));
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+                <Card 
+                  className={cn(
+                    "group cursor-pointer hover:border-primary/20 hover:shadow-lg transition-all duration-300 bg-card",
+                    selectedNoticeIds.includes(notice.id) ? "border-primary shadow-lg shadow-primary/10" : "border-zinc-800"
+                  )}
+                  onClick={() => setSelectedNotice(notice)}
+                >
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
@@ -1301,8 +1376,9 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </motion.div>
+            </div>
+          ))}
+        </motion.div>
         )}
       </AnimatePresence>
     </div>

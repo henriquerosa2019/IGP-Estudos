@@ -99,6 +99,17 @@
         "topics": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["uid", "title", "type", "content", "subject", "createdAt"]
+    },
+    "UsageTracking": {
+      "title": "Usage Tracking",
+      "description": "Tracking daily AI credits usage per user",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "count": { "type": "integer" }
+      },
+      "required": ["uid", "date", "count"]
     }
   },
   "firestore": {
@@ -121,6 +132,10 @@
     "/contentItems/{itemId}": {
       "schema": "ContentItem",
       "description": "Store study materials in the intelligent library"
+    },
+    "/usage/{usageId}": {
+      "schema": "UsageTracking",
+      "description": "Track daily AI usage per user"
     }
   }
 }

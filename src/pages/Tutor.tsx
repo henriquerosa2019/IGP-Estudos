@@ -42,7 +42,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ai, GEMINI_MODEL, generateWithFallback } from "@/lib/gemini";
+import { GEMINI_MODEL, generateWithFallback, getUsageStats } from "@/lib/gemini";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
@@ -127,19 +127,15 @@ export default function Tutor() {
     }
 
     // Daily count logic
-    const today = new Date().toLocaleDateString();
-    const storedDaily = localStorage.getItem("aestudamos_tutor_daily");
-    if (storedDaily) {
-      const { count, date } = JSON.parse(storedDaily);
-      if (date === today) {
-        setDailyCount(count);
-      } else {
-        setDailyCount(0);
-        localStorage.setItem("aestudamos_tutor_daily", JSON.stringify({ count: 0, date: today }));
+    const fetchUsage = async () => {
+      try {
+        const stats = await getUsageStats();
+        setDailyCount(stats.count);
+      } catch (err) {
+        console.warn("Falha ao buscar estatísticas de uso.");
       }
-    } else {
-      localStorage.setItem("aestudamos_tutor_daily", JSON.stringify({ count: 0, date: today }));
-    }
+    };
+    fetchUsage();
 
     // Fetch user context
     const fetchContext = async () => {
@@ -278,7 +274,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
 
     try {
       // Tentar gerar um título curto com IA baseado no contexto da conversa
-      if (ai && messages.length >= 2) {
+      if (messages.length >= 2) {
         const firstUserMessage = messages.find(m => m.role === 'user');
         const contentForTitle = firstUserMessage?.content || "";
         
@@ -349,7 +345,7 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
   };
 
   const handleSend = async () => {
-    if (!input.trim() || !ai) return;
+    if (!input.trim()) return;
 
     // Check limits
     const userQuestions = messages.filter(m => m.role === 'user').length;
@@ -370,8 +366,6 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
     setLoading(true);
 
     try {
-      if (!ai) throw new Error("A chave da API do Gemini não foi configurada.");
-
       // Use generateContent with history to "continue" the conversation
       const history = newMessages.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
@@ -404,10 +398,16 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
       if (!text) throw new Error("A IA não retornou resposta.");
       
       setMessages(prev => [...prev, { role: 'assistant', content: text }]);
-      updateDailyCount(dailyCount + 1);
-    } catch (error) {
+      
+      // Sync usage after success
+      const stats = await getUsageStats();
+      setDailyCount(stats.count);
+    } catch (error: any) {
       console.error(error);
-      const message = error instanceof Error ? error.message : "Erro desconhecido";
+      const message = error.message || "Erro desconhecido";
+      if (message.includes("limit reached")) {
+        toast.error("Você atingiu seu limite diário de créditos IA.");
+      }
       setMessages(prev => [...prev, { role: 'assistant', content: `Houve um erro: ${message}. Tente novamente mais tarde.` }]);
       toast.error(`Erro no IgpAI: ${message}`);
     } finally {
