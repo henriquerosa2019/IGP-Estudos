@@ -92,4 +92,5 @@ export interface ContentItem {
   topics?: string[];
   banca?: string;
   bancaCharacteristics?: string;
+  contest?: string;
 }

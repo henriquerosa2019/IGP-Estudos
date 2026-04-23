@@ -93,7 +93,11 @@
         "title": { "type": "string" },
         "type": { "type": "string", "enum": ["pdf", "text", "video", "link"] },
         "content": { "type": "string", "description": "URL or text content" },
+        "contest": { "type": "string" },
         "subject": { "type": "string" },
+        "subCategory": { "type": "string" },
+        "banca": { "type": "string" },
+        "bancaCharacteristics": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "summary": { "type": "string" },
         "topics": { "type": "array", "items": { "type": "string" } }

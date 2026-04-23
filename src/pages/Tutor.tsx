@@ -42,7 +42,13 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { GEMINI_MODEL, generateWithFallback, getUsageStats } from "@/lib/gemini";
+import { GEMINI_MODEL, generateWithFallback } from "@/lib/gemini";
+import { 
+  checkDailyLimit, 
+  incrementUsage, 
+  getPlan, 
+  getLimits 
+} from "@/lib/usageControl";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
@@ -128,9 +134,12 @@ export default function Tutor() {
 
     // Daily count logic
     const fetchUsage = async () => {
+      if (!authReady) return;
       try {
-        const stats = await getUsageStats();
-        setDailyCount(stats.count);
+        const uid = user?.uid || localStorage.getItem('igp_local_uid') || 'anon';
+        const plan = getPlan(user?.email);
+        const { dailyMax, remaining } = await checkDailyLimit(uid, plan);
+        setDailyCount(dailyMax - remaining);
       } catch (err) {
         console.warn("Falha ao buscar estatísticas de uso.");
       }
@@ -345,17 +354,24 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
-    // Check limits
+    // Limit: max per conversation
     const userQuestions = messages.filter(m => m.role === 'user').length;
-    if (userQuestions >= 5) {
-      toast.error("Limite de 5 perguntas por conversa atingido. Inicie uma nova conversa.");
+    const plan = getPlan(user?.email);
+    const limits = getLimits(plan);
+
+    if (userQuestions >= limits.perConversationMax) {
+      toast.error(`Limite de ${limits.perConversationMax} perguntas por conversa atingido. Inicie uma nova conversa.`);
       return;
     }
 
-    if (dailyCount >= 20) {
-      toast.error("Limite diário de 20 perguntas atingido. Volte amanhã!");
+    // Limit: daily — checked in Firestore (server-side security)
+    const uid = user?.uid || localStorage.getItem('igp_local_uid') || 'anon';
+    const { allowed, remaining, dailyMax } = await checkDailyLimit(uid, plan);
+
+    if (!allowed) {
+      toast.error(`Limite diário de ${dailyMax} perguntas atingido. Volte amanhã!`);
       return;
     }
 
@@ -366,7 +382,6 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
     setLoading(true);
 
     try {
-      // Use generateContent with history to "continue" the conversation
       const history = newMessages.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
         parts: [{ text: m.content }]
@@ -399,15 +414,12 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
       
       setMessages(prev => [...prev, { role: 'assistant', content: text }]);
       
-      // Sync usage after success
-      const stats = await getUsageStats();
-      setDailyCount(stats.count);
+      // Increment usage in Firestore (secure)
+      await incrementUsage(uid);
+      setDailyCount(prev => prev + 1);
     } catch (error: any) {
       console.error(error);
       const message = error.message || "Erro desconhecido";
-      if (message.includes("limit reached")) {
-        toast.error("Você atingiu seu limite diário de créditos IA.");
-      }
       setMessages(prev => [...prev, { role: 'assistant', content: `Houve um erro: ${message}. Tente novamente mais tarde.` }]);
       toast.error(`Erro no IgpAI: ${message}`);
     } finally {
@@ -715,8 +727,16 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                 Sessão Ativa
               </CardTitle>
               <div className="flex gap-4 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                <span>Perguntas na conversa: {messages.filter(m => m.role === 'user').length}/5</span>
-                <span>Uso diário: {dailyCount}/20</span>
+                {(() => {
+                  const plan = getPlan(user?.email);
+                  const limits = getLimits(plan);
+                  return (
+                    <>
+                      <span>Perguntas na conversa: {messages.filter(m => m.role === 'user').length}/{limits.perConversationMax}</span>
+                      <span>Uso diário: {dailyCount}/{limits.dailyMax}</span>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </CardHeader>

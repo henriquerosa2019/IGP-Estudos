@@ -75,7 +75,8 @@ import {
   deleteDoc, 
   doc,
   updateDoc,
-  orderBy
+  orderBy,
+  writeBatch
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
@@ -119,13 +120,15 @@ export default function ContentLibrary() {
   const [isExtracting, setIsExtracting] = useState(false);
 
   // Folder Navigation State
-  type FolderState = null | { subject: string; subCategory?: string };
+  type FolderState = null | { contest: string; subject?: string; subCategory?: string };
   const [currentFolder, setCurrentFolder] = useState<FolderState>(null);
 
   // Edit and Delete State
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<FolderState>(null);
   const [itemToEdit, setItemToEdit] = useState<ContentItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [editContest, setEditContest] = useState("");
   const [editSubject, setEditSubject] = useState("");
   const [editSubCategory, setEditSubCategory] = useState("");
   const [editBanca, setEditBanca] = useState("");
@@ -176,12 +179,15 @@ export default function ContentLibrary() {
   const [newType, setNewType] = useState<'pdf' | 'text' | 'video' | 'link'>('text');
   const [newContent, setNewContent] = useState("");
   const [newFile, setNewFile] = useState<File | null>(null);
+  const [newContest, setNewContest] = useState("");
   const [newSubject, setNewSubject] = useState("");
   const [newSubCategory, setNewSubCategory] = useState("");
   const [newBanca, setNewBanca] = useState("");
   const [newBancaCharacteristics, setNewBancaCharacteristics] = useState("");
   const [existingSubjects, setExistingSubjects] = useState<string[]>([]);
+  const [existingContests, setExistingContests] = useState<string[]>([]);
   const [isCreatingNewSubject, setIsCreatingNewSubject] = useState(false);
+  const [isCreatingNewContest, setIsCreatingNewContest] = useState(false);
 
   useEffect(() => {
     console.log("ContentLibrary: Iniciando monitoramento de Auth...");
@@ -271,15 +277,23 @@ export default function ContentLibrary() {
         console.log("Acervo: Snapshot recebido com", snapshot.size, "itens");
         const contentItems: ContentItem[] = [];
         const subjectsSet = new Set<string>();
+        const contestsSet = new Set<string>();
         
         snapshot.forEach((doc) => {
           const data = doc.data() as ContentItem;
           contentItems.push({ ...data, id: doc.id });
           if (data.subject) subjectsSet.add(data.subject);
+          contestsSet.add(data.contest || "Carreiras Policiais");
         });
         
+        // Ensure "Carreiras Policiais" is always an option
+        if (!contestsSet.has("Carreiras Policiais")) {
+          contestsSet.add("Carreiras Policiais");
+        }
+        
         setItems(contentItems);
-        setExistingSubjects(Array.from(subjectsSet));
+        setExistingSubjects(Array.from(subjectsSet).sort());
+        setExistingContests(Array.from(contestsSet).sort());
         setLoading(false);
         setLoadError(null);
         setIsConnected(true);
@@ -344,36 +358,47 @@ export default function ContentLibrary() {
         const storageRef = ref(storage, `content/${uid}/${Date.now()}_${sanitizedName}`);
         
         try {
-          // Tenta o upload, mas com um timeout curto (8s) para detectar falha de CORS rapidamente
+          // Tenta o upload direto para o Firebase Storage primeiro
           const uploadPromise = uploadBytes(storageRef, newFile);
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("CORS_OR_TIMEOUT")), 8000)
+            setTimeout(() => reject(new Error("CORS_OR_TIMEOUT")), 6000)
           );
 
           await Promise.race([uploadPromise, timeoutPromise]);
-          console.log("Upload concluído com sucesso.");
           contentValue = await getDownloadURL(storageRef);
           setUploadProgress(100);
         } catch (error: any) {
-          console.warn("Upload falhou ou travou (provavelmente CORS). Usando extração de texto local...");
+          console.warn("Upload direto falhou. Tentando extração local...");
           setIsExtracting(true);
-          toast.loading("Upload bloqueado pelo servidor. Extraindo texto do PDF para salvar como texto...", { id: loadingToast });
+          toast.loading("Lendo arquivo localmente (mais rápido)...", { id: loadingToast });
           
           try {
-            const extractedText = await extractTextFromFile(newFile);
-            if (!extractedText) {
-              throw new Error("O PDF parece ser uma imagem escaneada (sem texto selecionável).");
-            }
+            // Tenta extração local (PDF.js) - Bypassa servidor e limites de rede
+            const localText = await extractTextFromPDF(newFile);
             
-            contentValue = extractedText;
-            finalType = 'text'; // Converte para texto para salvar no Firestore
-            toast.success("Texto extraído localmente!", { id: loadingToast });
+            if (localText && localText.trim().length > 100) {
+              contentValue = localText;
+              finalType = 'text';
+              toast.success("Leitura local concluída!", { id: loadingToast });
+            } else {
+              // Se a extração local falhar ou trouxer pouco texto (PDF escaneado), tenta OCR via servidor
+              console.log("Pouco texto local. Chamando IA via servidor para OCR...");
+              toast.loading("Arquivo sem texto direto. Usando IA para ler imagem...", { id: loadingToast });
+              
+              const serverText = await extractTextFromFile(newFile);
+              if (!serverText || serverText.trim().length === 0) {
+                throw new Error("Não conseguimos ler este arquivo nem mesmo com IA.");
+              }
+              contentValue = serverText;
+              finalType = 'text';
+              toast.success("O material foi lido e transcrito pela IA!", { id: loadingToast });
+            }
           } catch (extractError: any) {
-            console.error("Erro na extração local:", extractError);
-            const isScanned = extractError.message?.includes("imagem escaneada");
-            throw new Error(isScanned 
-              ? "Este PDF é uma imagem escaneada. Como o servidor está bloqueando o arquivo, não conseguimos ler o texto. Por favor, copie e cole o texto na aba 'Texto'."
-              : "Falha total: O servidor bloqueou o arquivo e o navegador não conseguiu ler o texto. Tente usar a aba 'Texto' ou 'Link'.");
+            console.error("Falha em todos os métodos de extração:", extractError);
+            if (extractError.message?.includes("Failed to fetch")) {
+              throw new Error("O arquivo é muito grande para o servidor. Tente reduzir o tamanho ou copiar o texto para a aba 'Texto'.");
+            }
+            throw new Error(`Não conseguimos ler este PDF: ${extractError.message}. Tente usar a aba 'Texto'.`);
           } finally {
             setIsExtracting(false);
           }
@@ -401,6 +426,7 @@ export default function ContentLibrary() {
         title: newTitle,
         type: finalType,
         content: contentValue,
+        contest: newContest || "Carreiras Policiais",
         subject: newSubject,
         subCategory: newSubCategory,
         banca: newBanca || null,
@@ -427,11 +453,13 @@ export default function ContentLibrary() {
     setNewType('text');
     setNewContent("");
     setNewFile(null);
+    setNewContest("");
     setNewSubject("");
     setNewSubCategory("");
     setNewBanca("");
     setNewBancaCharacteristics("");
     setIsCreatingNewSubject(false);
+    setIsCreatingNewContest(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -442,6 +470,36 @@ export default function ContentLibrary() {
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `contentItems/${id}`);
       toast.error("Erro ao excluir conteúdo.");
+    }
+  };
+
+  const handleDeleteFolder = async () => {
+    if (!folderToDelete) return;
+    
+    const loadingToast = toast.loading("Excluindo pasta e conteúdos...");
+    try {
+      // Find all items belonging to this folder/hierarchy
+      const itemsToDeleteInFolder = items.filter(item => {
+        const matchesContest = (item.contest || "Carreiras Policiais") === folderToDelete.contest;
+        const matchesSubject = !folderToDelete.subject || item.subject === folderToDelete.subject;
+        const matchesSubCategory = !folderToDelete.subCategory || item.subCategory === folderToDelete.subCategory;
+        return matchesContest && matchesSubject && matchesSubCategory;
+      });
+
+      if (itemsToDeleteInFolder.length > 0) {
+        const batch = writeBatch(db);
+        itemsToDeleteInFolder.forEach(item => {
+          batch.delete(doc(db, "contentItems", item.id));
+        });
+        await batch.commit();
+      }
+
+      toast.success(`${itemsToDeleteInFolder.length} itens excluídos com sucesso.`, { id: loadingToast });
+      setFolderToDelete(null);
+      setCurrentFolder(null); // Return to root after deleting a folder for simplicity
+    } catch (error) {
+      console.error("Erro ao excluir pasta:", error);
+      toast.error("Erro ao excluir pasta.", { id: loadingToast });
     }
   };
 
@@ -459,6 +517,7 @@ export default function ContentLibrary() {
     try {
       await updateDoc(doc(db, "contentItems", itemToEdit.id), {
         title: editTitle,
+        contest: editContest || "Carreiras Policiais",
         subject: editSubject,
         subCategory: editSubCategory || null,
         banca: editBanca || null,
@@ -565,7 +624,8 @@ export default function ContentLibrary() {
   const filteredItems = items
     .filter(item => {
       const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           item.subject.toLowerCase().includes(searchTerm.toLowerCase());
+                           item.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (item.contest && item.contest.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesFilter = filterSubject === "all" || item.subject === filterSubject;
       return matchesSearch && matchesFilter;
     })
@@ -685,14 +745,14 @@ export default function ContentLibrary() {
                 <Plus className="w-4 h-4" /> Adicionar
               </Button>
             } />
-            <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader className="shrink-0">
               <DialogTitle className="text-2xl font-bold text-primary">Novo Conteúdo</DialogTitle>
               <DialogDescription className="text-zinc-400">
                 Adicione materiais de estudo ou envie uma <b>prova anterior (PDF)</b> para que a IA gere um simulado personalizado de questões.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-1">
               <div className="space-y-2">
                 <Label>Título</Label>
                 <Input 
@@ -700,6 +760,48 @@ export default function ContentLibrary() {
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Concurso / Carreira</Label>
+                <div className="flex gap-2">
+                  {!isCreatingNewContest ? (
+                    <Select 
+                      value={newContest} 
+                      onValueChange={(val) => {
+                        if (val === "_new") {
+                          setIsCreatingNewContest(true);
+                          setNewContest("");
+                        } else {
+                          setNewContest(val);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Selecione ou crie um concurso..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {existingContests.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                        <SelectItem value="_new" className="text-primary font-bold">+ Criar Novo Concurso</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input 
+                      placeholder="Nome do concurso (ex: PRF, PF, Policial)..." 
+                      value={newContest}
+                      onChange={(e) => setNewContest(e.target.value)}
+                      autoFocus
+                    />
+                  )}
+                  {isCreatingNewContest && (
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setIsCreatingNewContest(false);
+                      setNewContest("");
+                    }}>Voltar</Button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -935,9 +1037,9 @@ export default function ContentLibrary() {
                 </Button>
               </div>
               {uploadLoading && (
-                <div className="w-full mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-                  <p className="text-[10px] text-blue-700 dark:text-blue-300 leading-relaxed">
-                    <strong>Dica Técnica:</strong> Se o upload não sair de 0%, você precisa configurar o <strong>CORS</strong> no seu Google Cloud Console para o bucket do Firebase. Isso é necessário para permitir que sites externos (como o Vercel) enviem arquivos para o seu servidor.
+                <div className="w-full mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-800">
+                  <p className="text-[10px] text-orange-700 dark:text-orange-300 leading-relaxed">
+                    <strong>Dica IgpAI:</strong> Arquivos PDF muito grandes ou com bloqueio de segurança podem demorar para processar. Se falhar, use a aba <b>'Texto'</b> para colar o conteúdo diretamente.
                   </p>
                 </div>
               )}
@@ -1067,16 +1169,33 @@ export default function ContentLibrary() {
               >
                 <Folder className="w-4 h-4" /> Acervo
               </button>
+              
               <ChevronRight className="w-3 h-3 opacity-50" />
               <button 
-                onClick={() => setCurrentFolder({ subject: currentFolder.subject })}
+                onClick={() => setCurrentFolder({ contest: currentFolder.contest })}
                 className={cn(
                   "hover:text-primary transition-colors font-medium",
-                  !currentFolder.subCategory && "text-white"
+                  !currentFolder.subject && "text-white"
                 )}
               >
-                {currentFolder.subject}
+                {currentFolder.contest}
               </button>
+
+              {currentFolder.subject && (
+                <>
+                  <ChevronRight className="w-3 h-3 opacity-50" />
+                  <button 
+                    onClick={() => setCurrentFolder({ contest: currentFolder.contest, subject: currentFolder.subject })}
+                    className={cn(
+                      "hover:text-primary transition-colors font-medium",
+                      !currentFolder.subCategory && "text-white"
+                    )}
+                  >
+                    {currentFolder.subject}
+                  </button>
+                </>
+              )}
+
               {currentFolder.subCategory && (
                 <>
                   <ChevronRight className="w-3 h-3 opacity-50" />
@@ -1111,6 +1230,7 @@ export default function ContentLibrary() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => {
                             setEditTitle(item.title);
+                            setEditContest(item.contest || "Carreiras Policiais");
                             setEditSubject(item.subject);
                             setEditSubCategory(item.subCategory || "");
                             setEditBanca(item.banca || "");
@@ -1227,7 +1347,7 @@ export default function ContentLibrary() {
               </div>
             );
 
-            const renderFolderCard = (title: string, count: number, onClick: () => void) => (
+            const renderFolderCard = (title: string, count: number, onClick: () => void, folderData: FolderState) => (
               <Card 
                 key={title}
                 className="cursor-pointer bg-[#1a1a1a] border-zinc-800 hover:border-primary transition-all flex items-center p-5 gap-4 shadow-xl rounded-2xl group"
@@ -1240,7 +1360,28 @@ export default function ContentLibrary() {
                   <h3 className="font-bold text-white line-clamp-1 text-lg tracking-tight">{title}</h3>
                   <p className="text-sm text-zinc-500 font-medium">{count} ite{count === 1 ? 'm' : 'ns'}</p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-primary transition-colors" />
+                
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger onClick={(e) => e.stopPropagation()} render={
+                      <Button variant="ghost" size="icon" className="h-8 w-8 p-0 text-zinc-500 hover:text-white hover:bg-zinc-800">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    } />
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        className="text-primary font-bold" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFolderToDelete(folderData);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" /> Excluir Pasta
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-primary transition-colors" />
+                </div>
               </Card>
             );
 
@@ -1253,19 +1394,38 @@ export default function ContentLibrary() {
             }
 
             if (currentFolder === null) {
-              const subjects = Array.from(new Set(filteredItems.map(i => i.subject)));
+              const contests = Array.from(new Set(filteredItems.map(i => i.contest || "Carreiras Policiais")));
               return (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {subjects.map(subject => {
-                    const count = filteredItems.filter(i => i.subject === subject).length;
-                    return renderFolderCard(subject, count, () => setCurrentFolder({ subject }));
+                  {contests.map(contest => {
+                    const count = filteredItems.filter(i => (i.contest || "Carreiras Policiais") === contest).length;
+                    return renderFolderCard(contest, count, () => setCurrentFolder({ contest }), { contest });
                   })}
                 </div>
               );
             }
 
+            if (!currentFolder.subject) {
+              const contestItems = filteredItems.filter(i => (i.contest || "Carreiras Policiais") === currentFolder.contest);
+              const subjects = Array.from(new Set(contestItems.map(i => i.subject)));
+              
+              return (
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {subjects.map(subject => {
+                      const count = contestItems.filter(i => i.subject === subject).length;
+                      return renderFolderCard(subject, count, () => setCurrentFolder({ contest: currentFolder.contest, subject }), { contest: currentFolder.contest, subject });
+                    })}
+                  </div>
+                </div>
+              );
+            }
+
             if (!currentFolder.subCategory) {
-              const subjectItems = filteredItems.filter(i => i.subject === currentFolder.subject);
+              const subjectItems = filteredItems.filter(i => 
+                (i.contest || "Carreiras Policiais") === currentFolder.contest && 
+                i.subject === currentFolder.subject
+              );
               const subCategories = Array.from(new Set(subjectItems.filter(i => i.subCategory).map(i => i.subCategory as string)));
               const itemsWithoutSub = subjectItems.filter(i => !i.subCategory);
 
@@ -1274,12 +1434,16 @@ export default function ContentLibrary() {
                   {subCategories.length > 0 && (
                     <div>
                       <h3 className="text-xs font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <FolderOpen className="w-4 h-4" /> Subpastas
+                        <FolderOpen className="w-4 h-4" /> Professores / Módulos
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {subCategories.map(sub => {
                           const count = subjectItems.filter(i => i.subCategory === sub).length;
-                          return renderFolderCard(sub, count, () => setCurrentFolder({ subject: currentFolder.subject, subCategory: sub }));
+                          return renderFolderCard(sub, count, () => setCurrentFolder({ 
+                            contest: currentFolder.contest, 
+                            subject: currentFolder.subject, 
+                            subCategory: sub 
+                          }), { contest: currentFolder.contest, subject: currentFolder.subject, subCategory: sub });
                         })}
                       </div>
                     </div>
@@ -1299,15 +1463,19 @@ export default function ContentLibrary() {
               );
             }
 
-            const subCategoryItems = filteredItems.filter(i => i.subject === currentFolder.subject && i.subCategory === currentFolder.subCategory);
+            const finalLevelItems = filteredItems.filter(i => 
+              (i.contest || "Carreiras Policiais") === currentFolder.contest && 
+              i.subject === currentFolder.subject && 
+              i.subCategory === currentFolder.subCategory
+            );
             return (
               <div>
                 <h3 className="text-xs font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                   <FileText className="w-4 h-4" /> Arquivos em {currentFolder.subCategory}
                 </h3>
-                {subCategoryItems.length > 0 ? (
+                {finalLevelItems.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {subCategoryItems.map(renderItemCard)}
+                    {finalLevelItems.map(renderItemCard)}
                   </div>
                 ) : (
                   <p className="text-zinc-500 text-center py-10">Esta subpasta está vazia.</p>
@@ -1357,6 +1525,28 @@ export default function ContentLibrary() {
         </DialogContent>
       </Dialog>
 
+      {/* Folder Delete Confirmation Dialog */}
+      <Dialog open={!!folderToDelete} onOpenChange={(open) => !open && setFolderToDelete(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Excluir Pasta</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-zinc-600 dark:text-zinc-400">
+              Tem certeza que deseja excluir esta pasta? <strong>Todos os materiais dentro dela serão excluídos permanentemente.</strong> Esta ação não pode ser desfeita.
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setFolderToDelete(null)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteFolder}>
+              Excluir Pasta e Conteúdos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Dialog */}
       <Dialog open={!!itemToEdit} onOpenChange={(open) => !open && setItemToEdit(null)}>
         <DialogContent className="sm:max-w-[500px]">
@@ -1364,6 +1554,20 @@ export default function ContentLibrary() {
             <DialogTitle>Editar Conteúdo</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Concurso / Carreira</Label>
+              <Select value={editContest} onValueChange={setEditContest}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o concurso..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {existingContests.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-zinc-500">Mude o concurso para mover este material entre pastas principais.</p>
+            </div>
             <div className="space-y-2">
               <Label>Título</Label>
               <Input 

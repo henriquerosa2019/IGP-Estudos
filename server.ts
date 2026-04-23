@@ -31,10 +31,14 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-  // Multer for file uploads
-  const upload = multer({ dest: 'uploads/' });
+  // Multer for file uploads with size limit (50MB)
+  const upload = multer({ 
+    dest: 'uploads/',
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+  });
 
   // Middleware to verify Firebase Token
   const verifyToken = async (req: any, res: any, next: any) => {
@@ -63,14 +67,19 @@ async function startServer() {
       // Usage Check
       const uid = req.user.uid;
       const today = new Date().toISOString().split('T')[0];
-      const usageId = `${uid}_${today}`;
-      const usageRef = db.collection('usage').doc(usageId);
+      const usageRef = db.collection('usage').doc(uid);
       const usageDoc = await usageRef.get();
-      const currentCount = usageDoc.exists ? usageDoc.data()?.count || 0 : 0;
+      
+      let currentCount = 0;
+      const usageData = usageDoc.exists ? usageDoc.data() : null;
+      
+      if (usageData && usageData.lastReset === today) {
+        currentCount = usageData.count || 0;
+      }
 
       // Allow admins more usage or different limits
       const isAdmin = req.user.email === "henrique.rosa@poli.ufrj.br" || req.user.email === "brunool.rj@gmail.com";
-      const limit = isAdmin ? 500 : 50; 
+      const limit = isAdmin ? 1000 : 50; // Harmonized with usageControl.ts admin limit
 
       if (currentCount >= limit) {
         return res.status(429).json({ error: "Daily limit reached. Try again tomorrow!" });
@@ -88,7 +97,18 @@ async function startServer() {
       });
 
       // Increment Usage
-      await usageRef.set({ uid, date: today, count: currentCount + 1 }, { merge: true });
+      if (!usageDoc.exists || usageData?.lastReset !== today) {
+        await usageRef.set({
+          count: 1,
+          lastReset: today,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } else {
+        await usageRef.update({
+          count: admin.firestore.FieldValue.increment(1),
+          updatedAt: new Date().toISOString()
+        });
+      }
 
       res.json({ text: result.response.text() });
     } catch (error: any) {
@@ -104,13 +124,17 @@ async function startServer() {
     try {
       const uid = req.user.uid;
       const today = new Date().toISOString().split('T')[0];
-      const usageId = `${uid}_${today}`;
-      const usageRef = db.collection('usage').doc(usageId);
+      const usageRef = db.collection('usage').doc(uid);
       const usageDoc = await usageRef.get();
-      const currentCount = usageDoc.exists ? usageDoc.data()?.count || 0 : 0;
+      
+      let currentCount = 0;
+      const usageData = usageDoc.exists ? usageDoc.data() : null;
+      if (usageData && usageData.lastReset === today) {
+        currentCount = usageData.count || 0;
+      }
 
       const isAdmin = req.user.email === "henrique.rosa@poli.ufrj.br" || req.user.email === "brunool.rj@gmail.com";
-      const limit = isAdmin ? 500 : 50; 
+      const limit = isAdmin ? 1000 : 50; 
 
       if (currentCount >= limit) {
         return res.status(429).json({ error: "Daily limit reached. Try again tomorrow!" });
@@ -142,7 +166,18 @@ async function startServer() {
       });
 
       // Increment Usage (questions generation counts as 1 credit for now)
-      await usageRef.set({ uid, date: today, count: currentCount + 1 }, { merge: true });
+      if (!usageDoc.exists || usageData?.lastReset !== today) {
+        await usageRef.set({
+          count: 1,
+          lastReset: today,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } else {
+        await usageRef.update({
+          count: admin.firestore.FieldValue.increment(1),
+          updatedAt: new Date().toISOString()
+        });
+      }
 
       res.json({ text: result.response.text() });
     } catch (error: any) {
@@ -154,9 +189,13 @@ async function startServer() {
   app.get("/api/usage/stats", verifyToken, async (req: any, res: any) => {
     const uid = req.user.uid;
     const today = new Date().toISOString().split('T')[0];
-    const usageId = `${uid}_${today}`;
-    const usageDoc = await db.collection('usage').doc(usageId).get();
-    res.json({ count: usageDoc.exists ? usageDoc.data()?.count || 0 : 0 });
+    const usageDoc = await db.collection('usage').doc(uid).get();
+    
+    let count = 0;
+    if (usageDoc.exists && usageDoc.data()?.lastReset === today) {
+      count = usageDoc.data()?.count || 0;
+    }
+    res.json({ count });
   });
 
   app.post("/api/upload/extract-text", verifyToken, upload.single('file'), async (req: any, res: any) => {
@@ -167,8 +206,49 @@ async function startServer() {
       let text = "";
       
       if (req.file.mimetype === 'application/pdf') {
-        const data = await pdf(dataBuffer);
-        text = data.text;
+        try {
+          const data = await pdf(dataBuffer);
+          text = data.text;
+          
+          // Se o texto extraído for muito curto ou inexistente, pode ser um PDF escaneado
+          // Nesses casos, usamos o Gemini como OCR (Reconhecimento Óptico de Caracteres)
+          if (!text || text.trim().length < 50) {
+            console.log("PDF sem camada de texto detectado. Iniciando extração via IA (OCR)...");
+            
+            if (!genAI) throw new Error("IA não configurada no servidor para OCR.");
+
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+            const result = await model.generateContent([
+              {
+                inlineData: {
+                  data: dataBuffer.toString("base64"),
+                  mimeType: "application/pdf",
+                },
+              },
+              "Extraia todo o texto deste documento PDF. Mantenha a fidelidade absoluta ao conteúdo escrito. " +
+              "Se houver imagens com texto, transcreva-as. Não adicione comentários, apenas o texto do documento."
+            ]);
+            
+            text = result.response.text();
+            console.log("Extração via IA concluída com sucesso.");
+          }
+        } catch (pdfError: any) {
+          console.error("Erro no pdf-parse, tentando IA diretamente:", pdfError);
+          
+          if (!genAI) throw pdfError;
+          
+          const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+          const result = await model.generateContent([
+            {
+              inlineData: {
+                data: dataBuffer.toString("base64"),
+                mimeType: "application/pdf",
+              },
+            },
+            "Extraia todo o texto deste PDF."
+          ]);
+          text = result.response.text();
+        }
       } else {
         text = dataBuffer.toString('utf-8');
       }

@@ -6,14 +6,42 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+    
     function isAdmin() {
       return isAuthenticated() && 
         ((request.auth.token.email == "henrique.rosa@poli.ufrj.br" && request.auth.token.email_verified == true) || 
          (request.auth.token.email == "brunool.rj@gmail.com" && request.auth.token.email_verified == true));
     }
 
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    match /notices/{noticeId} {
+      allow read, write: if isAuthenticated() && (request.resource.data.uid == request.auth.uid || resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    match /plans/{planId} {
+      allow read, write: if isAuthenticated() && (request.resource.data.uid == request.auth.uid || resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    match /flashcardReviews/{reviewId} {
+      allow read, write: if isOwner(request.resource.data.uid) || isOwner(resource.data.uid) || isAdmin();
+    }
+
+    match /contentItems/{itemId} {
+      allow read, write: if isAuthenticated() && (request.resource.data.uid == request.auth.uid || resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    match /usage/{uid} {
+      allow read, write: if isOwner(uid) || isAdmin();
+    }
+
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
   }
 }

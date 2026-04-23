@@ -31,7 +31,8 @@ import {
   LogOut as LogOutIcon,
   UserPlus,
   AlertCircle,
-  Clock
+  Clock,
+  GitMerge
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ExamNotice, Subject } from "@/types";
@@ -59,6 +60,7 @@ import {
 
 import { PlanViewer } from "@/components/PlanViewer";
 import { PerformanceDashboard } from "@/components/PerformanceDashboard";
+import { NoticeCross } from "@/components/NoticeCross";
 import { StudyPlan } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -86,7 +88,7 @@ export default function Notices() {
 
   // Plan viewing state
   const [currentPlan, setCurrentPlan] = useState<StudyPlan | null>(null);
-  const [noticeViewMode, setNoticeViewMode] = useState<'subjects' | 'vertical' | 'calendar' | 'performance'>('subjects');
+  const [noticeViewMode, setNoticeViewMode] = useState<'subjects' | 'vertical' | 'calendar' | 'performance' | 'cross'>('subjects');
   const [dailyStudyHours, setDailyStudyHours] = useState<number>(4);
   const [manualExamDate, setManualExamDate] = useState<string>("");
 
@@ -1071,17 +1073,25 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                       <BarChart3 className="w-4 h-4" />
                       Desempenho Geral
                     </Button>
+                    <Button 
+                      variant={noticeViewMode === 'cross' ? 'secondary' : 'ghost'} 
+                      className="w-full justify-start gap-3 text-zinc-600 hover:text-primary hover:bg-primary/10"
+                      onClick={() => setNoticeViewMode('cross')}
+                    >
+                      <GitMerge className="w-4 h-4" />
+                      Cruzar Editais
+                    </Button>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-primary text-white border-none">
+                <Card className="bg-primary text-black border-none">
                   <CardContent className="p-6">
                     <h3 className="font-bold mb-2">Progresso Total</h3>
                     <div className="flex items-end gap-2 mb-4">
                       <span className="text-3xl font-bold">
                         {Math.round(selectedNotice.subjects.reduce((acc, s) => acc + (s.progress || 0), 0) / selectedNotice.subjects.length)}%
                       </span>
-                      <span className="text-yellow-200 text-sm mb-1">concluído</span>
+                      <span className="text-black/60 text-sm mb-1 font-bold">concluído</span>
                     </div>
                     <Progress 
                       value={selectedNotice.subjects.reduce((acc, s) => acc + (s.progress || 0), 0) / selectedNotice.subjects.length} 
@@ -1302,6 +1312,10 @@ NOÇÕES DE ÉTICA E CIDADANIA:
                       </Card>
                     )}
                   </>
+                )}
+
+                {noticeViewMode === 'cross' && (
+                  <NoticeCross notices={notices} selectedNotice={selectedNotice} />
                 )}
               </div>
             </div>
