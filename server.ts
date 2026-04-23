@@ -79,7 +79,10 @@ async function startServer() {
 
       // Allow admins more usage or different limits
       const isAdmin = req.user.email === "henrique.rosa@poli.ufrj.br" || req.user.email === "brunool.rj@gmail.com";
-      const limit = isAdmin ? 1000 : 50; // Harmonized with usageControl.ts admin limit
+      // Harmonized with usageControl.ts: free:10, starter:50, pro:200, admin:1000
+      // We set server limit to 200 for common users to allow Pro users to work, 
+      // while the frontend handles more granular free/starter display.
+      const limit = isAdmin ? 1000 : 200; 
 
       if (currentCount >= limit) {
         return res.status(429).json({ error: "Daily limit reached. Try again tomorrow!" });
@@ -134,7 +137,7 @@ async function startServer() {
       }
 
       const isAdmin = req.user.email === "henrique.rosa@poli.ufrj.br" || req.user.email === "brunool.rj@gmail.com";
-      const limit = isAdmin ? 1000 : 50; 
+      const limit = isAdmin ? 1000 : 200; 
 
       if (currentCount >= limit) {
         return res.status(429).json({ error: "Daily limit reached. Try again tomorrow!" });
