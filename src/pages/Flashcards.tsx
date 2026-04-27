@@ -581,7 +581,7 @@ export default function Flashcards() {
               <BarChart3 className="w-4 h-4 text-primary" />
               Métricas
             </Button>
-            <Button onClick={handleStartStudy} className="bg-primary hover:bg-primary/80  dark:text-primary dark:hover:bg-zinc-800 dark:border dark:border-red-900/50 gap-2">
+            <Button onClick={handleStartStudy} className="bg-primary hover:bg-primary/80 text-black font-bold gap-2">
               <Layers className="w-4 h-4" />
               Estudar Agora
             </Button>
@@ -896,7 +896,9 @@ export default function Flashcards() {
                 <span className="text-xs font-bold uppercase tracking-widest text-primary mb-4 shrink-0">Pergunta</span>
                 <div className="flex-1 overflow-y-auto w-full pr-2">
                   <div className="min-h-full flex flex-col items-center justify-center">
-                    <h2 className="text-xl md:text-2xl font-bold text-white  leading-relaxed py-2">{currentCard?.question}</h2>
+                    <h2 className="text-xl md:text-2xl font-bold text-white leading-relaxed py-2 text-center">
+                      {currentCard?.question || (currentCard as any)?.Question || (currentCard as any)?.pergunta || "Pergunta não carregada"}
+                    </h2>
                   </div>
                 </div>
                 <p className="mt-4 text-zinc-400 text-sm italic shrink-0">Clique para ver a resposta</p>
@@ -907,8 +909,12 @@ export default function Flashcards() {
                 <span className="text-xs font-bold uppercase tracking-widest text-primary mb-4 shrink-0">Resposta</span>
                 <div className="flex-1 overflow-y-auto w-full pr-2">
                   <div className="min-h-full flex flex-col items-center justify-center">
-                    <div className="text-lg md:text-xl text-white  dark:font-bold leading-relaxed prose prose-yellow max-w-none text-center py-2">
-                      <Markdown>{currentCard?.answer}</Markdown>
+                    <div className="text-lg md:text-xl text-white font-bold leading-relaxed prose prose-invert prose-yellow max-w-none text-center py-2">
+                      {currentCard?.answer || (currentCard as any)?.Answer || (currentCard as any)?.resposta ? (
+                        <Markdown>{currentCard.answer || (currentCard as any).Answer || (currentCard as any).resposta}</Markdown>
+                      ) : (
+                        "Resposta não carregada"
+                      )}
                     </div>
                   </div>
                 </div>

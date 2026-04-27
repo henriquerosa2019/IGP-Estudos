@@ -7,7 +7,9 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   // No Vercel, as variÃ¡veis podem estar no process.env diretamente ou no env carregado
   
-  const define: Record<string, any> = {};
+  const define: Record<string, any> = {
+    'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || process.env.GEMINI_API_KEY || ''),
+  };
 
   return {
     plugins: [react(), tailwindcss()],

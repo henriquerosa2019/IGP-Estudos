@@ -1,8 +1,11 @@
 import { auth } from "./firebase";
+import { GoogleGenAI } from "@google/genai";
 
-// VERSION: 2.0.0 - FullStack Migration
-(window as any).IGP_GEMINI_VERSION = "2.0.0";
+// VERSION: 3.0.0 - Frontend Gemini Migration
+(window as any).IGP_GEMINI_VERSION = "3.0.0";
 
+// Platform provided API key
+const ai_client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 export const GEMINI_MODEL = "gemini-3-flash-preview";
 
 /**
@@ -14,30 +17,49 @@ const cleanJson = (text: string) => {
 };
 
 /**
- * Proxy para chamadas do Gemini via servidor seguro
+ * Incrementa uso no servidor de forma assíncrona
+ */
+const incrementUsage = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    const token = await user.getIdToken();
+    await fetch("/api/usage/increment", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+  } catch (e) {
+    console.warn("Failed to increment usage:", e);
+  }
+};
+
+/**
+ * Chamada direta ao Gemini no frontend (Padrão AI Studio)
  */
 export const generateWithFallback = async (params: any) => {
   const user = auth.currentUser;
-  if (!user) throw new Error("Usuário não autenticado. Faça login para usar a IA.");
-  
-  const token = await user.getIdToken();
+  if (!user) throw new Error("Usuário não autenticado.");
 
-  const response = await fetch("/api/gemini/generate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify(params)
-  });
-
-  const data = await response.json();
+  const { contents, config } = params;
   
-  if (!response.ok) {
-    throw new Error(data.error || "Erro na geração com a IA.");
+  try {
+    const response = await ai_client.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: typeof contents === 'string' ? contents : contents,
+      config: config
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("A IA retornou uma resposta vazia.");
+
+    // Registro de uso (não bloqueante)
+    incrementUsage();
+
+    return { text };
+  } catch (error: any) {
+    console.error("Gemini frontend error:", error);
+    throw new Error(error.message || "Erro na geração com a IA.");
   }
-
-  return data; // Retorna { text: "..." }
 };
 
 /**
@@ -77,7 +99,17 @@ export const extractTextFromFile = async (file: File) => {
     body: formData
   });
 
-  const data = await response.json();
+  let data;
+  try {
+    const text = await response.text();
+    if (!text) {
+      throw new Error(`Resposta do servidor vazia (Status: ${response.status})`);
+    }
+    data = JSON.parse(text);
+  } catch (parseError) {
+    throw new Error(`Erro ao ler resposta do servidor (Status: ${response.status}).`);
+  }
+
   if (!response.ok) {
     throw new Error(data.error || "Erro ao extrair texto do arquivo.");
   }
@@ -230,39 +262,87 @@ export const generateFlashcardsFromMultimodal = async (
   const response = await generateWithFallback({
     contents: [{ role: 'user', parts }],
     config: {
-      systemInstruction: `Gere 20 flashcards para "${contentName}". Retorne JSON { flashcards: [...] }.`,
+      systemInstruction: `Você é um especialista em concursos e memorização. Sua tarefa é gerar uma lista de flashcards baseada no material fornecido.
+
+REGRAS CRÍTICAS:
+1. Retorne APENAS um JSON válido.
+2. O formato DEVE ser: { "flashcards": [ { "question": "...", "answer": "...", "subject": "..." } ] }
+3. Gere entre 15 e 20 flashcards.
+4. "question" (pergunta) e "answer" (resposta) são campos obrigatórios.
+5. Não use formatação markdown no JSON (como blocos de código), apenas texto puro ou markdown simples dentro das strings.`,
+      responseMimeType: "application/json"
     }
   });
 
   if (!response.text) throw new Error("A IA não retornou conteúdo.");
-  const cleaned = cleanJson(response.text);
-  const parsed = JSON.parse(cleaned);
-  return parsed.flashcards || parsed;
+  
+  try {
+    const cleaned = cleanJson(response.text);
+    const parsed = JSON.parse(cleaned);
+    
+    // Normalização para garantir que os campos existam mesmo que a IA mude a capitalização
+    const rawCards = Array.isArray(parsed) ? parsed : (parsed.flashcards || parsed.cards || []);
+    
+    if (!Array.isArray(rawCards)) {
+      throw new Error("Formato de flashcards inválido.");
+    }
+
+    return rawCards.map((card: any) => ({
+      question: card.question || card.Question || card.pergunta || card.Pergunta || "Questão não definida",
+      answer: card.answer || card.Answer || card.resposta || card.Resposta || "Resposta não definida",
+      subject: card.subject || card.Subject || card.materia || card.Materia || contentName
+    }));
+  } catch (err) {
+    console.error("Erro ao processar flashcards:", err);
+    throw new Error("Erro ao interpretar os flashcards gerados pela IA.");
+  }
 };
 
 /**
- * Gera um banco de questões a partir de um material de estudo
+ * Gera um banco de questões a partir de um material de estudo no frontend
  */
 export const generateQuestions = async (content: string, count: number = 10, bancaContext?: { banca?: string, characteristics?: string }) => {
   const user = auth.currentUser;
   if (!user) throw new Error("Usuário não autenticado.");
+
+  const systemInstruction = `Você é um especialista em concursos e exames da OAB e Carreiras Policiais. Sua tarefa é analisar o material fornecido e gerar uma lista de questões de múltipla escolha rigorosas e de alto nível. 
+  ${bancaContext?.banca ? `A banca examinadora alvo é: ${bancaContext.banca}.` : ''}
+  ${bancaContext?.characteristics ? `IMPORTANTE - Siga estas características da banca para as questões: ${bancaContext.characteristics}` : ''}
+  Retorne APENAS o JSON no formato: { "questions": [ { "question": "...", "options": ["...", "...", "...", "...", "..."], "correctIndex": 0, "explanation": "..." } ] }`;
+
+  const prompt = `Gere ${count} questões de múltipla escolha (estilo ${bancaContext?.banca || 'FCC/VUNESP/CESPE'}) baseadas exclusivamente no seguinte conteúdo:
   
-  const token = await user.getIdToken();
+  --- MATERIAL PARA ANÁLISE ---
+  ${content.substring(0, 50000)}
+  --- FIM DO MATERIAL ---
+  
+  REGRAS:
+  1. Use 5 alternativas (A, B, C, D, E).
+  2. Mantenha o foco em pegadinhas e detalhes técnicos típicos da banca.
+  3. A explicação deve ser clara e explicar por que as outras estão erradas.`;
 
-  const response = await fetch("/api/gemini/generate-questions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify({ content, count, bancaContext })
-  });
+  try {
+    const response = await ai_client.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+      config: {
+        systemInstruction: systemInstruction,
+        responseMimeType: "application/json"
+      }
+    });
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || "Erro ao gerar questões.");
+    const textValue = response.text;
+    if (!textValue) throw new Error("IA retornou resposta vazia.");
+    
+    incrementUsage();
+
+    const result = JSON.parse(cleanJson(textValue));
+    if (!result.questions || !Array.isArray(result.questions)) {
+      throw new Error("Formato de questões inválido na resposta da IA.");
+    }
+    return result.questions;
+  } catch (error: any) {
+    console.error("Generate questions error:", error);
+    throw new Error(error.message || "Falha ao gerar questões.");
   }
-
-  const cleaned = cleanJson(data.text);
-  return JSON.parse(cleaned).questions;
 };

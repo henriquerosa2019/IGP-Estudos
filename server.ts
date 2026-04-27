@@ -2,30 +2,61 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import multer from "multer";
 import fs from "fs";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const pdf = require("pdf-parse");
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Firebase Admin
-if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: "luminous-girder-479214-f6",
-  });
-}
+let db: any;
+let auth: any;
 
-const db = admin.firestore();
-const auth = admin.auth();
+try {
+  // Always initialize without explicit projectId to use ambient credentials in AI Studio
+  if (!admin.apps.length) {
+    admin.initializeApp();
+  }
+  const app = admin.app();
+
+  const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+  if (fs.existsSync(configPath)) {
+    const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    
+    // Use the specific database ID if provided, otherwise default
+    if (firebaseConfig.firestoreDatabaseId) {
+      db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+      console.log(`Firebase Admin initialized. Project: ${admin.app().options.projectId || 'Default'}, Database: ${firebaseConfig.firestoreDatabaseId}`);
+    } else {
+      db = getFirestore(app);
+      console.log(`Firebase Admin initialized with default database.`);
+    }
+  } else {
+    db = getFirestore(app);
+    console.log(`Firebase Admin initialized (no config file found).`);
+  }
+  auth = admin.auth();
+} catch (configError) {
+  console.error("Error initializing Firebase Admin:", configError);
+  if (!admin.apps.length) {
+    admin.initializeApp();
+  }
+  db = admin.firestore();
+  auth = admin.auth();
+}
 
 // Gemini Initialization
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+if (!genAI) {
+  console.warn("Gemini API Key missing - Server-side OCR will be disabled.");
+}
 
 async function startServer() {
   const app = express();
@@ -58,150 +89,55 @@ async function startServer() {
   };
 
   // API Routes
-  app.post("/api/gemini/generate", verifyToken, async (req: any, res: any) => {
-    if (!genAI) return res.status(500).json({ error: "Gemini not configured" });
-    const { contents, config, model: modelNameRequested } = req.body;
-    const modelName = modelNameRequested || "gemini-3-flash-preview";
-    
+  app.get("/api/debug/env", verifyToken, async (req: any, res: any) => {
     try {
-      // Usage Check
-      const uid = req.user.uid;
-      const today = new Date().toISOString().split('T')[0];
-      const usageRef = db.collection('usage').doc(uid);
-      const usageDoc = await usageRef.get();
-      
-      let currentCount = 0;
-      const usageData = usageDoc.exists ? usageDoc.data() : null;
-      
-      if (usageData && usageData.lastReset === today) {
-        currentCount = usageData.count || 0;
-      }
-
-      // Allow admins more usage or different limits
-      const isAdmin = req.user.email === "henrique.rosa@poli.ufrj.br" || req.user.email === "brunool.rj@gmail.com";
-      // Harmonized with usageControl.ts: free:10, starter:50, pro:200, admin:1000
-      // We set server limit to 200 for common users to allow Pro users to work, 
-      // while the frontend handles more granular free/starter display.
-      const limit = isAdmin ? 1000 : 200; 
-
-      if (currentCount >= limit) {
-        return res.status(429).json({ error: "Daily limit reached. Try again tomorrow!" });
-      }
-
-      const { systemInstruction, ...generationConfig } = config || {};
-      const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        systemInstruction: systemInstruction
+      res.json({ 
+        projectIdEnv: process.env.GOOGLE_CLOUD_PROJECT,
+        firebaseProjectId: admin.app().options.projectId,
+        geminiKeyLength: (GEMINI_API_KEY || "").length,
+        geminiKeyStart: (GEMINI_API_KEY || "").substring(0, 4)
       });
-      
-      const result = await model.generateContent({
-        contents: typeof contents === 'string' ? [{ role: 'user', parts: [{ text: contents }] }] : contents,
-        ...generationConfig
-      });
-
-      // Increment Usage
-      if (!usageDoc.exists || usageData?.lastReset !== today) {
-        await usageRef.set({
-          count: 1,
-          lastReset: today,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } else {
-        await usageRef.update({
-          count: admin.firestore.FieldValue.increment(1),
-          updatedAt: new Date().toISOString()
-        });
-      }
-
-      res.json({ text: result.response.text() });
-    } catch (error: any) {
-      console.error("Gemini error:", error);
-      res.status(500).json({ error: error.message });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
     }
   });
 
-  app.post("/api/gemini/generate-questions", verifyToken, async (req: any, res: any) => {
-    if (!genAI) return res.status(500).json({ error: "Gemini not configured" });
-    const { content, count = 10, bancaContext } = req.body;
-    
+  app.post("/api/usage/increment", verifyToken, async (req: any, res: any) => {
+    const uid = req.user.uid;
+    const today = new Date().toISOString().split('T')[0];
     try {
-      const uid = req.user.uid;
-      const today = new Date().toISOString().split('T')[0];
       const usageRef = db.collection('usage').doc(uid);
       const usageDoc = await usageRef.get();
-      
-      let currentCount = 0;
-      const usageData = usageDoc.exists ? usageDoc.data() : null;
-      if (usageData && usageData.lastReset === today) {
-        currentCount = usageData.count || 0;
-      }
-
-      const isAdmin = req.user.email === "henrique.rosa@poli.ufrj.br" || req.user.email === "brunool.rj@gmail.com";
-      const limit = isAdmin ? 1000 : 200; 
-
-      if (currentCount >= limit) {
-        return res.status(429).json({ error: "Daily limit reached. Try again tomorrow!" });
-      }
-
-      const systemInstruction = `Você é um especialista em concursos e exames da OAB e Carreiras Policiais. Sua tarefa é analisar o material fornecido e gerar uma lista de questões de múltipla escolha rigorosas e de alto nível. 
-      ${bancaContext?.banca ? `A banca examinadora alvo é: ${bancaContext.banca}.` : ''}
-      ${bancaContext?.characteristics ? `IMPORTANTE - Siga estas características da banca para as questões: ${bancaContext.characteristics}` : ''}
-      Retorne APENAS o JSON no formato: { "questions": [ { "question": "...", "options": ["...", "...", "...", "...", "..."], "correctIndex": 0, "explanation": "..." } ] }`;
-
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-3-flash-preview",
-        systemInstruction
-      });
-      
-      const prompt = `Gere ${count} questões de múltipla escolha (estilo ${bancaContext?.banca || 'FCC/VUNESP/CESPE'}) baseadas exclusivamente no seguinte conteúdo:
-      
-      --- MATERIAL PARA ANÁLISE ---
-      ${content.substring(0, 50000)}
-      --- FIM DO MATERIAL ---
-      
-      REGRAS:
-      1. Use 5 alternativas (A, B, C, D, E).
-      2. Mantenha o foco em pegadinhas e detalhes técnicos típicos da banca.
-      3. A explicação deve ser clara e explicar por que as outras estão erradas.`;
-
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }]
-      });
-
-      // Increment Usage (questions generation counts as 1 credit for now)
-      if (!usageDoc.exists || usageData?.lastReset !== today) {
-        await usageRef.set({
-          count: 1,
-          lastReset: today,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
+      if (!usageDoc.exists || usageDoc.data()?.lastReset !== today) {
+        await usageRef.set({ count: 1, lastReset: today, updatedAt: new Date().toISOString() }, { merge: true });
       } else {
-        await usageRef.update({
-          count: admin.firestore.FieldValue.increment(1),
-          updatedAt: new Date().toISOString()
-        });
+        await usageRef.update({ count: admin.firestore.FieldValue.increment(1), updatedAt: new Date().toISOString() });
       }
-
-      res.json({ text: result.response.text() });
-    } catch (error: any) {
-      console.error("Generate questions error:", error);
-      res.status(500).json({ error: error.message });
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error("Increment error:", e);
+      res.status(500).json({ success: false, error: e.message });
     }
   });
 
   app.get("/api/usage/stats", verifyToken, async (req: any, res: any) => {
     const uid = req.user.uid;
     const today = new Date().toISOString().split('T')[0];
-    const usageDoc = await db.collection('usage').doc(uid).get();
-    
-    let count = 0;
-    if (usageDoc.exists && usageDoc.data()?.lastReset === today) {
-      count = usageDoc.data()?.count || 0;
+    try {
+      const usageDoc = await db.collection('usage').doc(uid).get();
+      let count = 0;
+      if (usageDoc.exists && usageDoc.data()?.lastReset === today) {
+        count = usageDoc.data()?.count || 0;
+      }
+      res.json({ count });
+    } catch (error) {
+      console.error("Failed to fetch usage stats:", error);
+      res.json({ count: 0 });
     }
-    res.json({ count });
   });
 
   app.post("/api/upload/extract-text", verifyToken, upload.single('file'), async (req: any, res: any) => {
+    console.log("POST /api/upload/extract-text hit");
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     
     try {
@@ -220,7 +156,7 @@ async function startServer() {
             
             if (!genAI) throw new Error("IA não configurada no servidor para OCR.");
 
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const result = await model.generateContent([
               {
                 inlineData: {
@@ -240,7 +176,7 @@ async function startServer() {
           
           if (!genAI) throw pdfError;
           
-          const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
           const result = await model.generateContent([
             {
               inlineData: {
@@ -251,6 +187,7 @@ async function startServer() {
             "Extraia todo o texto deste PDF."
           ]);
           text = result.response.text();
+          console.log("Extração via IA (fallback) concluída.");
         }
       } else {
         text = dataBuffer.toString('utf-8');
