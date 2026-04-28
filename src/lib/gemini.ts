@@ -5,8 +5,9 @@ import { GoogleGenAI } from "@google/genai";
 (window as any).IGP_GEMINI_VERSION = "3.0.0";
 
 // Platform provided API key
-const ai_client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-export const GEMINI_MODEL = "gemini-3-flash-preview";
+const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
+const ai_client = new GoogleGenAI({ apiKey: apiKey || "dummy-key-to-avoid-crash" });
+export const GEMINI_MODEL = "gemini-2.5-flash"; // updated to stable model just in case
 
 /**
  * Função de limpeza de JSON enviada pela IA
@@ -40,7 +41,12 @@ export const generateWithFallback = async (params: any) => {
   const user = auth.currentUser;
   if (!user) throw new Error("Usuário não autenticado.");
 
+  if (!apiKey || apiKey === "dummy-key-to-avoid-crash") {
+    throw new Error("A chave da API do Gemini não está configurada. Configure o GEMINI_API_KEY ou VITE_GEMINI_API_KEY nas variáveis de ambiente.");
+  }
+
   const { contents, config } = params;
+
   
   try {
     const response = await ai_client.models.generateContent({
