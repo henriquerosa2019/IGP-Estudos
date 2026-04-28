@@ -42,6 +42,7 @@ export default function Dashboard() {
   ]);
   const [subjectProgress, setSubjectProgress] = useState<{subject: string, progress: number}[]>([]);
   const [unauthorizedAttempts, setUnauthorizedAttempts] = useState<any[]>([]);
+  const [examAlerts, setExamAlerts] = useState<any[]>([]);
 
   const [weeklyData, setWeeklyData] = useState<{name: string, horas: number}[]>([
     { name: "Seg", horas: 0 }, { name: "Ter", horas: 0 }, { name: "Qua", horas: 0 },
@@ -233,6 +234,58 @@ export default function Dashboard() {
       ]);
     };
 
+    // Load exam alerts
+    try {
+      const key = user ? `calendar-events-${user.uid}` : "calendar-events-guest";
+      const savedEvents = localStorage.getItem(key);
+      if (savedEvents) {
+        const events = JSON.parse(savedEvents);
+        
+        const alerts = events.filter((e: any) => {
+          let targetDateStr = null;
+          if (e.dataProva) {
+            targetDateStr = e.dataProva;
+          } else if (e.tipo === 'prova' && e.data) {
+            targetDateStr = e.data;
+          }
+          
+          if (!targetDateStr) return false;
+          
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          
+          const [y, m, d] = targetDateStr.split('-');
+          const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+          targetDate.setHours(0,0,0,0);
+          
+          const diffInMs = targetDate.getTime() - today.getTime();
+          const diffInDays = Math.round(diffInMs / (1000 * 60 * 60 * 24));
+          
+          return diffInDays >= 0 && diffInDays <= 7;
+        }).map((e: any) => {
+           let targetDateStr = e.dataProva || (e.tipo === 'prova' ? e.data : '');
+           
+           const today = new Date();
+           today.setHours(0,0,0,0);
+           
+           const [y, m, d] = targetDateStr.split('-');
+           const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+           targetDate.setHours(0,0,0,0);
+           
+           const diffInMs = targetDate.getTime() - today.getTime();
+           const diffInDays = Math.round(diffInMs / (1000 * 60 * 60 * 24));
+           
+           return { ...e, diasRestantes: diffInDays };
+        });
+        
+        alerts.sort((a: any, b: any) => a.diasRestantes - b.diasRestantes);
+        
+        setExamAlerts(alerts);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
     return () => {
       unsubscribePlans();
       unsubscribeFlashcards();
@@ -256,6 +309,27 @@ export default function Dashboard() {
           />
         </div>
       </div>
+
+      {examAlerts.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-red-500 uppercase flex items-center gap-2">
+            <AlertTriangle className="w-6 h-6" />
+            Alerta de Provas Próximas
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {examAlerts.map(alert => (
+              <div key={alert.id} className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 flex flex-col gap-2 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/20 blur-2xl rounded-full"></div>
+                <div className="text-xl font-bold text-white z-10">{alert.concurso}</div>
+                <div className="text-sm text-zinc-300 z-10">{alert.orgao} {alert.cargo && `• ${alert.cargo}`}</div>
+                <div className="mt-2 text-primary font-extrabold text-lg z-10 tracking-widest uppercase">
+                  {alert.diasRestantes === 0 ? "É HOJE!" : alert.diasRestantes === 1 ? "AMANHÃ" : `FALTAM ${alert.diasRestantes} DIAS`}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (

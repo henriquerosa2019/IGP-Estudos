@@ -8,6 +8,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { MainLayout } from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import StartHere from "./pages/StartHere";
+import Strategy from "./pages/Strategy";
 import Notices from "./pages/Notices";
 import StudyPlan from "./pages/StudyPlan";
 import Flashcards from "./pages/Flashcards";
@@ -110,6 +111,7 @@ export default function App() {
           <Route element={<MainLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/comece-aqui" element={<StartHere />} />
+            <Route path="/estrategia" element={<Strategy />} />
             <Route path="/editais" element={<Notices />} />
             <Route path="/plano" element={<StudyPlan />} />
             <Route path="/acervo" element={<ContentLibrary />} />
