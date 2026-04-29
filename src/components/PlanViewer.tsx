@@ -116,11 +116,14 @@ export function PlanViewer({ plan, viewMode, onToggleTopic }: PlanViewerProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plan.schedule.map((day, idx) => (
           <Card key={idx} className="border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="bg-background/50 border-b border-zinc-100 py-4">
+            <CardHeader className="bg-background/50 border-b border-zinc-100 py-4 flex flex-row items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 <CalendarIcon className="w-4 h-4 text-zinc-400" />
                 {day.day}
               </CardTitle>
+              <Badge variant="outline" className="text-zinc-500 bg-background">
+                {Math.round(day.topics.reduce((acc, t) => acc + (t.duration || 0), 0) / 60 * 10) / 10}h
+              </Badge>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               {day.topics.map((topic, tIdx) => (

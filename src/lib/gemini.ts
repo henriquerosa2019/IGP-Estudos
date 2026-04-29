@@ -5,7 +5,7 @@ import { GoogleGenAI } from "@google/genai";
 (window as any).IGP_GEMINI_VERSION = "3.0.0";
 
 // Platform provided API key
-const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
 const ai_client = new GoogleGenAI({ apiKey: apiKey || "dummy-key-to-avoid-crash" });
 export const GEMINI_MODEL = "gemini-2.5-flash"; // updated to stable model just in case
 

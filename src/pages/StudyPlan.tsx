@@ -74,6 +74,114 @@ export default function StudyPlan() {
   const [breakDuration, setBreakDuration] = useState(5);
   const [showTimerSettings, setShowTimerSettings] = useState(false);
 
+  // Editing Dates State
+  const [showEditDates, setShowEditDates] = useState(false);
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editHours, setEditHours] = useState(4);
+
+  const formatLocalDate = (isoString?: string) => {
+    if (!isoString) return "";
+    try {
+      const d = new Date(isoString);
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    } catch {
+      return "";
+    }
+  };
+
+  useEffect(() => {
+    if (plan && showEditDates) {
+      setEditStartDate(formatLocalDate(plan.startDate) || formatLocalDate(new Date().toISOString()));
+      // If the plan has hours stored, we could try to guess them, but sticking to 4 or current average is fine. 
+      // A safe default is 4 if we don't have a specific stored editHours.
+    }
+  }, [plan, showEditDates]);
+
+  const handleUpdateDates = async () => {
+    if (!plan) return;
+    if (!editStartDate) {
+      toast.error("Por favor, selecione uma data de início.");
+      return;
+    }
+    if (!editHours || editHours <= 0) {
+      toast.error("Por favor, selecione um tempo de estudo válido (em horas).");
+      return;
+    }
+    
+    const sDate = new Date(`${editStartDate}T00:00:00`);
+    
+    const allTopics = plan.schedule.flatMap(day => day.topics);
+    const newSchedule: typeof plan.schedule = [];
+    
+    let currentDayTopics: typeof allTopics = [];
+    let currentDayMinutes = 0;
+    let dayIndex = 0;
+    
+    const maxMinutesPerDay = Math.round(editHours * 60);
+
+    for (let i = 0; i < allTopics.length; i++) {
+      const topic = allTopics[i];
+      const topicDuration = topic.duration || 60; // fallback
+      
+      if (currentDayTopics.length > 0 && currentDayMinutes + topicDuration > maxMinutesPerDay) {
+        const currentDate = new Date(sDate);
+        currentDate.setDate(sDate.getDate() + dayIndex);
+        
+        newSchedule.push({
+          day: `Dia ${dayIndex + 1} - ${currentDate.toLocaleDateString('pt-BR')}`,
+          topics: currentDayTopics
+        });
+        
+        dayIndex++;
+        currentDayTopics = [];
+        currentDayMinutes = 0;
+      }
+      
+      currentDayTopics.push(topic);
+      currentDayMinutes += topicDuration;
+    }
+    
+    if (currentDayTopics.length > 0) {
+      const currentDate = new Date(sDate);
+      currentDate.setDate(sDate.getDate() + dayIndex);
+      
+      newSchedule.push({
+        day: `Dia ${dayIndex + 1} - ${currentDate.toLocaleDateString('pt-BR')}`,
+        topics: currentDayTopics
+      });
+      dayIndex++;
+    }
+
+    const eDate = new Date(sDate);
+    if (dayIndex > 0) {
+      eDate.setDate(sDate.getDate() + dayIndex - 1);
+    }
+
+    const updatedPlan = {
+      ...plan,
+      startDate: sDate.toISOString(),
+      endDate: eDate.toISOString(),
+      schedule: newSchedule
+    };
+
+    setPlan(updatedPlan);
+    setShowEditDates(false);
+    toast.success("Datas recalculadas com sucesso!");
+    
+    if (plan.id) {
+        try {
+          await updateDoc(doc(db, "plans", plan.id), { 
+            startDate: updatedPlan.startDate, 
+            endDate: updatedPlan.endDate, 
+            schedule: updatedPlan.schedule 
+          });
+        } catch (error) {
+            console.error("Erro ao salvar datas", error);
+            toast.error("Erro ao salvar as datas atualizadas no banco de dados.");
+        }
+    }
+  };
+
   const getUid = () => {
     if (user) return user.uid;
     let localUid = localStorage.getItem('igp_local_uid');
@@ -530,13 +638,16 @@ export default function StudyPlan() {
             className="space-y-6"
           >
             <div className="bg-background border border-zinc-100 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between shadow-sm gap-4">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-yellow-100 rounded-xl">
+              <div className="flex items-start gap-4 flex-col sm:flex-row sm:items-center">
+                <div className="p-2 bg-yellow-100 rounded-xl hidden sm:block">
                   <Sparkles className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-white">{plan.title}</h2>
-                  <p className="text-xs text-zinc-500">{plan.goal}</p>
+                  <h2 className="font-bold text-white max-w-sm truncate" title={plan.title}>{plan.title}</h2>
+                  <p className="text-xs text-zinc-500 max-w-sm truncate" title={plan.goal}>{plan.goal}</p>
+                  <p className="text-xs text-primary font-medium mt-1">
+                    {formatLocalDate(plan.startDate).split('-').reverse().join('/')} até {formatLocalDate(plan.endDate).split('-').reverse().join('/')}
+                  </p>
                 </div>
               </div>
 
@@ -557,6 +668,15 @@ export default function StudyPlan() {
               </div>
 
               <div className="flex items-center gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-9 text-xs border-primary/20 text-primary"
+                  onClick={() => setShowEditDates(!showEditDates)}
+                >
+                  <CalendarIcon className="w-4 h-4 mr-2" />
+                  Editar Datas
+                </Button>
                 <div className="flex bg-card p-1 rounded-lg">
                   <Button 
                     variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} 
@@ -580,6 +700,43 @@ export default function StudyPlan() {
                 </Button>
               </div>
             </div>
+            
+            <AnimatePresence>
+              {showEditDates && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="bg-card border border-zinc-100 p-4 rounded-xl flex flex-wrap items-end gap-4 shadow-sm mb-2 mt-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-zinc-400">Data de Início</Label>
+                      <Input 
+                        type="date" 
+                        value={editStartDate} 
+                        onChange={(e) => setEditStartDate(e.target.value)}
+                        className="bg-background text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-zinc-400">Tempo de Estudo (Horas/Dia)</Label>
+                      <Input 
+                        type="number" 
+                        min="1"
+                        max="24"
+                        value={editHours} 
+                        onChange={(e) => setEditHours(Number(e.target.value))}
+                        className="bg-background text-sm w-32"
+                      />
+                    </div>
+                    <Button onClick={handleUpdateDates} className="bg-primary hover:bg-primary/90 text-black font-bold h-10">
+                      Recalcular Dias
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <PlanViewer 
               plan={plan} 
