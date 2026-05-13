@@ -174,19 +174,25 @@ export default function Flashcards() {
     const uids = getUids();
 
     // Filter UIDs to only include those the current user has permission to read
-    // This prevents "Missing or insufficient permissions" errors on list operations
     const allowedUids = uids.filter(id => id.startsWith('anon_') || (user && id === user.uid));
     
     if (allowedUids.length === 0) return;
 
     let q;
+    let qDecks;
     if (isAdmin) {
       q = query(collection(db, "flashcardReviews"));
+      qDecks = query(collection(db, "contentItems"), where("type", "==", "flashcardDeck"));
     } else {
       q = allowedUids.length === 1
         ? query(collection(db, "flashcardReviews"), where("uid", "==", allowedUids[0]))
         : query(collection(db, "flashcardReviews"), where("uid", "in", allowedUids));
+
+      qDecks = allowedUids.length === 1
+        ? query(collection(db, "contentItems"), where("uid", "==", allowedUids[0]), where("type", "==", "flashcardDeck"))
+        : query(collection(db, "contentItems"), where("uid", "in", allowedUids), where("type", "==", "flashcardDeck"));
     }
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const reviews: FlashcardReview[] = [];
       snapshot.forEach((doc) => {
@@ -197,7 +203,35 @@ export default function Flashcards() {
       handleFirestoreError(error, OperationType.LIST, "flashcardReviews");
     });
 
-    return () => unsubscribe();
+    const unsubscribeDecks = onSnapshot(qDecks, (snapshot) => {
+      const firestoreDecks: FlashcardDeck[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        try {
+          const cards = JSON.parse(data.content);
+          firestoreDecks.push({
+            id: doc.id,
+            name: data.title,
+            cards: cards
+          });
+        } catch (e) {
+          console.error("Erro ao processar deck do Firestore:", e);
+        }
+      });
+      
+      // Merge with local storage decks (filtering out duplicates by ID if necessary)
+      setSavedDecks(prev => {
+        const localOnly = prev.filter(d => d.id.startsWith('legacy-') || !firestoreDecks.find(fd => fd.id === d.id));
+        return [...firestoreDecks, ...localOnly];
+      });
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "contentItems (flashcardDeck)");
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeDecks();
+    };
   }, [authReady, user]);
 
   // Periodic refresh for review lists to catch cards as they become ready
@@ -322,15 +356,23 @@ export default function Flashcards() {
       if (abortControllerRef.current?.signal.aborted) return;
 
       const finalDeckName = deckName.trim() || `Flashcards - ${new Date().toLocaleDateString('pt-BR')}`;
-      const newDeckId = Date.now().toString();
-      const newDeck: FlashcardDeck = { id: newDeckId, name: finalDeckName, cards: newCards };
-      
-      setSavedDecks(prev => {
-        const updatedDecks = [...prev, newDeck];
-        localStorage.setItem("aestudamos_flashcards", JSON.stringify(updatedDecks));
-        return updatedDecks;
+      const uid = getUid();
+
+      // Save to Firestore
+      const docRef = await addDoc(collection(db, "contentItems"), {
+        uid,
+        title: finalDeckName,
+        type: 'flashcardDeck',
+        content: JSON.stringify(newCards),
+        contest: "Carreiras Policiais",
+        subject: "IA",
+        createdAt: new Date().toISOString(),
+        summary: `Deck de ${newCards.length} flashcards gerado automaticamente por IA.`
       });
 
+      const newDeckId = docRef.id;
+      const newDeck: FlashcardDeck = { id: newDeckId, name: finalDeckName, cards: newCards };
+      
       setFlashcards(newCards);
       setTopic(finalDeckName);
       setCurrentDeckId(newDeckId);
@@ -338,7 +380,7 @@ export default function Flashcards() {
       setIsFlipped(false);
       setView('study');
       setShowTopicInput(false);
-      toast.success(`Deck "${finalDeckName}" gerado e salvo na biblioteca!`);
+      toast.success(`Deck "${finalDeckName}" gerado e salvo na nuvem!`);
     } catch (error: any) {
       if (abortControllerRef.current?.signal.aborted) {
         console.log("Geração cancelada pelo usuário.");
@@ -365,10 +407,17 @@ export default function Flashcards() {
     const deckId = deckToDelete;
     
     try {
+      // 1. Delete from Firestore if it exists there
+      if (!deckId.startsWith('legacy-')) {
+        await deleteDoc(doc(db, "contentItems", deckId));
+      }
+
+      // 2. Update local state
       const updatedDecks = savedDecks.filter(d => d.id !== deckId);
       setSavedDecks(updatedDecks);
       localStorage.setItem("aestudamos_flashcards", JSON.stringify(updatedDecks));
 
+      // 3. Delete reviews
       const reviewsToDelete = allReviews.filter(r => r.deckId === deckId);
       for (const review of reviewsToDelete) {
         if (review.id) {
@@ -389,8 +438,18 @@ export default function Flashcards() {
     const { deckId, cardId } = cardToDelete;
 
     try {
-      // 1. Remove from localStorage deck
+      // 1. Remove from Firestore and local state
       if (deckId) {
+        if (!deckId.startsWith('legacy-')) {
+          const deck = savedDecks.find(d => d.id === deckId);
+          if (deck) {
+            const updatedCards = deck.cards.filter(c => c.id !== cardId);
+            await updateDoc(doc(db, "contentItems", deckId), {
+              content: JSON.stringify(updatedCards)
+            });
+          }
+        }
+
         setSavedDecks(prev => {
           const updatedDecks = prev.map(deck => {
             if (deck.id === deckId) {
@@ -432,7 +491,28 @@ export default function Flashcards() {
 
   const currentCard = flashcards[currentIndex];
 
-  const updateLocalDeckCardDifficulty = (deckId: string, cardId: string, newDifficulty: 'easy' | 'medium' | 'hard') => {
+  const updateLocalDeckCardDifficulty = async (deckId: string, cardId: string, newDifficulty: 'easy' | 'medium' | 'hard') => {
+    // 1. Update Firestore if applies
+    if (deckId && !deckId.startsWith('legacy-')) {
+      const deck = savedDecks.find(d => d.id === deckId);
+      if (deck) {
+        const updatedCards = deck.cards.map(card => {
+          if (card.id === cardId) {
+            return { ...card, difficulty: newDifficulty };
+          }
+          return card;
+        });
+        try {
+          await updateDoc(doc(db, "contentItems", deckId), {
+            content: JSON.stringify(updatedCards)
+          });
+        } catch (e) {
+          console.error("Erro ao sincronizar dificuldade com Firestore:", e);
+        }
+      }
+    }
+
+    // 2. Update local state
     setSavedDecks(prev => {
       const updatedDecks = prev.map(deck => {
         if (deck.id === deckId) {

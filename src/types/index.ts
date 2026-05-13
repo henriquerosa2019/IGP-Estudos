@@ -92,7 +92,7 @@ export interface ContentItem {
   id: string;
   uid: string;
   title: string;
-  type: 'pdf' | 'text' | 'video' | 'link' | 'questionBank';
+  type: 'pdf' | 'text' | 'video' | 'link' | 'questionBank' | 'flashcardDeck';
   content: string; // fileUrl for pdf, rich text for text, youtube link for video, or JSON string for questionBank
   subject: string;
   subCategory?: string; // e.g., Professor name, sub-topic

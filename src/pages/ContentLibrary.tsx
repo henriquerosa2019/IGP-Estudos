@@ -34,7 +34,8 @@ import {
   Edit2,
   MessageSquare,
   Info,
-  Save
+  Save,
+  Layers
 } from "lucide-react";
 import { 
   Tooltip,
@@ -602,35 +603,36 @@ export default function ContentLibrary() {
         let textToProcess = item.content;
         
         if (item.type === 'pdf') {
-          // For PDF, we'd ideally extract text. For now, we'll use the title and summary if available
           textToProcess = `Conteúdo: ${item.title}\nResumo: ${item.summary || ''}\nTópicos: ${(item.topics || []).join(', ')}`;
         } else if (item.type === 'video') {
-          // For video, we'd need transcription. For now, use title
           textToProcess = `Vídeo sobre: ${item.title}`;
         }
 
         const parts = [{ text: textToProcess }];
         const generatedCards = await generateFlashcardsFromMultimodal(parts, item.title);
         
-        const uid = user?.uid || localStorage.getItem('localUid');
+        const uid = getUid();
         
-        // Save to library (localStorage for now to match existing logic, or Firestore if you prefer)
-        const savedDecksStr = localStorage.getItem('aestudamos_flashcards');
-        const savedDecks = savedDecksStr ? JSON.parse(savedDecksStr) : [];
+        const cards = generatedCards.map((c: any) => ({
+          ...c,
+          id: `card-${Math.random().toString(36).substring(2, 11)}`,
+          subject: item.subject
+        }));
+
+        // Save to Firestore
+        await addDoc(collection(db, "contentItems"), {
+          uid,
+          title: `IA: ${item.title}`,
+          type: 'flashcardDeck',
+          content: JSON.stringify(cards),
+          contest: item.contest || "Carreiras Policiais",
+          subject: item.subject,
+          subCategory: item.subCategory || "IA",
+          createdAt: new Date().toISOString(),
+          summary: `Deck de ${cards.length} flashcards gerado automaticamente por IA.`
+        });
         
-        const newDeck = {
-          id: `deck-${Date.now()}`,
-          name: `IA: ${item.title}`,
-          cards: generatedCards.map((c: any) => ({
-            ...c,
-            id: `card-${Math.random().toString(36).substring(2, 11)}`,
-            subject: item.subject
-          }))
-        };
-        
-        localStorage.setItem('aestudamos_flashcards', JSON.stringify([...savedDecks, newDeck]));
-        
-        return "Flashcards gerados com sucesso!";
+        return "Flashcards gerados e salvos no seu acervo!";
       })(),
       {
         loading: 'IA processando conteúdo e gerando flashcards...',
@@ -1278,6 +1280,7 @@ export default function ContentLibrary() {
                          item.type === 'video' ? <Video className="w-6 h-6" /> : 
                          item.type === 'link' ? <LinkIcon className="w-6 h-6" /> :
                          item.type === 'questionBank' ? <BrainCircuit className="w-6 h-6" /> :
+                         item.type === 'flashcardDeck' ? <Layers className="w-6 h-6" /> :
                          <Type className="w-6 h-6" />}
                       </div>
                       <DropdownMenu>
@@ -1374,6 +1377,17 @@ export default function ContentLibrary() {
                         >
                           <BrainCircuit className="w-4 h-4" /> Abrir Caderno
                         </Button>
+                      ) : item.type === 'flashcardDeck' ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 gap-2 rounded-xl border-zinc-300 text-zinc-400 hover:bg-background font-bold"
+                          onClick={() => {
+                            navigate('/flashcards');
+                          }}
+                        >
+                          <Layers className="w-4 h-4" /> Estudar Deck
+                        </Button>
                       ) : (
                         <Button 
                           variant="outline" 
@@ -1387,21 +1401,25 @@ export default function ContentLibrary() {
                         </Button>
                       )}
                       
-                      <Button 
-                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-primary font-bold rounded-xl border-none" 
-                        size="sm"
-                        onClick={() => handleGenerateQuestions(item)}
-                      >
-                        <Sparkles className="w-4 h-4" /> Questões
-                      </Button>
-                      
-                      <Button 
-                        className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-primary font-bold rounded-xl border-none" 
-                        size="sm"
-                        onClick={() => handleGenerateFlashcards(item)}
-                      >
-                        <BrainCircuit className="w-4 h-4" /> Flashcards
-                      </Button>
+                      {item.type !== 'questionBank' && item.type !== 'flashcardDeck' && (
+                        <>
+                          <Button 
+                            className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-primary font-bold rounded-xl border-none" 
+                            size="sm"
+                            onClick={() => handleGenerateQuestions(item)}
+                          >
+                            <Sparkles className="w-4 h-4" /> Questões
+                          </Button>
+                          
+                          <Button 
+                            className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-primary font-bold rounded-xl border-none" 
+                            size="sm"
+                            onClick={() => handleGenerateFlashcards(item)}
+                          >
+                            <BrainCircuit className="w-4 h-4" /> Flashcards
+                          </Button>
+                        </>
+                      )}
                       
                       <Button 
                         className="flex-1 gap-2 bg-black hover:bg-zinc-900 text-primary font-bold rounded-xl border-none" 
