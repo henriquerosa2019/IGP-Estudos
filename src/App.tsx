@@ -14,6 +14,7 @@ import StudyPlan from "./pages/StudyPlan";
 import Flashcards from "./pages/Flashcards";
 import ContentLibrary from "./pages/ContentLibrary";
 import Tutor from "./pages/Tutor";
+import Questions from "./pages/Questions";
 import Settings from "./pages/Settings";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
@@ -116,6 +117,7 @@ export default function App() {
             <Route path="/plano" element={<StudyPlan />} />
             <Route path="/acervo" element={<ContentLibrary />} />
             <Route path="/flashcards" element={<Flashcards />} />
+            <Route path="/questoes" element={<Questions />} />
             <Route path="/tutor" element={<Tutor />} />
             <Route path="/configuracoes" element={<Settings />} />
           </Route>

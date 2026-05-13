@@ -33,7 +33,8 @@ import {
   ArrowLeft,
   Edit2,
   MessageSquare,
-  Info
+  Info,
+  Save
 } from "lucide-react";
 import { 
   Tooltip,
@@ -113,7 +114,10 @@ export default function ContentLibrary() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isQuestionsOpen, setIsQuestionsOpen] = useState(false);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [isSavingQuestions, setIsSavingQuestions] = useState(false);
+  const [itemForQuestions, setItemForQuestions] = useState<ContentItem | null>(null);
   const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
+  const [viewingQuestionBank, setViewingQuestionBank] = useState<ContentItem | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -532,6 +536,7 @@ export default function ContentLibrary() {
   };
 
   const handleGenerateQuestions = async (item: ContentItem) => {
+    setItemForQuestions(item);
     setIsGeneratingQuestions(true);
     setIsQuestionsOpen(true);
     setGeneratedQuestions([]);
@@ -558,6 +563,36 @@ export default function ContentLibrary() {
       setIsQuestionsOpen(false);
     } finally {
       setIsGeneratingQuestions(false);
+    }
+  };
+
+  const handleSaveQuestions = async () => {
+    if (!itemForQuestions || generatedQuestions.length === 0) return;
+    
+    setIsSavingQuestions(true);
+    const toastId = toast.loading("Salvando banco de questões...");
+    
+    try {
+      const uid = getUid();
+      await addDoc(collection(db, "contentItems"), {
+        uid,
+        title: `Caderno de Questões: ${itemForQuestions.title}`,
+        type: "questionBank",
+        content: JSON.stringify(generatedQuestions),
+        contest: itemForQuestions.contest || "Carreiras Policiais",
+        subject: itemForQuestions.subject,
+        subCategory: itemForQuestions.subCategory || "IA",
+        createdAt: new Date().toISOString(),
+        summary: `Banco de ${generatedQuestions.length} questões gerado a partir de ${itemForQuestions.title}.`
+      });
+      
+      toast.success("Banco de questões salvo no seu acervo!", { id: toastId });
+      setIsQuestionsOpen(false);
+    } catch (error) {
+      console.error("Erro ao salvar questões:", error);
+      toast.error("Erro ao salvar o banco de questões.", { id: toastId });
+    } finally {
+      setIsSavingQuestions(false);
     }
   };
 
@@ -1046,7 +1081,10 @@ export default function ContentLibrary() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        <Dialog open={isQuestionsOpen} onOpenChange={setIsQuestionsOpen}>
+        <Dialog open={isQuestionsOpen} onOpenChange={(open) => {
+          setIsQuestionsOpen(open);
+          if (!open) setViewingQuestionBank(null);
+        }}>
           <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto bg-[#121212] border-zinc-800 text-white">
             <DialogHeader>
               <DialogTitle className="text-primary text-2xl font-bold flex items-center gap-2">
@@ -1054,6 +1092,23 @@ export default function ContentLibrary() {
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-6 py-4">
+              {!isGeneratingQuestions && generatedQuestions.length > 0 && !viewingQuestionBank && (
+                <div className="flex justify-between items-center bg-primary/10 p-4 rounded-xl border border-primary/20 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Save className="w-5 h-5 text-primary" />
+                    <span className="text-sm font-medium text-primary">Estas questões ainda não estão salvas no seu acervo.</span>
+                  </div>
+                  <Button 
+                    size="sm"
+                    className="bg-primary hover:bg-primary/80 text-black font-bold h-9 rounded-lg"
+                    disabled={isSavingQuestions}
+                    onClick={handleSaveQuestions}
+                  >
+                    {isSavingQuestions ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                    Salvar Agora
+                  </Button>
+                </div>
+              )}
               {isGeneratingQuestions ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-4">
                   <Loader2 className="w-12 h-12 text-primary animate-spin" />
@@ -1091,12 +1146,16 @@ export default function ContentLibrary() {
                   ))}
                   <Button 
                     className="w-full bg-primary hover:bg-primary/80 text-black font-bold h-12 rounded-xl"
-                    onClick={() => {
-                      // Save to a "Questions" collection potentially
-                      toast.success("Sugestão: Use screenshots das questões para revisar mais tarde!");
-                    }}
+                    disabled={isSavingQuestions || !!viewingQuestionBank}
+                    onClick={handleSaveQuestions}
                   >
-                    Salvar Banco de Questões
+                    {isSavingQuestions ? (
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Salvando...</>
+                    ) : viewingQuestionBank ? (
+                      "Caderno já está no seu Acervo"
+                    ) : (
+                      "Salvar Banco de Questões no Acervo"
+                    )}
                   </Button>
                 </div>
               )}
@@ -1218,6 +1277,7 @@ export default function ContentLibrary() {
                         {item.type === 'pdf' ? <FileText className="w-6 h-6" /> : 
                          item.type === 'video' ? <Video className="w-6 h-6" /> : 
                          item.type === 'link' ? <LinkIcon className="w-6 h-6" /> :
+                         item.type === 'questionBank' ? <BrainCircuit className="w-6 h-6" /> :
                          <Type className="w-6 h-6" />}
                       </div>
                       <DropdownMenu>
@@ -1296,6 +1356,24 @@ export default function ContentLibrary() {
                         >
                           <ExternalLink className="w-4 h-4" /> Abrir
                         </a>
+                      ) : item.type === 'questionBank' ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 gap-2 rounded-xl border-zinc-300 text-zinc-400 hover:bg-background font-bold"
+                          onClick={() => {
+                            try {
+                              const questions = JSON.parse(item.content);
+                              setGeneratedQuestions(questions);
+                              setViewingQuestionBank(item);
+                              setIsQuestionsOpen(true);
+                            } catch (e) {
+                              toast.error("Erro ao carregar caderno de questões.");
+                            }
+                          }}
+                        >
+                          <BrainCircuit className="w-4 h-4" /> Abrir Caderno
+                        </Button>
                       ) : (
                         <Button 
                           variant="outline" 

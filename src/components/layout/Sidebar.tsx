@@ -12,7 +12,9 @@ import {
   Moon,
   Sun,
   HelpCircle,
-  Target
+  Target,
+  Search,
+  List
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -28,7 +30,9 @@ const menuItems = [
   { icon: Target, label: "Estratégia de Estudos", path: "/estrategia" },
   { icon: FileText, label: "Editais", path: "/editais" },
   { icon: Calendar, label: "Plano de Estudos", path: "/plano" },
+  { icon: List, label: "Edital Vertical", path: "/plano?view=vertical" },
   { icon: BookOpen, label: "Acervo Inteligente", path: "/acervo" },
+  { icon: Search, label: "Banco de Questões", path: "/questoes" },
   { icon: Layers, label: "Flashcards", path: "/flashcards" },
   { icon: MessageSquare, label: "IgpAI", path: "/tutor" },
 ];

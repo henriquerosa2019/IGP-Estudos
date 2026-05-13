@@ -40,6 +40,14 @@ service cloud.firestore {
       allow read, write: if isOwner(uid) || isAdmin();
     }
 
+    match /mindMaps/{mapId} {
+      allow read, write: if isAuthenticated() && (request.resource.data.uid == request.auth.uid || resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    match /questionBanks/{bankId} {
+      allow read, write: if isAuthenticated() && (request.resource.data.uid == request.auth.uid || resource.data.uid == request.auth.uid || isAdmin());
+    }
+
     match /{document=**} {
       allow read, write: if isAdmin();
     }

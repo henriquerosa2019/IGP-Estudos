@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { 
   Card, 
   CardContent, 
@@ -63,7 +64,18 @@ export default function StudyPlan() {
   
   const [error, setError] = useState<string | null>(null);
 
+  const location = useLocation();
   const [viewMode, setViewMode] = useState<'calendar' | 'vertical'>('calendar');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const view = params.get('view');
+    if (view === 'vertical') {
+      setViewMode('vertical');
+    } else if (view === 'calendar') {
+      setViewMode('calendar');
+    }
+  }, [location]);
   const [user, setUser] = useState<any>(null);
 
   // Timer State

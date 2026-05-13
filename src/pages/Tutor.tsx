@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import MindMap from "@/components/MindMap";
+import { cn } from "@/lib/utils";
 import { 
   Card, 
   CardContent, 
@@ -31,7 +33,10 @@ import {
   Link as LinkIcon,
   Type,
   ArrowDown,
-  Folder
+  Folder,
+  Network,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { 
   Dialog, 
@@ -52,10 +57,19 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
-import { collection, query, getDocs, where, onSnapshot } from "firebase/firestore";
+import { 
+  collection, 
+  query, 
+  getDocs, 
+  where, 
+  onSnapshot,
+  addDoc,
+  deleteDoc,
+  doc
+} from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { StudyPlan } from "@/types";
+import { StudyPlan, SavedMindMap } from "@/types";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -92,6 +106,12 @@ export default function Tutor() {
   const [pastedText, setPastedText] = useState("");
   const [pastedTitle, setPastedTitle] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isMindMapExpanded, setIsMindMapExpanded] = useState(false);
+  const [showMindMap, setShowMindMap] = useState(false);
+  const [mindMapData, setMindMapData] = useState<any>(null);
+  const [isGeneratingMap, setIsGeneratingMap] = useState(false);
+  const [savedMindMaps, setSavedMindMaps] = useState<SavedMindMap[]>([]);
+  const [historyTab, setHistoryTab] = useState<'chats' | 'mindmaps'>('chats');
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
@@ -119,11 +139,30 @@ export default function Tutor() {
       q = query(collection(db, "contentItems"), where("uid", "==", uid));
     }
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeNotices = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setLibraryItems(items);
     });
-    return () => unsubscribe();
+
+    // Fetch saved mind maps
+    let qMaps;
+    if (isAdmin) {
+      qMaps = query(collection(db, "mindMaps"));
+    } else {
+      qMaps = query(collection(db, "mindMaps"), where("uid", "==", uid));
+    }
+
+    const unsubscribeMaps = onSnapshot(qMaps, (snapshot) => {
+      const maps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavedMindMap));
+      setSavedMindMaps(maps.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    }, (error) => {
+      console.error("Erro ao buscar mapas mentais:", error);
+    });
+
+    return () => {
+      unsubscribeNotices();
+      unsubscribeMaps();
+    };
   }, [authReady, user]);
 
   useEffect(() => {
@@ -339,6 +378,23 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
     toast.success("Conversa excluída.");
   };
 
+  const deleteMindMap = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteDoc(doc(db, "mindMaps", id));
+      toast.success("Mapa mental excluído.");
+    } catch (error) {
+      console.error("Erro ao excluir mapa mental:", error);
+      toast.error("Erro ao excluir.");
+    }
+  };
+
+  const loadMindMap = (map: SavedMindMap) => {
+    setMindMapData({ title: map.title, data: map.data });
+    setShowMindMap(true);
+    setShowHistory(false);
+  };
+
   const handleNewChat = () => {
     setMessages([{ role: 'assistant', content: 'Olá! Eu sou seu tutor IA. Em que posso te ajudar com seus estudos hoje?' }]);
     setShowSaveConfirm(false);
@@ -351,6 +407,76 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
       return;
     }
     setShowSaveConfirm(true);
+  };
+
+  const handleGenerateMindMap = async () => {
+    if (!selectedContent && messages.length <= 1) {
+      toast.error("É necessário conteúdo ou uma conversa ativa para gerar um mapa mental.");
+      return;
+    }
+
+    setIsGeneratingMap(true);
+    const toastId = toast.loading("O IgpAI está construindo seu mapa mental...");
+
+    try {
+      const contentToUse = selectedContent ? selectedContent.content : messages.map(m => m.content).join("\n");
+      const titleToUse = selectedContent ? selectedContent.title : "Sua Conversa";
+
+      const prompt = `Analise o seguinte texto e crie um mapa mental estruturado em JSON.
+      O JSON deve seguir este formato:
+      {
+        "title": "Título do Mapa",
+        "data": {
+          "id": "root",
+          "label": "Tópico Central",
+          "description": "Breve descrição",
+          "children": [
+            {
+              "id": "child1",
+              "label": "Subtópico",
+              "description": "Explicação curta",
+              "children": []
+            }
+          ]
+        }
+      }
+
+      Texto para análise:
+      ${contentToUse}
+
+      Responda APENAS o JSON. Seja conciso e estruturado. Limite a 3 níveis de profundidade.`;
+
+      const response = await generateWithFallback({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      if (response.text) {
+        // Simple cleanup if needed (though responseMimeType: application/json should handle it)
+        const jsonStr = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const data = JSON.parse(jsonStr);
+        
+        // Save to Firestore
+        const mapToSave = {
+          uid: user?.uid || localStorage.getItem('igp_local_uid') || 'anon',
+          title: data.title || titleToUse,
+          data: data.data,
+          createdAt: new Date().toISOString()
+        };
+        await addDoc(collection(db, "mindMaps"), mapToSave);
+        
+        setMindMapData(data);
+        setShowMindMap(true);
+        toast.success("Mapa mental gerado e salvo!", { id: toastId });
+      }
+    } catch (error) {
+      console.error("Erro ao gerar mapa mental:", error);
+      toast.error("Falha ao gerar o mapa mental. Tente novamente.", { id: toastId });
+    } finally {
+      setIsGeneratingMap(false);
+    }
   };
 
   const handleSend = async () => {
@@ -451,11 +577,11 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                 Colar Texto
               </Button>
             } />
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px] max-h-[95vh] flex flex-col overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Colar Texto para Estudo</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-4">
+              <div className="flex-1 overflow-y-auto space-y-4 py-4 pr-1">
                 <div className="space-y-2">
                   <Label>Título (Opcional)</Label>
                   <Input 
@@ -468,13 +594,13 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
                   <Label>Conteúdo do Texto</Label>
                   <Textarea 
                     placeholder="Cole aqui o texto que você quer que a IA analise..." 
-                    className="min-h-[300px]"
+                    className="min-h-[250px] md:min-h-[350px]"
                     value={pastedText}
                     onChange={(e) => setPastedText(e.target.value)}
                   />
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="pt-2 border-t border-zinc-800">
                 <Button variant="outline" onClick={() => setIsPasteOpen(false)}>Cancelar</Button>
                 <Button onClick={handlePasteSubmit} className="bg-primary hover:bg-primary/80">
                   Importar para o Tutor
@@ -597,6 +723,16 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
           <Button 
             variant="outline" 
             size="sm" 
+            className={`gap-2 border-primary/20 text-primary hover:bg-primary/10 ${isGeneratingMap ? 'animate-pulse' : ''}`}
+            onClick={handleGenerateMindMap}
+            disabled={isGeneratingMap}
+          >
+            <Network className="w-4 h-4" />
+            Mapa Mental
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
             className="gap-2"
             onClick={() => setShowHistory(!showHistory)}
           >
@@ -624,6 +760,80 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
       </div>
 
       <div className="flex-1 flex gap-6 overflow-hidden relative">
+        <Dialog open={showMindMap} onOpenChange={(open) => {
+          setShowMindMap(open);
+          if (!open) setIsMindMapExpanded(false);
+        }}>
+          <DialogContent className={cn(
+            "flex flex-col p-6 overflow-hidden bg-zinc-950 border-zinc-800 transition-all duration-300",
+            isMindMapExpanded ? "max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] border-none rounded-none" : "max-w-[95vw] w-[95vw] h-[90vh] max-h-[90vh] rounded-[2rem]"
+          )}>
+            <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-zinc-800">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Network className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-white uppercase tracking-wider text-sm font-black">
+                    Mapa Mental Interativo
+                  </DialogTitle>
+                  <p className="text-[10px] text-zinc-500 font-medium">Visualize as conexões do seu conteúdo</p>
+                </div>
+              </div>
+              <div className="flex gap-2 mr-6">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 text-[10px] border-zinc-800 text-zinc-400 hover:text-white uppercase font-bold"
+                  onClick={() => setIsMindMapExpanded(!isMindMapExpanded)}
+                >
+                  {isMindMapExpanded ? <Minimize2 className="w-3 h-3 mr-1" /> : <Maximize2 className="w-3 h-3 mr-1" />}
+                  {isMindMapExpanded ? "Reduzir" : "Expandir"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 text-[10px] border-zinc-800 text-zinc-400 hover:text-white uppercase font-bold"
+                  onClick={() => {
+                    const el = document.getElementById('mind-map-core');
+                    if (!el) return;
+                    
+                    if (!document.fullscreenElement) {
+                      el.requestFullscreen().catch(err => {
+                        toast.error(`Erro ao entrar em tela cheia: ${err.message}`);
+                      });
+                    } else {
+                      document.exitFullscreen();
+                    }
+                  }}
+                >
+                  <Maximize2 className="w-3 h-3 mr-1" />
+                  Tela Cheia
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 text-[10px] border-zinc-800 text-zinc-400 hover:text-white uppercase font-bold"
+                  onClick={() => {
+                    const printContents = document.getElementById('mind-map-core')?.innerHTML;
+                    if (printContents) {
+                      toast.info("Geração de imagem em desenvolvimento...");
+                    }
+                  }}
+                >
+                  Exportar
+                </Button>
+              </div>
+            </DialogHeader>
+            
+            <div className="flex-1 overflow-auto custom-scrollbar bg-black/20 rounded-2xl mt-4 relative group" id="mind-map-core">
+              <div className="min-h-full min-w-full p-8 flex items-center justify-center bg-zinc-950">
+                {mindMapData && <MindMap data={mindMapData.data} title={mindMapData.title} />}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <AnimatePresence>
           {showSaveConfirm && (
             <motion.div 
@@ -674,42 +884,92 @@ Como posso te ajudar a estudar este conteúdo? Posso explicar de forma simples, 
               className="h-full overflow-hidden"
             >
               <Card className="h-full flex flex-col border-zinc-200">
-                <CardHeader className="py-4 border-b bg-background/50">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-primary" />
-                    Conversas Salvas
-                  </CardTitle>
+                <CardHeader className="py-2 border-b bg-background/50">
+                  <div className="flex bg-zinc-100 p-1 rounded-lg">
+                    <Button 
+                      variant={historyTab === 'chats' ? 'secondary' : 'ghost'} 
+                      size="sm" 
+                      className="flex-1 text-[10px] h-7 font-bold uppercase transition-all"
+                      onClick={() => setHistoryTab('chats')}
+                    >
+                      Conversas
+                    </Button>
+                    <Button 
+                      variant={historyTab === 'mindmaps' ? 'secondary' : 'ghost'} 
+                      size="sm" 
+                      className="flex-1 text-[10px] h-7 font-bold uppercase transition-all"
+                      onClick={() => setHistoryTab('mindmaps')}
+                    >
+                      Mapas Mentais
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="flex-1 p-0">
                   <ScrollArea className="h-full">
                     <div className="p-2 space-y-1">
-                      {savedConversations.length === 0 ? (
-                        <div className="p-4 text-center text-xs text-zinc-400 italic">
-                          Nenhuma conversa salva ainda.
-                        </div>
-                      ) : (
-                        savedConversations.map((conv) => (
-                          <div
-                            key={conv.id}
-                            onClick={() => loadConversation(conv)}
-                            className="group flex items-center justify-between p-3 rounded-lg hover:bg-primary/10 cursor-pointer transition-colors border border-transparent hover:border-primary/10"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-zinc-300 truncate group-hover:text-yellow-700">
-                                {conv.title}
-                              </p>
-                              <p className="text-[10px] text-zinc-400 mt-0.5">{conv.date}</p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-red-50"
-                              onClick={(e) => deleteConversation(conv.id, e)}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                      {historyTab === 'chats' ? (
+                        savedConversations.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-zinc-400 italic">
+                            Nenhuma conversa salva ainda.
                           </div>
-                        ))
+                        ) : (
+                          savedConversations.map((conv) => (
+                            <div
+                              key={conv.id}
+                              onClick={() => loadConversation(conv)}
+                              className="group flex items-center justify-between p-3 rounded-lg hover:bg-primary/10 cursor-pointer transition-colors border border-transparent hover:border-primary/10"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-zinc-300 truncate group-hover:text-yellow-700">
+                                  {conv.title}
+                                </p>
+                                <p className="text-[10px] text-zinc-400 mt-0.5">{conv.date}</p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-red-50"
+                                onClick={(e) => deleteConversation(conv.id, e)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          ))
+                        )
+                      ) : (
+                        savedMindMaps.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-zinc-400 italic">
+                            Nenhum mapa mental salvo ainda.
+                          </div>
+                        ) : (
+                          savedMindMaps.map((map) => (
+                            <div
+                              key={map.id}
+                              onClick={() => loadMindMap(map)}
+                              className="group flex items-center justify-between p-3 rounded-lg hover:bg-primary/10 cursor-pointer transition-colors border border-transparent hover:border-primary/10"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <Network className="w-3 h-3 text-primary" />
+                                  <p className="text-xs font-bold text-zinc-300 truncate group-hover:text-yellow-700">
+                                    {map.title}
+                                  </p>
+                                </div>
+                                <p className="text-[10px] text-zinc-400">
+                                  {new Date(map.createdAt).toLocaleDateString('pt-BR')} {new Date(map.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-red-50"
+                                onClick={(e) => deleteMindMap(map.id, e)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          ))
+                        )
                       )}
                     </div>
                   </ScrollArea>

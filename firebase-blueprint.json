@@ -114,6 +114,44 @@
         "count": { "type": "integer" }
       },
       "required": ["uid", "date", "count"]
+    },
+    "MindMap": {
+      "title": "Mind Map",
+      "description": "A generated mind map for a subject or content",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "data": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "title", "data", "createdAt"]
+    },
+    "QuestionBank": {
+      "title": "Question Bank",
+      "description": "A set of generated questions for a subject",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "subject": { "type": "string" },
+        "questions": { 
+          "type": "array", 
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "correctIndex": { "type": "integer" },
+              "explanation": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "title", "subject", "questions", "createdAt"]
     }
   },
   "firestore": {
@@ -140,6 +178,14 @@
     "/usage/{usageId}": {
       "schema": "UsageTracking",
       "description": "Track daily AI usage per user"
+    },
+    "/mindMaps/{mapId}": {
+      "schema": "MindMap",
+      "description": "Store generated mind maps"
+    },
+    "/questionBanks/{bankId}": {
+      "schema": "QuestionBank",
+      "description": "Store generated question banks"
     }
   }
 }
